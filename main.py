@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 # Environment configuration
-TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("bot")
 CLIENT_ID = os.getenv("CLIENT_ID") or os.getenv("BOT_CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:8000/auth/callback")
