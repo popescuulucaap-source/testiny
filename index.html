@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testiny | Discord bot for moderation, tickets and more</title>
+<meta name="description" content="Testiny is a Discord bot with moderation, tickets, invite tracking, giveaways, verification and games, set up from one menu.">
+<meta name="theme-color" content="#02040c">
+<link rel="icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="embers" aria-hidden="true"></canvas>
+
+<header class="nav">
+  <a class="brand" href="#top"><img src="favicon.png" alt="" width="34" height="34"><span>Testiny</span></a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#commands">Commands</a>
+    <a href="#updates">Updates</a>
+    <a class="btn small primary invite-link" href="#">Add to Discord</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="eyebrow">Discord bot</p>
+      <h1><span class="shimmer">Testiny</span></h1>
+      <p class="lede">Moderation, tickets, invite tracking, giveaways and games. One bot, set up from a single menu.</p>
+      <div class="cta">
+        <a class="btn primary invite-link" href="#">Add to Discord</a>
+        <a class="btn ghost" href="#commands">See commands</a>
+      </div>
+      <dl class="stats" id="stats" hidden>
+        <div><dt>Servers</dt><dd data-count="servers">0</dd></div>
+        <div><dt>Members</dt><dd data-count="members">0</dd></div>
+        <div><dt>Commands</dt><dd data-count="commands">0</dd></div>
+      </dl>
+    </div>
+    <div class="hero-logo">
+      <div class="ring"></div>
+      <img src="logo.png" alt="Testiny logo: a hooded robot wearing an ice crown" width="460" height="460">
+    </div>
+  </section>
+
+  <section id="features" class="wrap split">
+    <div class="split-side reveal">
+      <p class="eyebrow">What it does</p>
+      <h2>Everything your server needs</h2>
+      <p class="muted">Pick what you want in <code>/setup</code>. Each system has its own switch.</p>
+      <div class="mock" aria-label="Preview of the ban message members receive">
+        <div class="mock-head"><img src="favicon.png" alt="" width="28" height="28"><b>Testiny</b><span class="tag-bot">BOT</span></div>
+        <div class="mock-embed">
+          <b>You have been banned</b>
+          <p>You have been banned from <b>Your Server</b>.<br>To appeal, click the button below.</p>
+        </div>
+        <span class="mock-btn">Appeal</span>
+      </div>
+    </div>
+    <ol class="feat-list" id="featList"></ol>
+  </section>
+
+  <section id="commands" class="wrap">
+    <div class="reveal">
+      <p class="eyebrow">Commands</p>
+      <h2>Every command, one place</h2>
+      <p class="muted">All commands work with <code>/</code> and with <code>!</code>. Click a command to copy it.</p>
+    </div>
+    <div class="tools reveal">
+      <input id="q" type="search" placeholder="Search commands..." aria-label="Search commands" autocomplete="off">
+      <div class="chips" id="chips" role="group" aria-label="Filter by category"></div>
+    </div>
+    <p class="count" id="count" aria-live="polite"></p>
+    <div class="cmd-list" id="cmdList"></div>
+  </section>
+
+  <section id="updates" class="wrap">
+    <div class="reveal">
+      <p class="eyebrow">Updates</p>
+      <h2>Announcements</h2>
+      <p class="muted">The latest news and changes to Testiny.</p>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span class="brand"><img src="favicon.png" alt="" width="26" height="26"><span>Testiny</span></span>
+    <span class="muted">Made for Discord servers.</span>
+    <a class="muted support-link" href="#" hidden>Support server</a>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js" defer></script>
+</body>
+</html>
