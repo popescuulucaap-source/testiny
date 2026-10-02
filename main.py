@@ -6,7 +6,58 @@ import discord
 from discord.ext import commands
 from flask import Flask, render_template, request, redirect, session, jsonify, url_for
 
-# Initialize Flask app using your Render environment variables
+# ---------------------------------------------------------
+# 1. DATABASE INITIALIZATION (Prevents missing table crashes)
+# ---------------------------------------------------------
+def init_db():
+    conn = sqlite3.connect("bot_data.sqlite3")
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS guild_settings (
+            guild_id TEXT PRIMARY KEY,
+            staff_role_id TEXT,
+            log_channel_id TEXT,
+            anti_raid INTEGER DEFAULT 0,
+            anti_nuke INTEGER DEFAULT 0,
+            anti_link INTEGER DEFAULT 0,
+            verification_enabled INTEGER DEFAULT 0,
+            welcome_channel_id TEXT,
+            leave_channel_id TEXT,
+            j4j_enabled INTEGER DEFAULT 0,
+            daily_coins INTEGER DEFAULT 500,
+            booster_role_id TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS warnings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT,
+            user_id TEXT,
+            reason TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS jails (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT,
+            user_id TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS giveaways (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT,
+            prize TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# ---------------------------------------------------------
+# 2. FLASK WEB SERVER SETUP
+# ---------------------------------------------------------
 web_app = Flask(__name__)
 web_app.secret_key = os.getenv("SESSION_SECRET", "testiny_secret_key_123")
 
@@ -16,7 +67,6 @@ REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:5000/callback")
 DISCORD_API_BASE = "https://discord.com/api/v10"
 BOT_TOKEN = os.getenv("TOKEN")
 
-# Helper to fetch managed guilds for logged-in user
 def get_user_guilds(token):
     headers = {"Authorization": f"Bearer {token}"}
     res = requests.get(f"{DISCORD_API_BASE}/users/@me/guilds", headers=headers)
@@ -24,7 +74,6 @@ def get_user_guilds(token):
         return [g for g in res.json() if (int(g.get("permissions", 0)) & 0x8) == 0x8]
     return []
 
-# Web Dashboard Routes
 @web_app.route("/")
 def index():
     user = session.get("user")
@@ -121,15 +170,28 @@ def start_web():
     port = int(os.getenv("PORT", 5000))
     web_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
-# ==========================================
-# YOUR EXISTING DISCORD BOT CODE STARTS HERE
-# ==========================================
+# ---------------------------------------------------------
+# 3. DISCORD BOT SETUP
+# ---------------------------------------------------------
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
 
-# ... [Keep all your existing commands, events, and database tables here] ...
+bot = commands.Bot(command_prefix="!", intents=intents)
 
+@bot.event
+async def on_ready():
+    print(f"Bot successfully logged in as {bot.user}")
+
+# Add any additional bot commands or event handlers here...
+
+# ---------------------------------------------------------
+# 4. ENTRY POINT
+# ---------------------------------------------------------
 if __name__ == "__main__":
-    # Start web server in background thread
     threading.Thread(target=start_web, daemon=True).start()
     
-    # Run Discord Bot with TOKEN variable
+    if not BOT_TOKEN:
+        raise ValueError("TOKEN environment variable is missing in Render settings!")
+        
     bot.run(BOT_TOKEN)
