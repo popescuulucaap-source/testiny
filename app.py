@@ -14,6 +14,9 @@ DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "")
 BOT_API_URL = os.getenv("BOT_API_URL", "").rstrip("/")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+INVITE_URL = os.getenv("INVITE_URL", "#")
+SUPPORT_URL = os.getenv("SUPPORT_URL", "#")
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
@@ -46,9 +49,70 @@ def bot_request(method, path, **kwargs):
         return {"ok": False, "error": f"Bot API unavailable: {exc}"}, 502
 
 
+@app.context_processor
+def site_context():
+    return {"invite_url": INVITE_URL, "support_url": SUPPORT_URL}
+
+def load_announcements():
+    return session.get("announcements", [])
+
+def save_announcements(items):
+    session["announcements"] = items[:20]
+
 @app.get("/")
 def index():
-    return render_template("index.html")
+    features = [
+        ("🛡️","Moderation","Ban, kick, warn, timeout, lock, slowmode and jail."),
+        ("🔐","Security","Anti-raid, anti-nuke, anti-link and verification."),
+        ("🎫","Tickets","Interactive panels, questions, claims, proof and appeals."),
+        ("👋","Community","Welcome, leave, invites, vouches, feedback and boosters."),
+        ("🎮","Games","High-Low, Coinflip, Blackjack, Roulette and daily coins."),
+        ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
+    ]
+    return render_template("index.html", features=features)
+
+@app.route("/admin", methods=["GET","POST"])
+def admin_login():
+    if session.get("admin"):
+        return redirect(url_for("admin"))
+    if request.method == "POST":
+        if ADMIN_PASSWORD and request.form.get("password") == ADMIN_PASSWORD:
+            session["admin"] = True
+            return redirect(url_for("admin"))
+        return render_template("admin_login.html", error="Incorrect admin password.")
+    return render_template("admin_login.html")
+
+@app.get("/admin/panel")
+def admin():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    return render_template("admin.html", announcements=load_announcements())
+
+@app.post("/admin/command")
+def admin_command():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    cmd=(request.form.get("command") or "").strip()
+    cat=(request.form.get("category") or "Other").strip()
+    desc=(request.form.get("description") or "").strip()
+    if cmd and desc:
+        COMMANDS.append((cmd,cat,desc))
+    return redirect(url_for("admin"))
+
+@app.post("/admin/announcement")
+def admin_announcement():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    items=load_announcements()
+    items.insert(0, {"title":(request.form.get("title") or "Update").strip(), "body":(request.form.get("body") or "").strip(), "date":__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")})
+    save_announcements(items)
+    return redirect(url_for("admin"))
+
+@app.get("/admin/logout")
+def admin_logout():
+    session.pop("admin", None)
+    return redirect(url_for("index"))
+
 
 
 @app.get("/commands")
@@ -63,7 +127,7 @@ def guidelines():
 
 @app.get("/announcements")
 def announcements():
-    return render_template("announcements.html")
+    return render_template("announcements.html", announcements=load_announcements())
 
 
 @app.get("/login")
@@ -207,6 +271,21 @@ COMMANDS = [
     ("!stick", "Utility", "Create a sticky message."),
     ("!unstick", "Utility", "Remove the sticky message."),
     ("!autoreaction #channel emoji", "Utility", "Automatically react to messages in a channel."),
+    ("!welcome setup", "Community", "Configure welcome channel, invite attribution and member-count embeds."),
+    ("!leave setup", "Community", "Configure goodbye messages and invite attribution."),
+    ("!autorole setup", "Community", "Assign a configured role to new members."),
+    ("!antiraid setup", "Security", "Enable raid protections and external-app restrictions."),
+    ("!antinuke setup", "Security", "Configure channel-deletion and permission protection."),
+    ("!antilink setup", "Security", "Automatically timeout link messages while allowing GIFs."),
+    ("!verify setup", "Security", "Create the verified/unverified flow with private challenge verification."),
+    ("!commandchannel setup", "Security", "Restrict prefix commands to a configured channel."),
+    ("!feedback setup", "Community", "Create an interactive feedback and star-rating panel."),
+    ("!j4j setup", "Community", "Configure J4J detection, DM prompts and J4J tickets."),
+    ("!boost setup", "Community", "Configure booster role and boost announcements."),
+    ("!application setup", "Community", "Configure staff/application panels."),
+    ("!ticket setup", "Tickets", "Configure ticket types, questions, categories, claims and staff pings."),
+    ("!appeal setup", "Tickets", "Configure the appeal server/link used by moderation."),
+    ("!gamble setup", "Games", "Configure the gambling channel and economy."),
 ]
 
 
