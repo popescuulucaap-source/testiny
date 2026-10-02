@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Testiny • Admin{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">ADMIN CONTROL</span><h1>Manage Testiny.</h1><p>Add commands and publish announcements without editing the website code.</p></section>
+<div class="admin-grid">
+ <form class="card" method="post" action="/admin/command"><h3>Add command</h3><input name="command" placeholder="!example" required><input name="category" placeholder="Category" required><textarea name="description" placeholder="What does it do?" required></textarea><button class="btn primary">Add command</button></form>
+ <form class="card" method="post" action="/admin/announcement"><h3>Publish update</h3><input name="title" placeholder="Update title" required><textarea name="body" placeholder="Announcement text" required></textarea><button class="btn primary">Publish update</button></form>
+</div>
+<div class="card admin-list"><h3>Recent announcements</h3>{% for a in announcements %}<div class="admin-row"><b>{{ a.title }}</b><span>{{ a.date }}</span></div>{% endfor %}</div>
+{% endblock %}
