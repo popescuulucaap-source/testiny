@@ -1,5 +1,0 @@
-discord.py
-pillow
-python-dotenv
-Flask
-requests
