@@ -11,7 +11,7 @@ app.secret_key = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
-DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "")
+DISCORD_REDIRECT_URI = "https://testiny-7wuu.onrender.com/oauth/callback"
 BOT_API_URL = os.getenv("BOT_API_URL", "").rstrip("/")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
