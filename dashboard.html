@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Testiny • {{ guild.name }}{% endblock %}
+{% block content %}
+<section class="dashboard-head">
+  <div>
+    <span class="eyebrow">SERVER CONTROL CENTER</span>
+    <h1>{{ guild.name }}</h1>
+    <p>Configure Testiny without leaving your browser.</p>
+  </div>
+  <a class="btn ghost" href="/servers">← Servers</a>
+</section>
+
+{% if bot_error %}
+<div class="notice error">Bot connection: {{ bot_error }}. The UI is ready, but the bot API bridge still needs to be connected.</div>
+{% endif %}
+
+<section class="dashboard-grid">
+  <aside class="side-menu">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="moderation">Moderation</button>
+    <button class="tab" data-tab="security">Security</button>
+    <button class="tab" data-tab="community">Community</button>
+    <button class="tab" data-tab="tickets">Tickets</button>
+    <button class="tab" data-tab="games">Games</button>
+    <button class="tab" data-tab="jail">Jail</button>
+  </aside>
+
+  <div class="dash-content">
+    <section class="tab-panel active" id="overview">
+      <div class="cards three">
+        <article class="card"><span class="eyebrow">BOT</span><h3>Testiny</h3><p>Connected through the dashboard API.</p></article>
+        <article class="card"><span class="eyebrow">PREFIX</span><h3><code>!</code></h3><p>Default command prefix.</p></article>
+        <article class="card"><span class="eyebrow">ACCESS</span><h3>Manage Server</h3><p>Discord permission verified.</p></article>
+      </div>
+      <div class="card settings-card">
+        <h2>Quick settings</h2>
+        <label>Command prefix <input id="prefix" value="{{ settings.get('prefix', '!') }}"></label>
+        <label>Logs channel ID <input id="logs_channel" value="{{ settings.get('logs_channel', '') }}" placeholder="Discord channel ID"></label>
+        <button class="btn primary save-settings">Save settings</button>
+        <div id="saveResult"></div>
+      </div>
+    </section>
+
+    {% for tab, title, items in [
+      ('moderation','Moderation', ['Ban / Kick / Warn','Timeout','Lock channels','Slowmode']),
+      ('security','Security', ['Anti-Raid','Anti-Nuke','Anti-Link','Verification','Command channel']),
+      ('community','Community', ['Welcome / Leave','Auto Role','Vouch','Feedback','J4J','Boosters','Staff Applications','Invites']),
+      ('tickets','Tickets', ['Ticket panel','Ticket types','Questions','Claim / Close','Proof flow','Jail appeals']),
+      ('games','Games & Events', ['High-Low','Coinflip','Blackjack','Roulette','Daily coins','Giveaways','Sticky messages','Auto reactions']),
+      ('jail','Jail System', ['Auto-create jail role','Jail channels','Jail chat','Jail appeal panel','One appeal per jail','Restore original roles'])
+    ] %}
+    <section class="tab-panel" id="{{ tab }}">
+      <div class="section-heading"><span class="eyebrow">CONFIGURATION</span><h2>{{ title }}</h2></div>
+      <div class="feature-list">
+        {% for item in items %}
+        <div class="feature-row"><span>{{ item }}</span><button class="toggle" data-feature="{{ item }}">ON</button></div>
+        {% endfor %}
+      </div>
+      <button class="btn primary" data-action="save-section" data-section="{{ tab }}">Save {{ title }} settings</button>
+    </section>
+    {% endfor %}
+  </div>
+</section>
+<script>
+window.TESTINY_GUILD_ID = "{{ guild.id }}";
+</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

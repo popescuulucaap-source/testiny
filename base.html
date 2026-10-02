@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Testiny{% endblock %}</title>
+  <meta name="theme-color" content="#55d9ff">
+  <link rel="icon" href="{{ url_for('static', filename='testiny-logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <header class="nav">
+    <a class="brand" href="/">
+      <img src="{{ url_for('static', filename='testiny-logo.svg') }}" alt="Testiny">
+      <span>TESTINY</span>
+    </a>
+    <nav>
+      <a href="/commands">Commands</a>
+      <a href="/guidelines">Guidelines</a>
+      <a href="/announcements">Updates</a>
+      {% if session.get('user') %}
+        <a class="user-pill" href="/servers">{{ session['user'].get('username', 'Discord') }}</a>
+        <a href="/logout">Logout</a>
+      {% else %}
+        <a class="btn small" href="/login">Login with Discord</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer>
+    <div><strong>TESTINY</strong> • Discord management, moderation & community tools.</div>
+    <div>Built for your server. Configure it your way.</div>
+  </footer>
+</body>
+</html>

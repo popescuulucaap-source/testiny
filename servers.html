@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Testiny • Your Servers{% endblock %}
+{% block content %}
+<section class="page-head compact">
+  <span class="eyebrow">DISCORD MANAGEMENT</span>
+  <h1>Select a <span>server.</span></h1>
+  <p>Only servers where your Discord account has Manage Server permissions are shown.</p>
+</section>
+<div class="server-grid">
+{% for guild in guilds %}
+  <a class="server-card" href="/dashboard/{{ guild.id }}">
+    <div class="server-icon">{{ guild.name[:1]|upper }}</div>
+    <div><h3>{{ guild.name }}</h3><p>{% if guild.bot_present %}🟢 Testiny is connected{% else %}⚪ Add Testiny first{% endif %}</p></div>
+    <span>→</span>
+  </a>
+{% else %}
+  <div class="empty card">No manageable Discord servers were returned.</div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Testiny • Guidelines{% endblock %}
+{% block content %}
+<section class="page-head">
+  <span class="eyebrow">BOT GUIDELINES</span>
+  <h1>Use Testiny<br><span>responsibly.</span></h1>
+  <p>These guidelines keep the bot safe, predictable and useful across communities.</p>
+</section>
+<div class="guide-grid">
+  <article class="card"><h3>1. Respect permissions</h3><p>Only grant Testiny the permissions required for the features you enable. Review role hierarchy and channel overrides after setup.</p></article>
+  <article class="card"><h3>2. Protect staff tools</h3><p>Limit setup, moderation and security controls to trusted staff. Never share dashboard credentials, API secrets or bot tokens.</p></article>
+  <article class="card"><h3>3. Use automation carefully</h3><p>Anti-raid, anti-nuke, anti-link and automatic punishment features can affect real members. Configure thresholds and exemptions before enabling them.</p></article>
+  <article class="card"><h3>4. Keep appeals available</h3><p>If your server uses bans or jail, configure an appeal destination so members have a clear route to contact staff.</p></article>
+  <article class="card"><h3>5. Respect Discord rules</h3><p>Use Testiny in accordance with Discord's Terms, Community Guidelines and applicable laws. Testiny is a server-management tool, not a replacement for moderation judgment.</p></article>
+  <article class="card"><h3>6. Developer responsibility</h3><p>Only authorized Testiny developers should publish bot-wide announcements, deploy updates or change shared infrastructure.</p></article>
+</div>
+{% endblock %}

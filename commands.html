@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Testiny • Commands{% endblock %}
+{% block content %}
+<section class="page-head">
+  <span class="eyebrow">COMMAND DIRECTORY</span>
+  <h1>Every command.<br><span>One clean list.</span></h1>
+  <p>Testiny uses <code>!</code> as the default prefix. Server owners can configure the bot from the dashboard.</p>
+</section>
+<div class="command-toolbar">
+  <input id="commandSearch" placeholder="Search commands, e.g. giveaway, jail, invite…">
+  <span class="count">{{ commands|length }} commands</span>
+</div>
+<section class="command-grid">
+{% for command, category, description in commands %}
+  <article class="command-card" data-search="{{ command }} {{ category }} {{ description }}">
+    <div class="command-top"><code>{{ command }}</code><span>{{ category }}</span></div>
+    <p>{{ description }}</p>
+  </article>
+{% endfor %}
+</section>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}
