@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Testiny{% endblock %}</title>
+  <meta name="description" content="Testiny — powerful all-in-one Discord bot for moderation, security, tickets, invites, games and more.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<nav class="nav">
+  <a class="brand" href="/"><span class="brand-mark">T</span><span>Testiny</span></a>
+  <div class="nav-links">
+    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a>
+    {% if session.get('user') %}<a class="nav-pill" href="/servers">Dashboard</a>{% else %}<a class="nav-pill" href="/login">Dashboard</a>{% endif %}
+  </div>
+</nav>
+<main>{% block content %}{% endblock %}</main>
+<footer><div><b>Testiny</b><span> • Built for communities that want more.</span></div><div><a href="/guidelines">Rules & Guidelines</a><span> · </span><a href="/announcements">Updates</a></div></footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
