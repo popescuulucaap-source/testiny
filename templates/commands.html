@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Testiny • Commands{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">COMMAND LIBRARY</span><h1>Everything Testiny can do.</h1><p>Prefix: <code>!</code> • The dashboard also exposes interactive setup panels.</p></section>
+<div class="command-grid">{% for cmd,cat,desc in commands %}<article class="command-card"><span class="tag">{{ cat }}</span><code>{{ cmd }}</code><p>{{ desc }}</p></article>{% endfor %}</div>
+{% endblock %}
