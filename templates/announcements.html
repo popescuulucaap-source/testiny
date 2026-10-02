@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Testiny • Updates{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">OFFICIAL UPDATES</span><h1>What's new in Testiny.</h1><p>New commands, features, fixes and announcements.</p></section>
+<div class="updates">{% for a in announcements %}<article class="update"><span>{{ a.date }}</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No announcements yet.</h3><p>Use the admin panel to publish the first Testiny update.</p></article>{% endfor %}</div>
+{% endblock %}
