@@ -231,7 +231,9 @@ def utc_ts() -> int:
 
 def embed(title: str, description: str, color: discord.Color = EMBED_COLOR) -> discord.Embed:
     e = discord.Embed(title=title, description=description, color=color, timestamp=datetime.now(timezone.utc))
-    e.set_footer(text="Nightfall • polished, fast & persistent ✨")
+    e.set_footer(text="Nightfall  •  made for your community")
+    if bot.user:
+        e.set_author(name="NIGHTFALL  /  COMMUNITY SYSTEMS", icon_url=bot.user.display_avatar.url)
     return e
 
 
@@ -2657,6 +2659,21 @@ async def finish_giveaway(guild: discord.Guild, message_id: int, manual=False):
 # Events
 # -----------------------------
 
+PRESENCE_INDEX = 0
+
+
+@tasks.loop(seconds=35)
+async def nightfall_presence():
+    global PRESENCE_INDEX
+    activities = [
+        discord.Activity(type=discord.ActivityType.watching, name="your community"),
+        discord.Activity(type=discord.ActivityType.listening, name="the night"),
+        discord.Game(name=f"!help • {len(bot.guilds)} communities"),
+        discord.Activity(type=discord.ActivityType.watching, name="for a safer server"),
+    ]
+    await bot.change_presence(activity=activities[PRESENCE_INDEX % len(activities)], status=discord.Status.online)
+    PRESENCE_INDEX += 1
+
 @bot.event
 async def on_ready():
     global bridge_task
@@ -2688,10 +2705,10 @@ async def on_ready():
         await asyncio.sleep(0.25)
     if not giveaway_watcher.is_running():
         giveaway_watcher.start()
+    if not nightfall_presence.is_running():
+        nightfall_presence.start()
     if NIGHTFALL_WEBSITE_URL and NIGHTFALL_BRIDGE_SECRET and (bridge_task is None or bridge_task.done()):
         bridge_task = asyncio.create_task(nightfall_website_bridge(), name="nightfall-website-bridge")
-    # Dashboard-style presence.
-    await bot.change_presence(activity=discord.Game(name=f"{PREFIX}help • Nightfall ✨"))
     print(f"Logged in as {bot.user} ({bot.user.id}) on {len(bot.guilds)} server(s)")
 
 
@@ -3039,23 +3056,62 @@ async def handle_website_job(job):
 
     if job.get("kind") == "settings":
         current = get_settings(guild_id)
-        if "prefix" in payload:
-            prefix = str(payload["prefix"]).strip()
-            if 1 <= len(prefix) <= 5:
-                current["prefix"] = prefix
-        if "logs_channel" in payload:
-            raw = str(payload["logs_channel"]).strip()
-            if raw.isdigit():
-                current["logs_channel_id"] = int(raw)
-            else:
-                current.pop("logs_channel_id", None)
+        # A dashboard owner can only configure IDs that belong to this guild.
+        for key, value in payload.items():
+            if value is None:
+                continue
+            if key.endswith("_channel_id") or key.endswith("_category_id"):
+                channel = guild.get_channel(int(value))
+                expected = discord.CategoryChannel if key.endswith("_category_id") else discord.TextChannel
+                if not isinstance(channel, expected):
+                    print(f"Website setting {key!r} ignored for guild {guild_id}: channel not found or wrong type.")
+                    payload[key] = None
+            elif key.endswith("_role_id"):
+                if guild.get_role(int(value)) is None:
+                    print(f"Website setting {key!r} ignored for guild {guild_id}: role not found.")
+                    payload[key] = None
+        previous_anti_raid = bool(current.get("anti_raid", False))
+        current.update(payload)
+        if "anti_raid" in payload and payload["anti_raid"] and not previous_anti_raid:
+            changed, rate_limited, total = await apply_external_app_lock(guild)
+            print(f"Website enabled anti-raid for {guild_id}: protected {changed}/{total} channels.")
+        if ("appeal_server_id" in payload or "appeal_invite_url" in payload) and current.get("appeal_server_id") and current.get("appeal_invite_url"):
+            conn = db_connect()
+            conn.execute(
+                "INSERT OR REPLACE INTO appeal_links(main_guild_id,appeal_guild_id,invite_url) VALUES(?,?,?)",
+                (guild_id, int(current["appeal_server_id"]), str(current["appeal_invite_url"])),
+            )
+            conn.commit()
+            conn.close()
         save_settings(guild_id, current)
+        await refresh_setup_dashboard(guild)
         return
 
     if job.get("kind") == "action" and payload.get("action") == "sync_setup":
         refreshed = await refresh_setup_dashboard(guild)
         if not refreshed:
             print(f"Website requested setup sync for {guild_id}, but no saved !setup dashboard exists.")
+    elif job.get("kind") == "action":
+        action = payload.get("action")
+        try:
+            if action == "post_ticket_panel":
+                channel = guild.get_channel(setting(guild, "ticket_panel_channel_id")) if setting(guild, "ticket_panel_channel_id") else None
+                if isinstance(channel, discord.TextChannel):
+                    await channel.send(embed=embed("🎫 Open a Nightfall ticket", "Choose a topic below and our team will be with you shortly."), view=TicketPanelView(guild.id))
+            elif action == "post_verification_panel":
+                await post_verification_panel(guild)
+            elif action == "post_feedback_panel":
+                await post_feedback_panel(guild)
+            elif action == "post_application_panel":
+                await post_staff_application_panel(guild)
+            elif action == "toggle_jail":
+                if setting(guild, "jail_enabled", False):
+                    set_setting(guild, "jail_enabled", False)
+                else:
+                    await configure_jail_system(guild)
+            await refresh_setup_dashboard(guild)
+        except (discord.Forbidden, discord.HTTPException, ValueError) as exc:
+            print(f"Website action {action!r} failed for guild {guild_id}: {type(exc).__name__}")
 
 
 async def nightfall_website_bridge():

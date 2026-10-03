@@ -5,7 +5,7 @@ import time
 from collections import deque
 from hmac import compare_digest
 from functools import wraps
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import requests
 import psycopg
@@ -26,6 +26,27 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
 ADMINISTRATOR = 0x8
+
+# Only settings that the bot actually reads are editable from the dashboard.
+CHANNEL_SETTINGS = {
+    "logs_channel_id", "ticket_category_id", "ticket_panel_channel_id",
+    "welcome_channel_id", "leave_channel_id", "verification_channel_id",
+    "command_channel_id", "vouch_channel_id", "feedback_channel_id",
+    "proof_channel_id", "gamble_channel_id", "staff_application_channel_id",
+    "jail_category_id", "jail_chat_channel_id", "jail_appeal_channel_id",
+    "autoreaction_channel_id",
+}
+ROLE_SETTINGS = {"staff_role_id", "autorole_id", "booster_role_id", "jail_role_id", "verified_role_id", "unverified_role_id"}
+TOGGLE_SETTINGS = {"anti_raid", "anti_nuke", "anti_link", "j4j", "j4j_dm", "jail_enabled"}
+TEXT_SETTINGS = {"prefix", "autoreaction_emoji", "appeal_invite_url"}
+EDITABLE_SETTINGS = CHANNEL_SETTINGS | ROLE_SETTINGS | TOGGLE_SETTINGS | TEXT_SETTINGS | {"appeal_server_id", "ticket_options", "ticket_questions"}
+SETTING_GROUPS = [
+    ("general", "General", "Identity and moderation logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel ID", "id"), ("staff_role_id", "Staff role ID", "id")]),
+    ("community", "Community", "Welcome, feedback, invites, applications and more", [("welcome_channel_id", "Welcome channel ID", "id"), ("leave_channel_id", "Leave channel ID", "id"), ("autorole_id", "Auto role ID", "id"), ("vouch_channel_id", "Vouch channel ID", "id"), ("feedback_channel_id", "Feedback channel ID", "id"), ("proof_channel_id", "Proof channel ID", "id"), ("booster_role_id", "Booster role ID", "id"), ("staff_application_channel_id", "Applications channel ID", "id"), ("autoreaction_channel_id", "Auto reaction channel ID", "id"), ("autoreaction_emoji", "Auto reaction emoji", "text")]),
+    ("security", "Security", "Protection, verification and command access", [("anti_raid", "Anti raid protection", "toggle"), ("anti_nuke", "Anti nuke protection", "toggle"), ("anti_link", "Block links", "toggle"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel ID", "id"), ("command_channel_id", "Command only channel ID", "id")]),
+    ("tickets", "Tickets & appeals", "Ticket panel, categories and appeal routing", [("ticket_panel_channel_id", "Ticket panel channel ID", "id"), ("ticket_category_id", "Ticket category ID", "id"), ("ticket_options", "Ticket types (comma separated)", "list"), ("ticket_questions", "Ticket questions (JSON)", "json"), ("appeal_server_id", "Appeal server ID", "id"), ("appeal_invite_url", "Appeal invite URL", "text")]),
+    ("moderation", "Moderation & jail", "Jail roles, rooms and game channel", [("jail_role_id", "Jail role ID", "id"), ("jail_category_id", "Jail category ID", "id"), ("jail_chat_channel_id", "Jail chat channel ID", "id"), ("jail_appeal_channel_id", "Jail appeals channel ID", "id"), ("gamble_channel_id", "Games channel ID", "id")]),
+]
 
 
 def discord_headers():
@@ -381,6 +402,7 @@ def dashboard(guild_id):
         guild=guild,
         settings=settings,
         bot_error=bot_error,
+        setting_groups=SETTING_GROUPS,
     )
 
 
@@ -392,7 +414,49 @@ def update_settings(guild_id):
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
         return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
-    job_id = queue_bot_job(guild_id, "settings", payload)
+    if not isinstance(payload, dict) or not payload:
+        return jsonify({"ok": False, "error": "Choose at least one setting to update."}), 400
+    clean = {}
+    for key, value in payload.items():
+        if key not in EDITABLE_SETTINGS:
+            return jsonify({"ok": False, "error": f"Unsupported setting: {key}."}), 400
+        if key in CHANNEL_SETTINGS | ROLE_SETTINGS | {"appeal_server_id"}:
+            raw = str(value or "").strip()
+            if raw and (not raw.isdigit() or len(raw) > 22):
+                return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be a numeric Discord ID."}), 400
+            clean[key] = int(raw) if raw else None
+        elif key in TOGGLE_SETTINGS:
+            if not isinstance(value, bool):
+                return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be on or off."}), 400
+            clean[key] = value
+        elif key == "prefix":
+            raw = str(value).strip()
+            if not 1 <= len(raw) <= 5:
+                return jsonify({"ok": False, "error": "Prefix must contain 1–5 characters."}), 400
+            clean[key] = raw
+        elif key == "ticket_questions":
+            if not isinstance(value, dict) or len(value) > 10 or any(not isinstance(k, str) or not isinstance(v, list) or len(v) > 5 or any(not isinstance(q, str) or len(q) > 300 for q in v) for k, v in value.items()):
+                return jsonify({"ok": False, "error": "Ticket questions must be a JSON object with up to five short questions per ticket type."}), 400
+            clean[key] = value
+        elif key == "ticket_options":
+            if not isinstance(value, list) or not 1 <= len(value) <= 10:
+                return jsonify({"ok": False, "error": "Add between 1 and 10 ticket options."}), 400
+            options = [str(x).strip().lower()[:40] for x in value if str(x).strip()]
+            if not options:
+                return jsonify({"ok": False, "error": "Ticket options cannot be empty."}), 400
+            clean[key] = options
+        elif key == "appeal_invite_url":
+            raw = str(value).strip()
+            parsed = urlparse(raw) if raw else None
+            if raw and not (parsed.scheme == "https" and parsed.netloc.lower() in {"discord.gg", "discord.com"} and (parsed.netloc.lower() == "discord.gg" or parsed.path.startswith("/invite/"))):
+                return jsonify({"ok": False, "error": "Use a valid HTTPS Discord invite URL."}), 400
+            clean[key] = raw
+        else:
+            raw = str(value).strip()
+            if key == "autoreaction_emoji" and len(raw) > 50:
+                return jsonify({"ok": False, "error": "Emoji value is too long."}), 400
+            clean[key] = raw
+    job_id = queue_bot_job(guild_id, "settings", clean)
     return jsonify({"ok": True, "queued": True, "job_id": job_id})
 
 
@@ -404,8 +468,19 @@ def dashboard_action(guild_id):
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
         return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
-    if payload.get("action") != "sync_setup":
+    allowed_actions = {"sync_setup", "post_ticket_panel", "post_verification_panel", "post_feedback_panel", "post_application_panel", "toggle_jail"}
+    if payload.get("action") not in allowed_actions:
         return jsonify({"ok": False, "error": "Unknown action."}), 400
+    guild_snapshot = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
+    settings = guild_snapshot.get("settings", {})
+    required = {
+        "post_ticket_panel": ("ticket_panel_channel_id", "Set a ticket panel channel in Tickets & appeals first."),
+        "post_verification_panel": ("verification_channel_id", "Set a verification channel in Security first."),
+        "post_feedback_panel": ("feedback_channel_id", "Set a feedback channel in Community first."),
+        "post_application_panel": ("staff_application_channel_id", "Set an applications channel in Community first."),
+    }
+    if payload["action"] in required and not settings.get(required[payload["action"]][0]):
+        return jsonify({"ok": False, "error": required[payload["action"]][1]}), 400
     job_id = queue_bot_job(guild_id, "action", payload)
     return jsonify({"ok": True, "queued": True, "job_id": job_id})
 

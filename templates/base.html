@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Nightfall{% endblock %}</title>
   <meta name="description" content="Nightfall — powerful all-in-one Discord bot for moderation, security, tickets, invites, games and more.">
+  <meta name="theme-color" content="#080914">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='nightfall-logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-motion.css') }}">
 </head>
 <body>
-<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall"><div class="loader-name">NIGHTFALL</div><div class="loader-status"><span></span> LOADING</div></div>
+{% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div></div>{% endif %}
 <div class="bg-grid"></div>
 <nav class="nav">
   <a class="brand" href="/"><img class="brand-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall"><span>Nightfall</span></a>
