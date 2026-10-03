@@ -1,7 +1,7 @@
 import os
 import secrets
 from functools import wraps
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 import requests
 import psycopg
@@ -41,6 +41,8 @@ def login_required(fn):
 def bot_request(method, path, **kwargs):
     if not BOT_API_URL:
         return {"ok": False, "error": "BOT_API_URL is not configured."}, 503
+    if urlsplit(BOT_API_URL).scheme != "https":
+        return {"ok": False, "error": "BOT_API_URL must use HTTPS to protect the bot API key."}, 503
     headers = kwargs.pop("headers", {})
     headers["X-Testiny-API-Key"] = BOT_API_SECRET
     headers["Content-Type"] = "application/json"
