@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import io
 import json
 import os
@@ -1975,8 +1976,192 @@ class J4JTicketView(discord.ui.View):
 async def help_command(ctx: commands.Context):
     e = embed("📚 Nightfall command center", "Everything uses the `!` prefix.\n\n**Moderation**\n`!ban @user [reason]` • `!kick @user [reason]` • `!warn @user [reason]` • `!timeout @user <duration>` • `!lock` • `!slowmode <seconds>`\n\n**Community**\n`!afk [reason]` • `!invites @user` • `!invited @user` • `!inviter @user` • `!reset invites @user`\n\n**Tickets / setup**\n`!setup` • `!jail @user [reason]` • `!unjail @user [reason]` • `!ticket panel` • `!ticket questions <type> q1 | q2 | ...` • `!apeal server`\n\n**Fun**\n`!giveaway <duration> <winners> <prize> [| image_url]` • `!giveaway reroll <message_id>` • `!giveaway end <message_id>` • `!highlow <bet>` • `!coinflip <bet> <heads/tails>` • `!blackjack <bet>` • `!roulette <bet> <red/black/number>` • `!daily`\n\n**Utilities**\n`!stick <message>` • `!unstick` • `!role give @user @role` • `!role make <name> <hex>` • `!autoreaction #channel 😀` • `!proof please`", EMBED_COLOR)
     e.add_field(name="🌙 New tools", value="`!purge <1–100>` • `!warnings @user` • `!clearwarnings @user` (admins) • `!announce #channel <message>` • `!poll Question | Option 1 | Option 2`", inline=False)
+    e.add_field(name="✨ More to explore", value="`!8ball <question>` • `!choose a | b` • `!roll 3d8` • `!rps rock` • `!avatar` • `!userinfo` • `!serverinfo` • `!quote` • `!reverse text` • `!mock text` • `!color 8B5CF6` • `!aiimage <description>` • `!about`", inline=False)
     e.set_thumbnail(url=bot.user.display_avatar.url if bot.user else discord.Embed.Empty)
     await ctx.send(embed=e)
+
+
+@bot.command(name="about")
+async def about_command(ctx: commands.Context):
+    description = (
+        "🌙 **Nightfall** is your all-in-one Discord guardian: smooth moderation, "
+        "smart server safety, tickets, invites, giveaways, games, and creative tools.\n\n"
+        "Set up your server with `!setup`, then let the night run smoother. ✨"
+    )
+    e = embed("🌌 NIGHTFALL • 1.0v LAUNCH", description, EMBED_COLOR)
+    if bot.user:
+        e.set_thumbnail(url=bot.user.display_avatar.url)
+    await ctx.send(embed=e)
+
+
+@bot.command(name="8ball")
+async def eight_ball(ctx: commands.Context, *, question: str):
+    if not question.strip():
+        await ctx.send("Ask me a question first. 🎱")
+        return
+    answers = (
+        "Without a doubt.", "Absolutely. ✨", "The signs point to yes.",
+        "Ask again after a snack.", "I can’t tell yet.", "Probably not.",
+        "My sources say no.", "The night says yes. 🌙", "Outlook is looking bright.",
+        "I wouldn’t count on it.",
+    )
+    await ctx.send(embed=embed("🎱 The Nightfall 8-Ball", random.choice(answers), INFO))
+
+
+@bot.command(name="choose")
+async def choose_command(ctx: commands.Context, *, options: str):
+    choices = [item.strip() for item in options.split("|") if item.strip()]
+    if len(choices) < 2:
+        await ctx.send("Give me at least two choices, separated by `|`. Example: `!choose tea | coffee`")
+        return
+    if len(choices) > 20:
+        await ctx.send("Keep it to 20 choices or fewer.")
+        return
+    await ctx.send(embed=embed("🌙 Nightfall chooses…", random.choice(choices)[:900], EMBED_COLOR))
+
+
+@bot.command(name="roll")
+async def roll_command(ctx: commands.Context, dice: str = "1d6"):
+    match = re.fullmatch(r"(?:(\d{1,2})d)?(\d{1,4})", dice.strip().lower())
+    if not match:
+        await ctx.send("Use `!roll`, `!roll 20`, or `!roll 3d8`.")
+        return
+    count = int(match.group(1) or 1)
+    sides = int(match.group(2))
+    if count < 1 or count > 20 or sides < 2 or sides > 1000:
+        await ctx.send("Roll 1–20 dice with 2–1000 sides each.")
+        return
+    results = [random.randint(1, sides) for _ in range(count)]
+    detail = " • ".join(f"**{value}**" for value in results)
+    await ctx.send(embed=embed("🎲 The dice are cast", f"{detail}\n\n**Total:** {sum(results)}", INFO))
+
+
+@bot.command(name="rps")
+async def rps_command(ctx: commands.Context, choice: str):
+    options = {"rock": "🪨", "paper": "📄", "scissors": "✂️"}
+    player = choice.casefold()
+    if player not in options:
+        await ctx.send("Choose `rock`, `paper`, or `scissors`. Example: `!rps rock`")
+        return
+    bot_choice = random.choice(tuple(options))
+    result = "It's a draw!" if player == bot_choice else (
+        "You win! ✨" if (player, bot_choice) in {("rock", "scissors"), ("paper", "rock"), ("scissors", "paper")} else "Nightfall wins this round. 🌙"
+    )
+    await ctx.send(embed=embed("✊ Rock, paper, scissors", f"You: {options[player]} **{player.title()}**\nNightfall: {options[bot_choice]} **{bot_choice.title()}**\n\n{result}", EMBED_COLOR))
+
+
+@bot.command(name="avatar")
+async def avatar_command(ctx: commands.Context, member: Optional[discord.Member] = None):
+    target = member or ctx.author
+    e = embed(f"🖼️ {target.display_name}'s avatar", f"[Open full-size avatar]({target.display_avatar.url})", EMBED_COLOR)
+    e.set_image(url=target.display_avatar.url)
+    await ctx.send(embed=e)
+
+
+@bot.command(name="userinfo")
+async def userinfo_command(ctx: commands.Context, member: Optional[discord.Member] = None):
+    target = member or ctx.author
+    roles = [role.mention for role in reversed(target.roles) if role != ctx.guild.default_role]
+    role_text = ", ".join(roles[:12]) or "No roles"
+    if len(roles) > 12:
+        role_text += f" and {len(roles) - 12} more"
+    e = embed(f"👤 {target.display_name}", f"**Account created:** <t:{int(target.created_at.timestamp())}:R>\n**Joined server:** {f'<t:{int(target.joined_at.timestamp())}:R>' if target.joined_at else 'Unknown'}\n**Top role:** {target.top_role.mention}\n**Roles:** {role_text}", EMBED_COLOR)
+    e.set_thumbnail(url=target.display_avatar.url)
+    e.set_footer(text=f"User ID: {target.id}")
+    await ctx.send(embed=e)
+
+
+@bot.command(name="serverinfo")
+@commands.guild_only()
+async def serverinfo_command(ctx: commands.Context):
+    guild = ctx.guild
+    owner = guild.get_member(guild.owner_id) if guild.owner_id else None
+    text_channels = len(guild.text_channels)
+    voice_channels = len(guild.voice_channels)
+    e = embed(f"🏰 {guild.name}", f"**Owner:** {owner.mention if owner else 'Unknown'}\n**Members:** {guild.member_count:,}\n**Channels:** {text_channels} text · {voice_channels} voice\n**Roles:** {len(guild.roles)}\n**Created:** <t:{int(guild.created_at.timestamp())}:D>", EMBED_COLOR)
+    e.set_thumbnail(url=guild.icon.url if guild.icon else (bot.user.display_avatar.url if bot.user else discord.Embed.Empty))
+    e.set_footer(text=f"Server ID: {guild.id}")
+    await ctx.send(embed=e)
+
+
+@bot.command(name="quote")
+async def quote_command(ctx: commands.Context):
+    quotes = (
+        "A good community is built one kind message at a time.",
+        "Even the longest night makes room for a new beginning.",
+        "Be the reason someone enjoys being here.",
+        "Small acts of trust make strong communities.",
+        "The best server feature is the people in it.",
+    )
+    await ctx.send(embed=embed("📜 A little Nightfall wisdom", f"“{random.choice(quotes)}”", INFO))
+
+
+@bot.command(name="reverse")
+async def reverse_command(ctx: commands.Context, *, text: str):
+    if not text.strip():
+        await ctx.send("Give me something to reverse. Example: `!reverse nightfall`")
+        return
+    await ctx.send(text[::-1][:1900], allowed_mentions=discord.AllowedMentions.none())
+
+
+@bot.command(name="mock")
+async def mock_command(ctx: commands.Context, *, text: str):
+    if not text.strip():
+        await ctx.send("Give me something to mOcK. Example: `!mock that was easy`")
+        return
+    mocked = "".join(char.upper() if index % 2 else char.lower() for index, char in enumerate(text))
+    await ctx.send(mocked[:1900], allowed_mentions=discord.AllowedMentions.none())
+
+
+@bot.command(name="color")
+async def color_command(ctx: commands.Context, hex_code: str):
+    value = hex_code.strip().removeprefix("#")
+    if not re.fullmatch(r"[0-9a-fA-F]{6}", value):
+        await ctx.send("Use a six-digit hex color, like `!color 8B5CF6`.")
+        return
+    color = discord.Color(int(value, 16))
+    e = discord.Embed(title=f"🎨 #{value.upper()}", description=f"Preview for **{ctx.author.display_name}**", color=color)
+    await ctx.send(embed=e)
+
+
+@bot.command(name="aiimage", aliases=["aiart"])
+@commands.guild_only()
+@commands.cooldown(1, 90, commands.BucketType.user)
+async def aiimage_command(ctx: commands.Context, *, prompt: str):
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        await ctx.send(embed=embed("🌌 AI image is not connected yet", "The server owner needs to add `OPENAI_API_KEY` to the KataBump environment variables and restart Nightfall. Image generations use the OpenAI API and may incur usage charges.", WARNING))
+        return
+    prompt = prompt.strip()
+    if len(prompt) < 4 or len(prompt) > 700:
+        await ctx.send("Give me an image description between 4 and 700 characters.")
+        return
+    await ctx.send(embed=embed("🎨 Nightfall is creating your image", "This can take a little while. ✨", INFO))
+    try:
+        response = await asyncio.to_thread(
+            requests.post,
+            "https://api.openai.com/v1/images/generations",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": "gpt-image-2.5-flare", "prompt": prompt, "size": "1024x1024", "quality": "low", "output_format": "png"},
+            timeout=(15, 150),
+        )
+        if response.status_code != 200:
+            if response.status_code in (401, 403):
+                message = "The image service key is invalid or not enabled for image generation. Ask the server owner to check it."
+            elif response.status_code == 429:
+                message = "The image service is busy or out of quota. Please try again later."
+            else:
+                message = f"The image service returned an error ({response.status_code}). Please try again later."
+            await ctx.send(embed=embed("❌ Image generation failed", message, WARNING))
+            return
+        encoded = response.json()["data"][0]["b64_json"]
+        image_bytes = base64.b64decode(encoded, validate=True)
+        file = discord.File(io.BytesIO(image_bytes), filename="nightfall-ai.png")
+        e = embed("🌌 Made with Nightfall AI", f"**Prompt:** {prompt[:900]}", EMBED_COLOR)
+        await ctx.send(embed=e, file=file)
+    except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
+        print(f"Nightfall image generation failed: {type(exc).__name__}")
+        await ctx.send(embed=embed("❌ Image generation failed", "I couldn't finish that image. Please try a simpler prompt in a moment.", WARNING))
 
 
 @bot.command()
@@ -2736,15 +2921,7 @@ PRESENCE_INDEX = 0
 
 @tasks.loop(seconds=35)
 async def nightfall_presence():
-    global PRESENCE_INDEX
-    activities = [
-        discord.Activity(type=discord.ActivityType.watching, name="your community"),
-        discord.Activity(type=discord.ActivityType.listening, name="the night"),
-        discord.Game(name=f"!help • {len(bot.guilds)} communities"),
-        discord.Activity(type=discord.ActivityType.watching, name="for a safer server"),
-    ]
-    await bot.change_presence(activity=activities[PRESENCE_INDEX % len(activities)], status=discord.Status.online)
-    PRESENCE_INDEX += 1
+    await bot.change_presence(activity=discord.Game(name="!setup to start!"), status=discord.Status.online)
 
 @bot.event
 async def on_ready():

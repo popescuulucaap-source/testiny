@@ -13,6 +13,8 @@ NIGHTFALL_WEBSITE_URL=https://testiny-7wuu.onrender.com
 NIGHTFALL_BRIDGE_SECRET=<same long random secret as Render>
 ```
 
+To enable `!aiimage`, add `OPENAI_API_KEY` as a private KataBump environment variable and restart the bot. Image generation uses OpenAI's image API and can incur API usage charges; the command stays unavailable until the key is configured. Never put the key in GitHub or share it in chat.
+
 The bridge uses HTTPS from KataBump to Render. The bot checks in every 10 seconds, reports its guild list and settings, and pulls dashboard changes. Do not add an inbound listener or expose port `20119` for the website bridge.
 
 ## Render website
@@ -24,3 +26,9 @@ Keep Render's existing `SESSION_SECRET`, Discord OAuth credentials, and database
 ## Dashboard behavior
 
 The command prefix starts as `!`, preserving the existing commands. An administrator can change the prefix or logs channel from the website dashboard. Settings and setup refresh actions are queued by the website and picked up on the bot's next HTTPS check-in. The dashboard cache is refreshed every 10 seconds while the bot is online.
+
+## Discord profile copy
+
+The `!about` command and website show the `1.0v LAUNCH` label. To use the same copy in Discord's Developer Portal profile, paste:
+
+> 🌙 Nightfall is your all-in-one Discord guardian: smooth moderation, smart server safety, tickets, invites, giveaways, games, and creative tools. Set up your server with !setup, then let the night run smoother. ✨

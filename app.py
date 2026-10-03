@@ -265,6 +265,7 @@ def index():
         ("👋","Community","Welcome, leave, invites, vouches, feedback and boosters."),
         ("🎮","Games","High-Low, Coinflip, Blackjack, Roulette and daily coins."),
         ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
+        ("🎨","Creative tools","Generate custom images with the optional AI image command; an API key is required."),
     ]
     return render_template("index.html", features=features)
 
@@ -535,6 +536,7 @@ def health():
 
 COMMANDS = [
     ("!help", "Utility", "Show the bot's command help."),
+    ("!about", "Utility", "Show Nightfall's launch description: 1.0v LAUNCH."),
     ("!setup", "Admin tools", "Open the interactive server setup dashboard and configure features there."),
     ("!ban @member [reason]", "Moderation", "Ban a member. Staff only."),
     ("!kick @member [reason]", "Moderation", "Kick a member. Staff only."),
@@ -551,6 +553,18 @@ COMMANDS = [
     ("!announce #channel <message>", "Admin tools", "Post a server announcement."),
     ("!poll <question and options>", "Community", "Create a reaction poll."),
     ("!afk [reason]", "Utility", "Set your AFK status."),
+    ("!8ball <question>", "Fun", "Ask the Nightfall 8-Ball a question."),
+    ("!choose <option> | <option> ...", "Fun", "Let Nightfall pick one of up to 20 options."),
+    ("!roll [NdM]", "Fun", "Roll a die, such as `!roll 20` or `!roll 3d8`."),
+    ("!rps <rock|paper|scissors>", "Fun", "Play rock, paper, scissors against Nightfall."),
+    ("!quote", "Fun", "Get a little Nightfall wisdom."),
+    ("!reverse <text>", "Fun", "Reverse a short line of text."),
+    ("!mock <text>", "Fun", "mOcK a short line of text."),
+    ("!color <hex>", "Utility", "Preview a six-digit color, such as `!color 8B5CF6`."),
+    ("!avatar [@member]", "Utility", "Show your avatar or another member's avatar."),
+    ("!userinfo [@member]", "Utility", "Show account, server join, and role details."),
+    ("!serverinfo", "Utility", "Show useful information about this server."),
+    ("!aiimage <description>", "Creative AI", "Generate an image with OpenAI. Requires `OPENAI_API_KEY` on KataBump; API usage may incur charges. Alias: `!aiart`."),
     ("!ticket", "Tickets", "Show ticket command usage."),
     ("!ticket panel", "Tickets", "Post the configured ticket panel."),
     ("!ticket questions <type> <questions>", "Tickets", "Set questions for a ticket type."),

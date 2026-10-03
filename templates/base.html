@@ -4,25 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Nightfall{% endblock %}</title>
-  <meta name="description" content="Nightfall — powerful all-in-one Discord bot for moderation, security, tickets, invites, games and more.">
+  <meta name="description" content="🌙 Nightfall is your Discord's midnight guardian: moderation, server safety, tickets, creative tools, games, and more. 1.0v LAUNCH.">
   <meta name="theme-color" content="#080914">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='nightfall-logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-motion.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=4">
 </head>
 <body>
 {% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div></div>{% endif %}
 <div class="bg-grid"></div>
 <nav class="nav">
-  <a class="brand" href="/"><img class="brand-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall"><span>Nightfall</span></a>
+  <a class="brand" href="/" aria-label="Nightfall home"><img class="brand-wordmark" src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall"></a>
   <div class="nav-links">
     <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>
     {% if session.get('user') %}<a class="nav-pill" href="/servers">Dashboard</a>{% else %}<a class="nav-pill" href="/login">Dashboard</a>{% endif %}
   </div>
 </nav>
 <main>{% block content %}{% endblock %}</main>
-<footer><div><b>Nightfall</b><span> • Built for communities that want more.</span></div><div><a href="/guidelines">Rules & Guidelines</a><span> · </span><a href="/announcements">Updates</a></div></footer>
+<footer><div><b>Nightfall</b><span> • 1.0v LAUNCH · Your community, after dark.</span></div><div><a href="/guidelines">Rules & Guidelines</a><span> · </span><a href="/announcements">Updates</a></div></footer>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
