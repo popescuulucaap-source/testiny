@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Testiny • Your Servers{% endblock %}
+{% block title %}Nightfall • Your Servers{% endblock %}
 {% block content %}
 <section class="page-head compact">
   <span class="eyebrow">DISCORD MANAGEMENT</span>
@@ -14,7 +14,7 @@
     {% else %}
       <div class="server-icon">{{ guild.name[:1]|upper }}</div>
     {% endif %}
-    <div><h3>{{ guild.name }}</h3><p>{% if guild.bot_present %}🟢 Testiny is connected{% else %}⚪ Add Testiny first{% endif %}</p></div>
+    <div><h3>{{ guild.name }}</h3><p>{% if guild.bot_present %}🟢 Nightfall is connected{% else %}⚪ Add Nightfall first{% endif %}</p></div>
     <span>→</span>
   </a>
 {% else %}
