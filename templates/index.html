@@ -8,13 +8,13 @@
       <h1>Your server.<br><span>After dark.</span></h1>
       <p class="lead">🌙 Nightfall is your all-in-one Discord guardian: smooth moderation, smart server safety, tickets, invites, giveaways, games, and creative tools. Set up your server with <code>!setup</code>, then let the night run smoother. ✨</p>
       <div class="actions"><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a><a class="btn ghost" href="/commands">Explore commands <span aria-hidden="true">→</span></a></div>
-      <div class="trust-row"><span>✦ 1.0v LAUNCH</span><span>✦ Admin controls</span><span>✦ 56+ commands</span></div>
+      <div class="trust-row"><span>✦ 1.0v LAUNCH</span><span>✦ Admin controls</span><span>✦ {{ command_count }} commands</span></div>
     </div>
     <div class="hero-card home-visual" aria-label="Nightfall bird emblem">
       <div class="visual-halo"></div><div class="visual-orbit visual-orbit-one"></div><div class="visual-orbit visual-orbit-two"></div>
       <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span><span class="visual-star star-three">✦</span>
       <img class="home-mark" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bird logo">
-      <div class="visual-caption"><span class="visual-caption-mark"><i></i></span><div><b>Nightfall</b><small>Your server, in good hands.</small></div><span class="visual-caption-tools">56+ commands</span></div>
+      <div class="visual-caption"><span class="visual-caption-mark"><i></i></span><div><b>Nightfall</b><small>Your server, in good hands.</small></div><span class="visual-caption-tools">{{ command_count }} commands</span></div>
     </div>
   </section>
 
@@ -37,7 +37,7 @@
     <div class="workflow-copy"><span class="eyebrow">YOUR SERVER, IN SYNC</span><h2>Less tab-hopping.<br><span class="heading-accent">More time together.</span></h2><p>Connect your Discord account and manage Nightfall’s server settings from a focused control center. Publish panels, tune security and shape the way your community runs.</p><div class="workflow-points"><div><span>01</span><b>Connect your server</b></div><div><span>02</span><b>Set up the tools you need</b></div><div><span>03</span><b>Let Nightfall handle the busywork</b></div></div><a class="btn primary" href="/login">Open the dashboard <span aria-hidden="true">→</span></a></div>
   </section>
 
-  <section class="home-command-band" id="commands"><div><span class="eyebrow">THE COMMAND LIBRARY</span><h2>Clear commands.<br>Quick answers.</h2><p>Browse 56+ tools, search by name or task, and copy a command format in one click.</p><a class="btn ghost" href="/commands">Find your command <span aria-hidden="true">↗</span></a></div><div class="command-stack" aria-hidden="true"><div class="command-line"><span>!</span> setup <i>SERVER CONFIGURATION</i></div><div class="command-line"><span>!</span> 8ball will it be a good night? <i>FUN</i></div><div class="command-line"><span>!</span> aiimage a moonlit forest <i>CREATIVE AI</i></div><div class="command-line"><span>!</span> ticket panel <i>COMMUNITY SUPPORT</i></div></div></section>
+  <section class="home-command-band" id="commands"><div><span class="eyebrow">THE COMMAND LIBRARY</span><h2>Clear commands.<br>Quick answers.</h2><p>Browse {{ command_count }} tools, search by name or task, and copy a command format in one click.</p><a class="btn ghost" href="/commands">Find your command <span aria-hidden="true">↗</span></a></div><div class="command-stack" aria-hidden="true"><div class="command-line"><span>!</span> setup <i>SERVER CONFIGURATION</i></div><div class="command-line"><span>!</span> 8ball will it be a good night? <i>FUN</i></div><div class="command-line"><span>!</span> ask why is the sky blue? <i>AI STUDIO</i></div><div class="command-line"><span>!</span> ticket panel <i>COMMUNITY SUPPORT</i></div></div></section>
 
   <section class="cta home-cta" id="support"><div><span class="eyebrow">YOUR COMMUNITY, AFTER DARK</span><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
 </div>

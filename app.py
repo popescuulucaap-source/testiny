@@ -265,9 +265,9 @@ def index():
         ("👋","Community","Welcome, leave, invites, vouches, feedback and boosters."),
         ("🎮","Games","High-Low, Coinflip, Blackjack, Roulette and daily coins."),
         ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
-        ("🎨","Creative tools","Generate custom images with the optional AI image command; an API key is required."),
+        ("🎨","AI studio","Ask questions, make stories, jokes, poems, riddles, captions and images. Requires a private OpenAI API key; usage may incur charges."),
     ]
-    return render_template("index.html", features=features)
+    return render_template("index.html", features=features, command_count=len(COMMANDS))
 
 @app.route("/admin", methods=["GET","POST"])
 def admin_login():
@@ -565,6 +565,16 @@ COMMANDS = [
     ("!userinfo [@member]", "Utility", "Show account, server join, and role details."),
     ("!serverinfo", "Utility", "Show useful information about this server."),
     ("!aiimage <description>", "Creative AI", "Generate an image with OpenAI. Requires `OPENAI_API_KEY` on KataBump; API usage may incur charges. Alias: `!aiart`."),
+    ("!ask <question>", "Creative AI", "Ask Nightfall AI a general question. Requires a private OpenAI API key; usage may incur charges."),
+    ("!story <idea>", "Creative AI", "Generate a short original story from an idea."),
+    ("!roast [@member]", "Creative AI", "Get a gentle, playful roast. Keeps it friendly."),
+    ("!compliment [@member]", "Creative AI", "Generate a warm compliment."),
+    ("!riddle", "Creative AI", "Get an original riddle with its answer."),
+    ("!poem [topic]", "Creative AI", "Generate a short poem about a topic."),
+    ("!joke [topic]", "Creative AI", "Get a clean AI-generated joke."),
+    ("!caption <idea>", "Creative AI", "Generate a short caption and hashtags."),
+    ("!namegen <theme>", "Creative AI", "Generate eight names for a theme. Alias: !names."),
+    ("!quiz <topic>", "Creative AI", "Generate one multiple-choice question with an answer."),
     ("!ticket", "Tickets", "Show ticket command usage."),
     ("!ticket panel", "Tickets", "Post the configured ticket panel."),
     ("!ticket questions <type> <questions>", "Tickets", "Set questions for a ticket type."),

@@ -41,6 +41,10 @@ NIGHTFALL_WEBSITE_URL = os.getenv("NIGHTFALL_WEBSITE_URL", "").strip().rstrip("/
 NIGHTFALL_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
 BRIDGE_POLL_SECONDS = 10
 bridge_task = None
+OPENAI_TEXT_MODEL = os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini").strip() or "gpt-5.4-mini"
+AI_TEXT_COOLDOWN_SECONDS = 20
+AI_TEXT_LAST_USED: dict[int, float] = {}
+AI_TEXT_LOCK = asyncio.Lock()
 
 
 async def command_prefix_for(message_bot, message):
@@ -1976,7 +1980,8 @@ class J4JTicketView(discord.ui.View):
 async def help_command(ctx: commands.Context):
     e = embed("📚 Nightfall command center", "Everything uses the `!` prefix.\n\n**Moderation**\n`!ban @user [reason]` • `!kick @user [reason]` • `!warn @user [reason]` • `!timeout @user <duration>` • `!lock` • `!slowmode <seconds>`\n\n**Community**\n`!afk [reason]` • `!invites @user` • `!invited @user` • `!inviter @user` • `!reset invites @user`\n\n**Tickets / setup**\n`!setup` • `!jail @user [reason]` • `!unjail @user [reason]` • `!ticket panel` • `!ticket questions <type> q1 | q2 | ...` • `!apeal server`\n\n**Fun**\n`!giveaway <duration> <winners> <prize> [| image_url]` • `!giveaway reroll <message_id>` • `!giveaway end <message_id>` • `!highlow <bet>` • `!coinflip <bet> <heads/tails>` • `!blackjack <bet>` • `!roulette <bet> <red/black/number>` • `!daily`\n\n**Utilities**\n`!stick <message>` • `!unstick` • `!role give @user @role` • `!role make <name> <hex>` • `!autoreaction #channel 😀` • `!proof please`", EMBED_COLOR)
     e.add_field(name="🌙 New tools", value="`!purge <1–100>` • `!warnings @user` • `!clearwarnings @user` (admins) • `!announce #channel <message>` • `!poll Question | Option 1 | Option 2`", inline=False)
-    e.add_field(name="✨ More to explore", value="`!8ball <question>` • `!choose a | b` • `!roll 3d8` • `!rps rock` • `!avatar` • `!userinfo` • `!serverinfo` • `!quote` • `!reverse text` • `!mock text` • `!color 8B5CF6` • `!aiimage <description>` • `!about`", inline=False)
+    e.add_field(name="✨ More to explore", value="`!8ball <question>` • `!choose a | b` • `!roll 3d8` • `!rps rock` • `!avatar` • `!userinfo` • `!serverinfo` • `!quote` • `!reverse text` • `!mock text` • `!color 8B5CF6` • `!about`", inline=False)
+    e.add_field(name="🤖 AI studio", value="`!ask <question>` • `!story <idea>` • `!roast [@member]` • `!compliment [@member]` • `!riddle` • `!poem [topic]` • `!joke [topic]` • `!caption <idea>` • `!namegen <theme>` • `!quiz <topic>` • `!aiimage <description>`", inline=False)
     e.set_thumbnail(url=bot.user.display_avatar.url if bot.user else discord.Embed.Empty)
     await ctx.send(embed=e)
 
@@ -2122,6 +2127,149 @@ async def color_command(ctx: commands.Context, hex_code: str):
     color = discord.Color(int(value, 16))
     e = discord.Embed(title=f"🎨 #{value.upper()}", description=f"Preview for **{ctx.author.display_name}**", color=color)
     await ctx.send(embed=e)
+
+
+def extract_response_text(data: dict) -> str:
+    direct = data.get("output_text")
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+    chunks = []
+    for item in data.get("output", []):
+        if not isinstance(item, dict) or item.get("type") != "message":
+            continue
+        for part in item.get("content", []):
+            if isinstance(part, dict) and part.get("type") == "output_text" and isinstance(part.get("text"), str):
+                chunks.append(part["text"])
+    return "\n".join(chunks).strip()
+
+
+async def generate_ai_text(ctx: commands.Context, task: str, prompt: str, *, max_prompt: int = 700):
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        await ctx.send(embed=embed(
+            "🤖 AI studio needs a key",
+            "The server owner can enable AI commands by adding `OPENAI_API_KEY` privately in KataBump. Requests use the OpenAI API and may incur charges.",
+            WARNING,
+        ))
+        return
+
+    prompt = prompt.strip()
+    if len(prompt) > max_prompt:
+        await ctx.send(f"Keep that prompt under {max_prompt} characters.")
+        return
+    if not prompt:
+        prompt = "Choose something fun and surprising."
+
+    now = time.monotonic()
+    async with AI_TEXT_LOCK:
+        last_used = AI_TEXT_LAST_USED.get(ctx.author.id, 0.0)
+        remaining = AI_TEXT_COOLDOWN_SECONDS - (now - last_used)
+        if remaining > 0:
+            await ctx.send(f"✨ Give the AI studio {remaining:.0f}s to cool down, then try again.", delete_after=5)
+            return
+        AI_TEXT_LAST_USED[ctx.author.id] = now
+
+    status = await ctx.send(embed=embed("🌙 Nightfall is thinking…", "A little stardust is on the way.", INFO))
+    instructions = (
+        "You are Nightfall, a friendly Discord community assistant. Follow the requested creative task. "
+        "Keep the result concise, safe for a general audience, and under 180 words. Avoid slurs, sexual content, "
+        "threats, targeted harassment, and claims that you verified facts. Never ping users or output mass mentions."
+    )
+    try:
+        response = await asyncio.to_thread(
+            requests.post,
+            "https://api.openai.com/v1/responses",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": OPENAI_TEXT_MODEL,
+                "instructions": instructions,
+                "input": f"Task: {task}\nUser request: {prompt}",
+                "max_output_tokens": 260,
+                "store": False,
+            },
+            timeout=(12, 50),
+        )
+        if response.status_code != 200:
+            if response.status_code in (401, 403):
+                message = "The AI key is invalid or does not have API access. Ask the server owner to check the private key setting."
+            elif response.status_code == 429:
+                message = "The AI service is busy or the account is out of quota. Try again later."
+            else:
+                message = f"The AI service returned an error ({response.status_code}). Try again later."
+            await status.edit(embed=embed("⚠️ AI studio unavailable", message, WARNING))
+            return
+        result = extract_response_text(response.json())
+        if not result:
+            await status.edit(embed=embed("⚠️ No answer this time", "Nightfall couldn't read the AI response. Try again shortly.", WARNING))
+            return
+        e = embed("✨ Nightfall AI studio", result[:3800], EMBED_COLOR)
+        e.set_footer(text=f"Requested by {ctx.author.display_name} • AI responses can be imperfect")
+        await status.edit(embed=e, allowed_mentions=discord.AllowedMentions.none())
+    except (requests.RequestException, ValueError, KeyError) as exc:
+        print(f"Nightfall text generation failed: {type(exc).__name__}")
+        await status.edit(embed=embed("⚠️ AI studio unavailable", "I couldn't reach the AI service. Please try again in a moment.", WARNING))
+
+
+@bot.command(name="ask")
+async def ai_ask(ctx: commands.Context, *, question: str):
+    """Ask Nightfall AI a general question."""
+    await generate_ai_text(ctx, "Answer the question clearly and briefly. If uncertain, say so.", question, max_prompt=900)
+
+
+@bot.command(name="story")
+async def ai_story(ctx: commands.Context, *, idea: str):
+    """Create a short, original story from an idea."""
+    await generate_ai_text(ctx, "Write a short, original, all-ages story with a satisfying ending.", idea, max_prompt=500)
+
+
+@bot.command(name="roast")
+async def ai_roast(ctx: commands.Context, member: Optional[discord.Member] = None):
+    """Give the caller or a member a gentle, playful roast."""
+    target = member or ctx.author
+    await generate_ai_text(ctx, "Write one gentle, silly roast. Keep it affectionate and never target identity, appearance, disability, or sensitive traits.", f"Target display name: {target.display_name}")
+
+
+@bot.command(name="compliment")
+async def ai_compliment(ctx: commands.Context, member: Optional[discord.Member] = None):
+    """Generate a kind, upbeat compliment."""
+    target = member or ctx.author
+    await generate_ai_text(ctx, "Write a warm, specific-sounding but non-personal compliment. Do not invent private facts.", f"Display name: {target.display_name}")
+
+
+@bot.command(name="riddle")
+async def ai_riddle(ctx: commands.Context):
+    """Generate an original riddle and answer."""
+    await generate_ai_text(ctx, "Create one original, solvable riddle. Give the riddle first, then put the answer on a separate line labelled Answer.", "Make it clever and suitable for a general audience.")
+
+
+@bot.command(name="poem")
+async def ai_poem(ctx: commands.Context, *, topic: str = "the night sky"):
+    """Write a short poem about a topic."""
+    await generate_ai_text(ctx, "Write a short, original poem in 4 to 8 lines.", topic, max_prompt=400)
+
+
+@bot.command(name="joke")
+async def ai_joke(ctx: commands.Context, *, topic: str = "anything"):
+    """Generate a clean, short joke."""
+    await generate_ai_text(ctx, "Tell one clean, short joke about the requested topic.", topic, max_prompt=350)
+
+
+@bot.command(name="caption")
+async def ai_caption(ctx: commands.Context, *, idea: str):
+    """Create a social caption for an idea or image description."""
+    await generate_ai_text(ctx, "Write one short, catchy social media caption and up to three relevant hashtags.", idea, max_prompt=500)
+
+
+@bot.command(name="namegen", aliases=["names"])
+async def ai_namegen(ctx: commands.Context, *, theme: str):
+    """Generate a short list of names for a theme."""
+    await generate_ai_text(ctx, "Suggest exactly 8 distinct names for the requested theme. Use a numbered list and keep each name short.", theme, max_prompt=300)
+
+
+@bot.command(name="quiz")
+async def ai_quiz(ctx: commands.Context, *, topic: str):
+    """Generate a quick question and answer for a quiz."""
+    await generate_ai_text(ctx, "Create one multiple-choice trivia question on the topic with four options, mark the correct answer, and include a one-sentence explanation. If the topic is obscure, avoid uncertain claims.", topic, max_prompt=300)
 
 
 @bot.command(name="aiimage", aliases=["aiart"])

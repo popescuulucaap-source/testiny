@@ -13,7 +13,7 @@ NIGHTFALL_WEBSITE_URL=https://testiny-7wuu.onrender.com
 NIGHTFALL_BRIDGE_SECRET=<same long random secret as Render>
 ```
 
-To enable `!aiimage`, add `OPENAI_API_KEY` as a private KataBump environment variable and restart the bot. Image generation uses OpenAI's image API and can incur API usage charges; the command stays unavailable until the key is configured. Never put the key in GitHub or share it in chat.
+To enable Nightfall's AI studio commands, add `OPENAI_API_KEY` as a private KataBump environment variable and restart the bot. This enables `!ask`, `!story`, `!roast`, `!compliment`, `!riddle`, `!poem`, `!joke`, `!caption`, `!namegen` / `!names`, `!quiz`, and `!aiimage` / `!aiart`. Requests use OpenAI's API and may incur usage charges; the commands stay unavailable until the key is configured. The text model defaults to `gpt-5.4-mini`; optionally set `OPENAI_TEXT_MODEL` to another API model available to your account. Never put the key in GitHub or share it in chat.
 
 The bridge uses HTTPS from KataBump to Render. The bot checks in every 10 seconds, reports its guild list and settings, and pulls dashboard changes. Do not add an inbound listener or expose port `20119` for the website bridge.
 
