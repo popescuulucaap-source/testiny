@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const loader=document.getElementById('nightfall-loader');
   if(loader){
-    const key='nightfall-home-intro-seen';
+    const key='nightfall-home-intro-seen-v2';
     if(sessionStorage.getItem(key)) loader.remove();
     else {
       sessionStorage.setItem(key,'1');
       const bar=loader.querySelector('.intro-progress-fill');
       const label=loader.querySelector('.intro-progress-label');
-      const start=performance.now(),duration=2350;
+      const start=performance.now(),duration=4000;
       const step=now=>{
         const progress=Math.min(1,(now-start)/duration);
         if(bar)bar.style.transform=`scaleX(${progress})`;
