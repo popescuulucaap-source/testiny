@@ -197,6 +197,8 @@ def servers():
     bot_ids = {str(x.get("id")) for x in bot_data.get("guilds", [])} if isinstance(bot_data, dict) else set()
     for guild in guilds:
         guild["bot_present"] = guild["id"] in bot_ids
+        icon_hash = guild.get("icon")
+        guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild['id']}/{icon_hash}.png?size=128" if icon_hash else ""
     return render_template("servers.html", guilds=guilds)
 
 
