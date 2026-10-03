@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Testiny • {{ guild.name }}{% endblock %}
+{% block content %}
+<section class="dashboard-head">
+  <div>
+    <span class="eyebrow">SERVER DASHBOARD</span>
+    <div class="server-title">
+      {% if guild.icon_url %}<img class="dashboard-server-icon" src="{{ guild.icon_url }}" alt="{{ guild.name }} icon">{% endif %}
+      <div><h1>{{ guild.name }}</h1><p>Configure Testiny for this server.</p></div>
+    </div>
+  </div>
+  <a class="btn ghost" href="/servers">← Servers</a>
+</section>
+{% if bot_error %}
+<div class="card notice error"><b>Testiny is not available in this server.</b><p>{{ bot_error }}</p><p>Install Testiny in this server first, then return here.</p></div>
+{% else %}
+<div class="dashboard-grid">
+  <aside class="side-menu">
+    <button class="tab active" type="button" onclick="showTab('overview',this)">Overview</button>
+    <button class="tab" type="button" onclick="showTab('settings',this)">Settings</button>
+  </aside>
+  <section>
+    <div id="overview" class="tab-panel active">
+      <div class="card"><span class="eyebrow">TESTINY</span><h2>Bot connected</h2><p>Testiny is installed and the dashboard can communicate with it.</p></div>
+    </div>
+    <div id="settings" class="tab-panel">
+      <div class="card settings-card">
+        <h2>Server settings</h2>
+        {% for key, value in settings.items() %}
+          {% if key != 'ok' %}
+          <label>{{ key }}<input value="{{ value }}" readonly></label>
+          {% endif %}
+        {% else %}
+          <p>No saved settings yet. Use <code>!setup</code> in Discord to configure Testiny.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+{% endif %}
+{% endblock %}
