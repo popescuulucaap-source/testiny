@@ -1,0 +1,3258 @@
+import asyncio
+import io
+import hmac
+import json
+import os
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import random
+import re
+import secrets
+import sqlite3
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
+
+import discord
+from discord.ext import commands, tasks
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+# ============================================================
+#  Nightfall — all-in-one Discord community/moderation bot
+#  Prefix: !
+#  Database: SQLite (bot_data.sqlite3)
+#  Library: discord.py 2.x
+# ============================================================
+
+TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("BOT_TOKEN")
+BOT_CLIENT_ID = os.getenv("BOT_CLIENT_ID")  # optional; automatically discovered after login
+DB_PATH = os.getenv("BOT_DB", "bot_data.sqlite3")
+
+if not TOKEN:
+    raise RuntimeError("Set DISCORD_TOKEN (or BOT_TOKEN) in your Katabump environment variables.")
+
+PREFIX = "!"
+DASHBOARD_API_SECRET = os.getenv("BOT_API_SECRET", "").strip()
+DASHBOARD_API_PORT = int(os.getenv("BOT_API_PORT", os.getenv("TESTINY_API_PORT", "20119")))
+
+
+async def command_prefix_for(message_bot, message):
+    """Keep the dashboard prefix and the live command parser in sync."""
+    if message.guild is None:
+        return PREFIX
+    return str(setting(message.guild, "prefix", PREFIX))
+
+
+def make_bot_invite() -> str:
+    client_id = BOT_CLIENT_ID or (str(bot.user.id) if bot.user else "YOUR_CLIENT_ID")
+    perms = discord.Permissions()
+    for flag in (
+        "view_channel", "send_messages", "embed_links", "attach_files",
+        "read_message_history", "manage_messages", "manage_channels",
+        "manage_roles", "kick_members", "ban_members", "moderate_members",
+        "view_audit_log", "manage_guild", "create_instant_invite",
+        "mention_everyone",
+    ):
+        setattr(perms, flag, True)
+    return f"https://discord.com/oauth2/authorize?client_id={client_id}&scope=bot&permissions={perms.value}"
+
+
+EMBED_COLOR = discord.Color.from_rgb(104, 84, 255)
+SUCCESS = discord.Color.from_rgb(46, 204, 113)
+WARNING = discord.Color.from_rgb(241, 196, 15)
+DANGER = discord.Color.from_rgb(231, 76, 60)
+INFO = discord.Color.from_rgb(52, 152, 219)
+DARK = discord.Color.from_rgb(44, 47, 51)
+
+INTENTS = discord.Intents.default()
+INTENTS.message_content = True
+INTENTS.members = True
+INTENTS.presences = False
+
+bot = commands.Bot(
+    command_prefix=command_prefix_for,
+    intents=INTENTS,
+    help_command=None,
+    case_insensitive=True,
+    strip_after_prefix=True,
+)
+
+# -----------------------------
+# Database
+# -----------------------------
+
+db_lock = asyncio.Lock()
+
+def db_connect():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+
+def db_init():
+    conn = db_connect()
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS guild_settings (
+            guild_id INTEGER PRIMARY KEY,
+            data TEXT NOT NULL DEFAULT '{}'
+        );
+
+        CREATE TABLE IF NOT EXISTS warnings (
+            guild_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            last_reason TEXT,
+            PRIMARY KEY (guild_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS afk (
+            guild_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            set_at INTEGER NOT NULL,
+            PRIMARY KEY (guild_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS invites (
+            guild_id INTEGER NOT NULL,
+            invite_code TEXT NOT NULL,
+            inviter_id INTEGER,
+            uses INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (guild_id, invite_code)
+        );
+
+        CREATE TABLE IF NOT EXISTS invite_members (
+            guild_id INTEGER NOT NULL,
+            invited_user_id INTEGER NOT NULL,
+            inviter_id INTEGER,
+            invite_code TEXT,
+            category TEXT NOT NULL DEFAULT 'clean',
+            joined_at INTEGER NOT NULL,
+            left_at INTEGER,
+            rejoined INTEGER NOT NULL DEFAULT 0,
+            j4j INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (guild_id, invited_user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS giveaways (
+            guild_id INTEGER NOT NULL,
+            channel_id INTEGER NOT NULL,
+            message_id INTEGER NOT NULL,
+            prize TEXT NOT NULL,
+            winners INTEGER NOT NULL,
+            ends_at INTEGER NOT NULL,
+            ended INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (guild_id, message_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS sticks (
+            guild_id INTEGER NOT NULL,
+            channel_id INTEGER PRIMARY KEY,
+            content TEXT NOT NULL,
+            message_id INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS gambling (
+            guild_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            coins INTEGER NOT NULL DEFAULT 0,
+            last_daily INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (guild_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS appeal_links (
+            main_guild_id INTEGER PRIMARY KEY,
+            appeal_guild_id INTEGER NOT NULL,
+            invite_url TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS jails (
+            jail_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            jailed_at INTEGER NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            appeal_created INTEGER NOT NULL DEFAULT 0,
+            appeal_channel_id INTEGER,
+            original_roles TEXT NOT NULL DEFAULT '[]'
+        );
+        CREATE INDEX IF NOT EXISTS idx_jails_active ON jails(guild_id, user_id, active);
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_settings(guild_id: int) -> dict[str, Any]:
+    conn = db_connect()
+    row = conn.execute("SELECT data FROM guild_settings WHERE guild_id=?", (guild_id,)).fetchone()
+    conn.close()
+    return json.loads(row["data"]) if row else {}
+
+
+def save_settings(guild_id: int, data: dict[str, Any]):
+    conn = db_connect()
+    conn.execute(
+        "INSERT INTO guild_settings(guild_id,data) VALUES(?,?) "
+        "ON CONFLICT(guild_id) DO UPDATE SET data=excluded.data",
+        (guild_id, json.dumps(data)),
+    )
+    conn.commit()
+    conn.close()
+
+
+def setting(guild: discord.Guild, key: str, default=None):
+    return get_settings(guild.id).get(key, default)
+
+
+def set_setting(guild: discord.Guild, key: str, value: Any):
+    data = get_settings(guild.id)
+    data[key] = value
+    save_settings(guild.id, data)
+
+
+# -----------------------------
+# Helpers
+# -----------------------------
+
+def utc_ts() -> int:
+    return int(time.time())
+
+
+def embed(title: str, description: str, color: discord.Color = EMBED_COLOR) -> discord.Embed:
+    e = discord.Embed(title=title, description=description, color=color, timestamp=datetime.now(timezone.utc))
+    e.set_footer(text="Nightfall • polished, fast & persistent ✨")
+    return e
+
+
+def mentionable_name(user: discord.abc.User) -> str:
+    return getattr(user, "mention", user.name)
+
+
+def parse_duration(value: str) -> int:
+    value = value.lower().strip()
+    m = re.fullmatch(r"(\d+)\s*([smhdw])", value)
+    if not m:
+        raise ValueError("Use a duration like `30s`, `10m`, `2h`, `1d`, or `1w`.")
+    n = int(m.group(1))
+    unit = m.group(2)
+    return n * {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}[unit]
+
+
+def human_duration(seconds: int) -> str:
+    parts = []
+    for name, size in (("w", 604800), ("d", 86400), ("h", 3600), ("m", 60), ("s", 1)):
+        q, seconds = divmod(seconds, size)
+        if q:
+            parts.append(f"{q}{name}")
+    return " ".join(parts) or "0s"
+
+
+def is_admin(member: discord.Member) -> bool:
+    return member.guild_permissions.administrator or member.guild.owner_id == member.id
+
+
+def is_staff(member: discord.Member) -> bool:
+    if is_admin(member):
+        return True
+    role_id = setting(member.guild, "staff_role_id")
+    return bool(role_id and any(r.id == role_id for r in member.roles))
+
+
+def staff_only():
+    async def predicate(ctx: commands.Context):
+        if not ctx.guild or not isinstance(ctx.author, discord.Member) or not is_staff(ctx.author):
+            raise commands.CheckFailure("This is a staff-only command.")
+        return True
+    return commands.check(predicate)
+
+
+def admin_only():
+    async def predicate(ctx: commands.Context):
+        if not ctx.guild or not isinstance(ctx.author, discord.Member) or not is_admin(ctx.author):
+            raise commands.CheckFailure("Administrator permissions are required.")
+        return True
+    return commands.check(predicate)
+
+
+def member_is_protected(member: discord.Member, actor: discord.Member, guild: discord.Guild) -> bool:
+    if member.id == guild.owner_id:
+        return True
+    if member.id == actor.id:
+        return True
+    me = guild.me
+    if not me:
+        return True
+    return member.top_role >= me.top_role
+
+
+async def safe_dm(user: discord.abc.User, *, embed_obj: discord.Embed, view: Optional[discord.ui.View] = None):
+    try:
+        await user.send(embed=embed_obj, view=view)
+        return True
+    except (discord.Forbidden, discord.HTTPException):
+        return False
+
+
+async def retry_after_from_http(exc: discord.HTTPException, default: float = 2.0) -> float:
+    """Read Retry-After from Discord/KataProxy when available."""
+    retry_after = default
+    try:
+        headers = exc.response.headers
+        retry_after = float(headers.get("Retry-After", default))
+    except Exception:
+        pass
+    return min(max(retry_after, 1.0), 10.0)
+
+
+async def send_followup_resilient(
+    interaction: discord.Interaction,
+    content: str,
+    *,
+    ephemeral: bool = True,
+    attempts: int = 4,
+):
+    """Send a deferred interaction follow-up with short 429 retries."""
+    for attempt in range(attempts):
+        try:
+            return await interaction.followup.send(content, ephemeral=ephemeral)
+        except discord.HTTPException as exc:
+            if getattr(exc, "status", None) != 429 or attempt == attempts - 1:
+                raise
+            await asyncio.sleep(await retry_after_from_http(exc, 1.5) + 0.25 * attempt)
+
+
+async def log_action(guild: discord.Guild, title: str, description: str, color: discord.Color = INFO):
+    channel_id = setting(guild, "logs_channel_id")
+    if not channel_id:
+        return
+    channel = guild.get_channel(channel_id)
+    if not isinstance(channel, discord.TextChannel):
+        return
+    try:
+        await channel.send(embed=embed(title, description, color))
+    except discord.HTTPException:
+        pass
+
+
+async def get_or_create_role(guild: discord.Guild, name: str, *, color=discord.Color.default()) -> discord.Role:
+    role = discord.utils.get(guild.roles, name=name)
+    if role:
+        return role
+    return await guild.create_role(name=name, color=color, reason="Nightfall automatic setup")
+
+
+async def configure_verification_roles(guild: discord.Guild):
+    unverified = await get_or_create_role(guild, "Unverified", color=discord.Color.dark_grey())
+    verified = await get_or_create_role(guild, "Verified", color=SUCCESS)
+    set_setting(guild, "unverified_role_id", unverified.id)
+    set_setting(guild, "verified_role_id", verified.id)
+    return unverified, verified
+
+
+async def apply_external_app_lock(guild: discord.Guild):
+    """Disable @everyone's external-app permission across the server.
+
+    Katabump's proxy can return 429s when many permission edits happen quickly,
+    so edits are deliberately paced and retried. The setup interaction is
+    deferred before this function is called, so a slow but successful lockdown
+    does not produce an Unknown interaction error.
+    """
+    changed = 0
+    rate_limited = 0
+    targets = [
+        ch for ch in guild.channels
+        if isinstance(ch, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel, discord.CategoryChannel))
+    ]
+
+    for index, channel in enumerate(targets):
+        success = False
+        for attempt in range(4):
+            try:
+                ow = channel.overwrites_for(guild.default_role)
+                ow.use_external_apps = False
+                await channel.set_permissions(
+                    guild.default_role,
+                    overwrite=ow,
+                    reason="Nightfall anti-raid",
+                )
+                changed += 1
+                success = True
+                break
+            except discord.Forbidden:
+                break
+            except discord.HTTPException as exc:
+                if getattr(exc, "status", None) != 429:
+                    break
+                rate_limited += 1
+                retry_after = 2.0
+                try:
+                    retry_after = float(getattr(exc, "response", None).headers.get("Retry-After", retry_after))
+                except Exception:
+                    pass
+                await asyncio.sleep(min(max(retry_after, 1.0), 8.0) + (0.25 * attempt))
+            except AttributeError:
+                break
+
+        # Keep requests spread out so KataProxy/Discord do not receive a burst.
+        if index < len(targets) - 1:
+            await asyncio.sleep(0.45 if success else 0.2)
+
+    return changed, rate_limited, len(targets)
+
+
+async def emergency_lockdown(guild: discord.Guild):
+    # Safer fallback than deleting every role: remove @everyone's ability to send
+    # and use external apps, while preserving the server's role structure.
+    for channel in guild.channels:
+        if isinstance(channel, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel)):
+            try:
+                ow = channel.overwrites_for(guild.default_role)
+                ow.send_messages = False
+                ow.use_external_apps = False
+                await channel.set_permissions(guild.default_role, overwrite=ow, reason="Nightfall emergency anti-nuke lockdown")
+            except (discord.Forbidden, discord.HTTPException, AttributeError):
+                pass
+
+
+async def create_ticket(guild: discord.Guild, user: discord.Member, ticket_type: str, answers: list[tuple[str, str]] | None = None):
+    category_id = setting(guild, "ticket_category_id")
+    staff_role_id = setting(guild, "staff_role_id")
+    category = guild.get_channel(category_id) if category_id else None
+    staff_role = guild.get_role(staff_role_id) if staff_role_id else None
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True),
+    }
+    if staff_role:
+        overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_messages=True)
+    name = f"ticket-{user.name[:16]}".lower().replace(" ", "-")
+    try:
+        channel = await guild.create_text_channel(name, category=category if isinstance(category, discord.CategoryChannel) else None, overwrites=overwrites, reason="Nightfall ticket system")
+    except discord.Forbidden:
+        return None
+    qtext = ""
+    if answers:
+        qtext = "\n".join(f"**{i+1}. {q}**\n{a or '—'}" for i, (q, a) in enumerate(answers))
+    ticket_embed = embed(
+        f"🎫 {ticket_type.title()} ticket",
+        f"Welcome {user.mention}! A member of staff will be with you shortly.\n\n{qtext}" if qtext else f"Welcome {user.mention}! A member of staff will be with you shortly.",
+        EMBED_COLOR,
+    )
+    ticket_embed.set_thumbnail(url=user.display_avatar.url)
+    await channel.send(embed=ticket_embed, view=TicketControlView())
+    if staff_role:
+        await channel.send(content=staff_role.mention, allowed_mentions=discord.AllowedMentions(roles=True))
+    if ticket_type.lower() == "claim":
+        await channel.send(embed=embed("📸 Proof required", f"{user.mention}, please upload a clear photo/screenshot of your claim here. Staff can use `!proof please` after you post it.", WARNING))
+    return channel
+
+
+# -----------------------------
+# Verification challenge image
+# -----------------------------
+
+def make_challenge_image(phrase: str) -> discord.File:
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for verification images") from exc
+    img = Image.new("RGB", (900, 300), (20, 22, 35))
+    draw = ImageDraw.Draw(img)
+    for x in range(0, 900, 30):
+        draw.line((x, 0, x + 260, 300), fill=(55, 47 + (x // 30) % 20, 90), width=3)
+    try:
+        font = ImageFont.truetype("DejaVuSans-Bold.ttf", 46)
+        small = ImageFont.truetype("DejaVuSans.ttf", 22)
+    except Exception:
+        font = ImageFont.load_default(); small = ImageFont.load_default()
+    draw.text((42, 38), "NIGHTFALL VERIFICATION", font=small, fill=(180, 175, 215))
+    bbox = draw.textbbox((0, 0), phrase, font=font)
+    tw = bbox[2] - bbox[0]
+    draw.text(((900 - tw) / 2, 115), phrase, font=font, fill=(246, 244, 255))
+    draw.text((42, 254), "This challenge is private and changes every attempt.", font=small, fill=(155, 160, 180))
+    out = io.BytesIO(); img.save(out, "PNG"); out.seek(0)
+    return discord.File(out, filename="verification.png")
+
+
+# -----------------------------
+# Animated welcome/leave card
+# -----------------------------
+
+def make_member_card(member: discord.Member, title: str, subtitle: str) -> discord.File:
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    except ImportError:
+        raise RuntimeError("Pillow is required for welcome/leave cards. Install `pillow`.")
+
+    w, h = 1000, 420
+    base = Image.new("RGB", (w, h), (18, 20, 30))
+    px = base.load()
+    for x in range(w):
+        for y in range(h):
+            t = x / w
+            px[x, y] = (int(20 + 65 * t), int(22 + 30 * (1-t)), int(38 + 75 * t))
+    glow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    for r in range(160, 0, -12):
+        a = max(0, int(60 * (1 - r / 160)))
+        gd.ellipse((690-r, 170-r, 690+r, 170+r), fill=(120, 100, 255, a))
+    glow = glow.filter(ImageFilter.GaussianBlur(10))
+    base = Image.alpha_composite(base.convert("RGBA"), glow)
+    draw = ImageDraw.Draw(base)
+
+    try:
+        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 54)
+        font_mid = ImageFont.truetype("DejaVuSans.ttf", 28)
+        font_small = ImageFont.truetype("DejaVuSans.ttf", 22)
+    except Exception:
+        font_big = ImageFont.load_default()
+        font_mid = ImageFont.load_default()
+        font_small = ImageFont.load_default()
+
+    # Avatar
+    avatar_bytes = None
+    try:
+        # The avatar is downloaded later by the async wrapper; this placeholder is intentional.
+        pass
+    except Exception:
+        pass
+
+    # Decorative circle + text.
+    cx, cy, rad = 150, 210, 105
+    draw.ellipse((cx-rad, cy-rad, cx+rad, cy+rad), outline=(170, 150, 255, 255), width=6)
+    draw.ellipse((cx-rad+12, cy-rad+12, cx+rad-12, cy+rad-12), fill=(50, 44, 78, 255))
+    draw.text((305, 95), title, font=font_big, fill=(245, 245, 255, 255))
+    draw.text((305, 170), member.display_name[:30], font=font_mid, fill=(195, 190, 230, 255))
+    draw.text((305, 220), subtitle[:70], font=font_small, fill=(170, 170, 185, 255))
+    draw.text((305, 285), "✦ Nightfall Community ✦", font=font_small, fill=(150, 135, 240, 255))
+
+    out = io.BytesIO()
+    base.convert("RGB").save(out, "PNG")
+    out.seek(0)
+    return discord.File(out, filename="member_card.png")
+
+
+async def make_member_card_with_avatar(member: discord.Member, title: str, subtitle: str) -> discord.File:
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageFilter
+    except ImportError:
+        return make_member_card(member, title, subtitle)
+
+    w, h = 1000, 420
+    base = Image.new("RGB", (w, h), (18, 20, 30))
+    for x in range(w):
+        shade = int(20 + 65 * x / w)
+        ImageDraw.Draw(base).line((x, 0, x, h), fill=(shade, 22, min(125, 38 + int(70 * x / w))))
+    base = base.convert("RGBA")
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    od.ellipse((520, -170, 920, 230), fill=(130, 100, 255, 38))
+    overlay = overlay.filter(ImageFilter.GaussianBlur(32))
+    base = Image.alpha_composite(base, overlay)
+    draw = ImageDraw.Draw(base)
+
+    avatar_size = 190
+    try:
+        avatar_data = await member.display_avatar.read()
+        avatar = Image.open(io.BytesIO(avatar_data)).convert("RGB").resize((avatar_size, avatar_size))
+        mask = Image.new("L", (avatar_size, avatar_size), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, avatar_size, avatar_size), fill=255)
+        base.paste(avatar, (55, 115), mask)
+    except Exception:
+        draw.ellipse((55, 115, 245, 305), fill=(55, 55, 75, 255), outline=(170, 150, 255, 255), width=6)
+
+    try:
+        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 54)
+        font_mid = ImageFont.truetype("DejaVuSans.ttf", 28)
+        font_small = ImageFont.truetype("DejaVuSans.ttf", 22)
+    except Exception:
+        font_big = font_mid = font_small = ImageFont.load_default()
+    draw.text((305, 90), title, font=font_big, fill=(245, 245, 255, 255))
+    draw.text((305, 170), member.display_name[:30], font=font_mid, fill=(205, 200, 235, 255))
+    draw.text((305, 220), subtitle[:80], font=font_small, fill=(175, 175, 190, 255))
+    draw.text((305, 285), "✦ Nightfall Community ✦", font=font_small, fill=(150, 135, 240, 255))
+    out = io.BytesIO()
+    base.convert("RGB").save(out, "PNG")
+    out.seek(0)
+    return discord.File(out, filename="member_card.png")
+
+
+# -----------------------------
+# Persistent-ish UI classes
+# -----------------------------
+
+class AppealLinkView(discord.ui.View):
+    def __init__(self, invite_url: str):
+        super().__init__(timeout=None)
+        self.add_item(discord.ui.Button(label="Appeal", emoji="📝", style=discord.ButtonStyle.link, url=invite_url))
+
+
+class VerificationView(discord.ui.View):
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=None)
+        self.guild_id = guild_id
+
+    @discord.ui.button(label="Start verification", emoji="✅", style=discord.ButtonStyle.success, custom_id="testiny:verify:start")
+    async def start(self, interaction: discord.Interaction, button: discord.ui.Button):
+        guild = bot.get_guild(self.guild_id)
+        if not guild:
+            await interaction.response.send_message("This verification panel is no longer active.", ephemeral=True)
+            return
+        phrase = " ".join([secrets.choice(["NIGHT", "STAR", "LUNA", "FOX", "RUNE", "NOVA", "EMBER"]) for _ in range(3)]) + f" {random.randint(10, 99)}"
+        await interaction.response.send_modal(VerificationModal(self.guild_id, interaction.user.id, phrase))
+        await asyncio.sleep(0.2)
+        try:
+            challenge = make_challenge_image(phrase)
+            await interaction.followup.send(
+                embed=embed("🔐 Verification challenge", "Type the phrase from the image into the verification popup.", INFO),
+                file=challenge,
+                ephemeral=True,
+            )
+        except discord.HTTPException:
+            await interaction.followup.send(embed=embed("🔐 Verification challenge", f"Your challenge is: `{phrase}`", INFO), ephemeral=True)
+
+
+class VerificationModal(discord.ui.Modal, title="Verify your account"):
+    answer = discord.ui.TextInput(label="Challenge phrase", placeholder="Type the phrase shown to you", max_length=80)
+
+    def __init__(self, guild_id: int, user_id: int, phrase: str):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.user_id = user_id
+        self.phrase = phrase
+
+    async def on_submit(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This verification belongs to another user.", ephemeral=True)
+            return
+        if str(self.answer.value).strip().casefold() != self.phrase.casefold():
+            await interaction.response.send_message("❌ That challenge was incorrect. Press the button and start a new one.", ephemeral=True)
+            return
+        guild = bot.get_guild(self.guild_id)
+        if not guild:
+            await interaction.response.send_message("Server unavailable.", ephemeral=True)
+            return
+        member = guild.get_member(self.user_id)
+        if not member:
+            await interaction.response.send_message("Member unavailable.", ephemeral=True)
+            return
+        unverified = guild.get_role(setting(guild, "unverified_role_id")) if setting(guild, "unverified_role_id") else None
+        verified = guild.get_role(setting(guild, "verified_role_id")) if setting(guild, "verified_role_id") else None
+        try:
+            if unverified and unverified in member.roles:
+                await member.remove_roles(unverified, reason="Verification completed")
+            if verified and verified not in member.roles:
+                await member.add_roles(verified, reason="Verification completed")
+            await interaction.response.send_message("✅ Verification successful. Welcome to the server!", ephemeral=True)
+            await log_action(guild, "✅ Verification completed", f"{member.mention} passed verification.", SUCCESS)
+        except discord.Forbidden:
+            await interaction.response.send_message("I do not have permission to manage the verification roles.", ephemeral=True)
+
+
+class TicketTypeSelect(discord.ui.Select):
+    def __init__(self, guild_id: int):
+        self.guild_id = guild_id
+        options = []
+        templates = get_settings(guild_id).get("ticket_options", ["support", "purchase", "claim", "report", "other"])
+        labels = {
+            "support": ("Support", "General support", "🛠️"),
+            "purchase": ("Purchase", "Orders / purchases", "💳"),
+            "claim": ("Claim", "Claim something", "🏆"),
+            "report": ("Report", "Report a member/problem", "🚨"),
+            "other": ("Other", "Everything else", "✨"),
+        }
+        for key in templates[:25]:
+            label, desc, emoji = labels.get(key, (key.title(), "Open a ticket", "🎫"))
+            options.append(discord.SelectOption(label=label, value=key, description=desc, emoji=emoji))
+        super().__init__(placeholder="🎫 Choose what you need help with...", options=options, custom_id="testiny:ticket:type")
+
+    async def callback(self, interaction: discord.Interaction):
+        cfg = get_settings(self.guild_id)
+        questions = cfg.get("ticket_questions", {}).get(self.values[0], [])
+        if not questions:
+            await interaction.response.defer(ephemeral=True)
+            channel = await create_ticket(interaction.guild, interaction.user, self.values[0])
+            await interaction.followup.send(f"🎫 Ticket created: {channel.mention if channel else 'I could not create it.'}", ephemeral=True)
+            return
+        await interaction.response.send_modal(TicketQuestionsModal(self.guild_id, self.values[0], questions[:5]))
+
+
+class TicketPanelView(discord.ui.View):
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=None)
+        self.add_item(TicketTypeSelect(guild_id))
+
+
+class TicketQuestionsModal(discord.ui.Modal):
+    def __init__(self, guild_id: int, ticket_type: str, questions: list[str]):
+        super().__init__(title=f"{ticket_type.title()} ticket")
+        self.guild_id = guild_id
+        self.ticket_type = ticket_type
+        self.inputs = []
+        for q in questions:
+            inp = discord.ui.TextInput(label=q[:45], placeholder="Your answer...", style=discord.TextStyle.paragraph, required=True, max_length=1000)
+            self.inputs.append((q, inp))
+            self.add_item(inp)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        channel = await create_ticket(interaction.guild, interaction.user, self.ticket_type, [(q, str(inp.value)) for q, inp in self.inputs])
+        await interaction.response.send_message(f"🎫 Ticket created: {channel.mention if channel else 'failed to create the ticket.'}", ephemeral=True)
+
+
+class TicketControlView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Claim", emoji="🙋", style=discord.ButtonStyle.primary, custom_id="testiny:ticket:claim")
+    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isinstance(interaction.user, discord.Member) or not is_staff(interaction.user):
+            await interaction.response.send_message("Staff only.", ephemeral=True)
+            return
+        await interaction.response.send_message(embed=embed("🙋 Ticket claimed", f"{interaction.user.mention} has claimed this ticket.", INFO))
+        try:
+            await interaction.channel.edit(topic=f"Claimed by {interaction.user.id}")
+        except discord.HTTPException:
+            pass
+
+    @discord.ui.button(label="Close", emoji="🔒", style=discord.ButtonStyle.danger, custom_id="testiny:ticket:close")
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isinstance(interaction.user, discord.Member) or not is_staff(interaction.user):
+            await interaction.response.send_message("Staff only.", ephemeral=True)
+            return
+        await interaction.response.send_message("🔒 Closing ticket in a moment...")
+        await asyncio.sleep(1.5)
+        try:
+            await interaction.channel.delete(reason=f"Ticket closed by {interaction.user}")
+        except discord.HTTPException:
+            pass
+
+
+class FeedbackModal(discord.ui.Modal, title="💬 Server feedback"):
+    feedback = discord.ui.TextInput(label="Your opinion", placeholder="Tell us what you think...", style=discord.TextStyle.paragraph, max_length=1500)
+
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.send_message("Choose your rating ⭐", view=RatingView(self.guild_id, str(self.feedback.value)), ephemeral=True)
+
+
+class FeedbackPanelView(discord.ui.View):
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=None)
+        self.guild_id = guild_id
+
+    @discord.ui.button(label="Leave feedback", emoji="💬", style=discord.ButtonStyle.primary, custom_id="testiny:feedback:start")
+    async def start(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(FeedbackModal(self.guild_id))
+
+
+class RatingView(discord.ui.View):
+    def __init__(self, guild_id: int, feedback: str):
+        super().__init__(timeout=180)
+        self.guild_id = guild_id
+        self.feedback = feedback
+        for stars in range(1, 6):
+            button = discord.ui.Button(label=f"{stars} ⭐", style=discord.ButtonStyle.secondary)
+            button.callback = self.make_callback(stars)
+            self.add_item(button)
+
+    def make_callback(self, stars: int):
+        async def callback(interaction: discord.Interaction):
+            guild = bot.get_guild(self.guild_id)
+            channel_id = setting(guild, "feedback_channel_id") if guild else None
+            channel = guild.get_channel(channel_id) if guild and channel_id else None
+            if isinstance(channel, discord.TextChannel):
+                e = embed("💬 New feedback", self.feedback, INFO)
+                e.set_author(name=str(interaction.user), icon_url=interaction.user.display_avatar.url)
+                e.add_field(name="Rating", value="⭐" * stars, inline=False)
+                await channel.send(embed=e)
+            await interaction.response.edit_message(content="✅ Thanks for your feedback!", view=None)
+        return callback
+
+
+class J4JView(discord.ui.View):
+    def __init__(self, guild_id: int, user_id: int):
+        super().__init__(timeout=3600)
+        self.guild_id = guild_id
+        self.user_id = user_id
+
+    @discord.ui.button(label="Yes, I joined from J4J", emoji="✅", style=discord.ButtonStyle.success)
+    async def yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This panel isn't for you.", ephemeral=True)
+            return
+        guild = bot.get_guild(self.guild_id)
+        if guild:
+            member = guild.get_member(self.user_id)
+            if member:
+                set_invite_category(guild.id, member.id, j4j=True)
+                channel = await create_j4j_ticket(guild, member)
+                await interaction.response.send_message(f"✅ J4J confirmed. Ticket created: {channel.mention if channel else 'failed'}", ephemeral=True)
+                return
+        await interaction.response.send_message("The server is unavailable.", ephemeral=True)
+
+    @discord.ui.button(label="No, I joined normally", emoji="❌", style=discord.ButtonStyle.secondary)
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This panel isn't for you.", ephemeral=True)
+            return
+        await interaction.response.send_message("Thanks! Enjoy the server 💜", ephemeral=True)
+        self.stop()
+
+
+class AppealServerSelect(discord.ui.Select):
+    def __init__(self, appeal_guild: discord.Guild):
+        self.appeal_guild_id = appeal_guild.id
+        options = []
+        for g in bot.guilds:
+            cfg = get_settings(g.id)
+            if cfg.get("appeal_server_id") == appeal_guild.id:
+                options.append(discord.SelectOption(label=g.name[:100], value=str(g.id), description=f"Appeals for {g.name}"[:100], emoji="🏛️"))
+        if not options:
+            options.append(discord.SelectOption(label="No configured main servers", value="0", description="Run !setup in a main server first.", emoji="⚠️"))
+        super().__init__(placeholder="🏛️ Choose the main server...", options=options[:25], custom_id="testiny:appeal:server")
+
+    async def callback(self, interaction: discord.Interaction):
+        gid = int(self.values[0])
+        if gid == 0:
+            await interaction.response.send_message("No main server is configured for this appeal server.", ephemeral=True)
+            return
+        main_guild = bot.get_guild(gid)
+        if not main_guild:
+            await interaction.response.send_message("Main server is unavailable.", ephemeral=True)
+            return
+        # Store the currently selected main server in the appeal guild so the panel
+        # can be used by normal banned users (not only administrators).
+        set_setting(appeal_guild, "active_appeal_main_guild_id", gid)
+        e = embed("📝 Ban appeals", f"Appeals for **{main_guild.name}** are ready.\n\nBanned members can press the button below to open a private appeal ticket.", INFO)
+        await interaction.response.send_message(e, view=AppealOpenView(gid, self.appeal_guild_id))
+
+
+class AppealServerView(discord.ui.View):
+    def __init__(self, appeal_guild: discord.Guild):
+        super().__init__(timeout=300)
+        self.add_item(AppealServerSelect(appeal_guild))
+
+
+class AppealOpenView(discord.ui.View):
+    def __init__(self, main_guild_id: int, appeal_guild_id: int):
+        super().__init__(timeout=None)
+        self.main_guild_id = main_guild_id
+        self.appeal_guild_id = appeal_guild_id
+
+    @discord.ui.button(label="Open appeal", emoji="📝", style=discord.ButtonStyle.primary, custom_id="testiny:appeal:open")
+    async def open_appeal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(AppealTicketReasonModal(self.main_guild_id, self.appeal_guild_id))
+
+
+class AppealTicketReasonModal(discord.ui.Modal, title="📝 Appeal"):
+    reason = discord.ui.TextInput(label="Why should your ban be appealed?", style=discord.TextStyle.paragraph, max_length=1500, required=True)
+
+    def __init__(self, main_guild_id: int, appeal_guild_id: int):
+        super().__init__(timeout=300)
+        self.main_guild_id = main_guild_id
+        self.appeal_guild_id = appeal_guild_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        appeal_guild = bot.get_guild(self.appeal_guild_id)
+        main_guild = bot.get_guild(self.main_guild_id)
+        if not appeal_guild or not main_guild:
+            await interaction.response.send_message("Server unavailable.", ephemeral=True)
+            return
+        try:
+            await main_guild.fetch_ban(interaction.user)
+        except discord.NotFound:
+            await interaction.response.send_message("You do not currently have a ban on that main server.", ephemeral=True)
+            return
+        except discord.Forbidden:
+            await interaction.response.send_message("The main server did not allow the bot to verify your ban status.", ephemeral=True)
+            return
+        cfg = get_settings(main_guild.id)
+        category = discord.utils.get(appeal_guild.categories, name="Appeal Tickets")
+        if not category:
+            try:
+                category = await appeal_guild.create_category("Appeal Tickets", reason="Nightfall appeal system")
+            except discord.HTTPException:
+                category = None
+        overwrites = {appeal_guild.default_role: discord.PermissionOverwrite(view_channel=False), interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),}
+        appeal_staff_id = get_settings(appeal_guild.id).get("staff_role_id")
+        staff_role = appeal_guild.get_role(appeal_staff_id) if appeal_staff_id else None
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, manage_messages=True)
+        channel = await appeal_guild.create_text_channel(f"appeal-{interaction.user.name[:16]}", category=category if isinstance(category, discord.CategoryChannel) else None, overwrites=overwrites, reason="Nightfall appeal ticket")
+        e = embed("📝 Ban appeal", f"User: {interaction.user.mention}\n**Main server:** {main_guild.name}\n\n**Reason:**\n{self.reason.value}", WARNING)
+        e.set_thumbnail(url=interaction.user.display_avatar.url)
+        await channel.send(embed=e, view=AppealTicketView())
+        await interaction.response.send_message(f"✅ Appeal ticket created: {channel.mention}", ephemeral=True)
+
+
+class AppealTicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Close appeal", emoji="🔒", style=discord.ButtonStyle.danger, custom_id="testiny:appeal:close")
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isinstance(interaction.user, discord.Member) or not (is_admin(interaction.user) or interaction.user.guild_permissions.manage_channels):
+            await interaction.response.send_message("Staff only.", ephemeral=True)
+            return
+        await interaction.response.send_message("🔒 Closing appeal...", ephemeral=True)
+        await asyncio.sleep(1)
+        try:
+            await interaction.channel.delete(reason="Appeal closed")
+        except discord.HTTPException:
+            pass
+
+
+# -----------------------------
+# Setup dashboard UI
+# -----------------------------
+
+def setup_dashboard_embed(guild: discord.Guild) -> discord.Embed:
+    cfg = get_settings(guild.id)
+
+    def role_value(key: str) -> str:
+        return f"<@&{cfg[key]}>" if cfg.get(key) else "Not set"
+
+    def channel_value(key: str) -> str:
+        return f"<#{cfg[key]}>" if cfg.get(key) else "Not set"
+
+    e = embed(
+        "⚙️ Nightfall setup center",
+        "Configure Nightfall with the buttons below. Every change is saved instantly and this dashboard refreshes automatically. ✨",
+        EMBED_COLOR,
+    )
+    e.add_field(name="🛡️ Staff role", value=role_value("staff_role_id"), inline=True)
+    e.add_field(name="📜 Logs", value=channel_value("logs_channel_id"), inline=True)
+    appeal_guild = bot.get_guild(int(cfg["appeal_server_id"])) if cfg.get("appeal_server_id") else None
+    appeal_value = appeal_guild.name[:100] if appeal_guild else ("Configured • bot not joined" if cfg.get("appeal_server_id") else "Not set")
+    e.add_field(name="📝 Appeal server", value=appeal_value, inline=True)
+    e.add_field(name="🎫 Ticket category", value=(f"<#{cfg.get('ticket_category_id')}>" if cfg.get("ticket_category_id") else "Not set"), inline=True)
+    e.add_field(name="👋 Welcome", value=channel_value("welcome_channel_id"), inline=True)
+    e.add_field(name="🚪 Leave", value=channel_value("leave_channel_id"), inline=True)
+    e.add_field(name="🎭 Auto role", value=role_value("autorole_id"), inline=True)
+    e.add_field(name="✅ Verification", value=channel_value("verification_channel_id"), inline=True)
+    e.add_field(name="⌨️ Commands", value=channel_value("command_channel_id"), inline=True)
+    e.add_field(name="⭐ Vouch", value=channel_value("vouch_channel_id"), inline=True)
+    e.add_field(name="💬 Feedback", value=channel_value("feedback_channel_id"), inline=True)
+    e.add_field(name="📸 Proof", value=channel_value("proof_channel_id"), inline=True)
+    e.add_field(name="🎰 Gamble", value=channel_value("gamble_channel_id"), inline=True)
+    e.add_field(name="🚀 Booster", value=role_value("booster_role_id"), inline=True)
+    e.add_field(name="📋 Applications", value=channel_value("staff_application_channel_id"), inline=True)
+    e.add_field(name="🧱 Anti-raid", value="🟢 ENABLED" if cfg.get("anti_raid") else "🔴 DISABLED", inline=True)
+    e.add_field(name="🛡️ Anti-nuke", value="🟢 ENABLED" if cfg.get("anti_nuke") else "🔴 DISABLED", inline=True)
+    e.add_field(name="🔗 Anti-link", value="🟢 ENABLED" if cfg.get("anti_link") else "🔴 DISABLED", inline=True)
+    e.add_field(name="🤝 J4J", value="🟢 ENABLED" if cfg.get("j4j") else "🔴 DISABLED", inline=True)
+    e.add_field(name="🔒 Jail", value="🟢 ENABLED" if cfg.get("jail_enabled") else "🔴 DISABLED", inline=True)
+    e.add_field(name="🔒 Jail role", value=role_value("jail_role_id"), inline=True)
+    e.add_field(name="🔒 Jail chat", value=channel_value("jail_chat_channel_id"), inline=True)
+    e.add_field(name="📝 Jail appeals", value=channel_value("jail_appeal_channel_id"), inline=True)
+    e.set_footer(text="Nightfall • setup changes save instantly ✨")
+    return e
+
+
+async def refresh_setup_dashboard(guild: discord.Guild) -> bool:
+    cfg = get_settings(guild.id)
+    channel_id = cfg.get("setup_dashboard_channel_id")
+    message_id = cfg.get("setup_dashboard_message_id")
+    if not channel_id or not message_id:
+        return False
+
+    channel = guild.get_channel(channel_id)
+    if not isinstance(channel, discord.TextChannel):
+        return False
+
+    for attempt in range(4):
+        try:
+            message = await channel.fetch_message(message_id)
+            await message.edit(embed=setup_dashboard_embed(guild), view=SetupDashboardView(guild.id))
+            return True
+        except discord.NotFound:
+            return False
+        except discord.Forbidden:
+            return False
+        except discord.HTTPException as exc:
+            if getattr(exc, "status", None) != 429 or attempt == 3:
+                return False
+            await asyncio.sleep(await retry_after_from_http(exc, 1.5) + 0.25 * attempt)
+    return False
+
+
+class SetupChannelSelect(discord.ui.Select):
+    def __init__(self, key: str, title: str, guild_id: int, channel_types=(discord.ChannelType.text,)):
+        self.key = key
+        self.guild_id = guild_id
+        options = []
+        guild = bot.get_guild(guild_id)
+        if guild:
+            for ch in guild.channels:
+                if isinstance(ch, discord.CategoryChannel) and discord.ChannelType.category in channel_types:
+                    options.append(discord.SelectOption(label=ch.name[:100], value=str(ch.id), description="Category"))
+                elif isinstance(ch, discord.TextChannel) and discord.ChannelType.text in channel_types:
+                    options.append(discord.SelectOption(label=ch.name[:100], value=str(ch.id), description="Text channel"))
+        super().__init__(placeholder=f"Select {title}...", options=options[:25] or [discord.SelectOption(label="No channels", value="0")])
+
+    async def callback(self, interaction: discord.Interaction):
+        if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
+            await interaction.response.send_message("Administrator only.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        value = int(self.values[0])
+        guild = interaction.guild
+        if not guild or not value:
+            await interaction.followup.send("❌ No valid selection.", ephemeral=True)
+            return
+
+        set_setting(guild, self.key, value)
+        extra = ""
+        try:
+            if self.key == "feedback_channel_id":
+                await post_feedback_panel(guild)
+                extra = " The feedback panel was posted there."
+            elif self.key == "staff_application_channel_id":
+                await post_staff_application_panel(guild)
+                extra = " The application panel was posted there."
+            elif self.key == "verification_channel_id":
+                await post_verification_panel(guild)
+                extra = " The verification panel was posted there."
+        except (discord.Forbidden, discord.HTTPException) as exc:
+            extra = f" ⚠️ The setting was saved, but Discord rejected the panel action: `{type(exc).__name__}`."
+
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Saved, but I couldn't refresh the setup dashboard."
+        await send_followup_resilient(interaction, f"✅ Saved **{self.key}** → <#{value}>.{extra}\n{status}")
+
+
+class SetupRoleSelect(discord.ui.Select):
+    def __init__(self, key: str, guild_id: int, label: str):
+        self.key = key
+        self.guild_id = guild_id
+        guild = bot.get_guild(guild_id)
+        opts = []
+        if guild:
+            for role in sorted(guild.roles, key=lambda r: r.position, reverse=True):
+                if role.is_default():
+                    continue
+                opts.append(discord.SelectOption(label=role.name[:100], value=str(role.id), emoji="🛡️"))
+        super().__init__(placeholder=label, options=opts[:25] or [discord.SelectOption(label="No roles", value="0")])
+
+    async def callback(self, interaction: discord.Interaction):
+        if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
+            await interaction.response.send_message("Administrator only.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        value = int(self.values[0])
+        guild = interaction.guild
+        if not guild or not value:
+            await interaction.followup.send("❌ No valid selection.", ephemeral=True)
+            return
+
+        role = guild.get_role(value)
+        if not role:
+            await interaction.followup.send("❌ That role no longer exists. Open `!setup` again and choose another role.", ephemeral=True)
+            return
+
+        set_setting(guild, self.key, value)
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Saved, but I couldn't refresh the setup dashboard."
+        await send_followup_resilient(interaction, f"✅ Saved **{self.key}** → {role.mention}.\n{status}")
+
+
+class SetupAppealModal(discord.ui.Modal, title="📝 Appeal server"):
+    server_id = discord.ui.TextInput(label="Appeal server ID", placeholder="Paste the appeal server's ID", max_length=30)
+    invite_url = discord.ui.TextInput(label="Appeal invite URL", placeholder="https://discord.gg/...", max_length=200)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        try:
+            sid = int(self.server_id.value.strip())
+        except ValueError:
+            await interaction.followup.send("❌ Invalid server ID.", ephemeral=True)
+            return
+        url = self.invite_url.value.strip()
+        if not url.startswith("https://discord.gg/") and not url.startswith("https://discord.com/invite/"):
+            await interaction.followup.send("❌ Use a Discord invite link.", ephemeral=True)
+            return
+        set_setting(interaction.guild, "appeal_server_id", sid)
+        set_setting(interaction.guild, "appeal_invite_url", url)
+        conn = db_connect()
+        conn.execute("INSERT OR REPLACE INTO appeal_links(main_guild_id,appeal_guild_id,invite_url) VALUES(?,?,?)", (interaction.guild.id, sid, url))
+        conn.commit()
+        conn.close()
+        configured = bot.get_guild(sid)
+        invite = make_bot_invite()
+        if configured:
+            msg = f"✅ Appeal server connected: **{configured.name}**\n\nUse `!apeal server` or `!appeal server` inside that server to choose this main server."
+        else:
+            msg = f"✅ Saved the appeal server. I am **not in that server yet**.\n\nAdd me there first: {invite}\n\nThen run `!apeal server` / `!appeal server` in the appeal server."
+        refreshed = await refresh_setup_dashboard(interaction.guild)
+        if refreshed:
+            msg += "\n\n✨ The setup dashboard was refreshed."
+        await send_followup_resilient(interaction, msg)
+
+
+class SetupTicketModal(discord.ui.Modal, title="🎫 Ticket settings"):
+    panel_channel_id = discord.ui.TextInput(label="Panel channel ID", placeholder="Paste text channel ID", max_length=30)
+    category_id = discord.ui.TextInput(label="Ticket category ID (optional)", placeholder="Leave blank to create tickets at server root", required=False, max_length=30)
+    options = discord.ui.TextInput(label="Options", placeholder="support, purchase, claim, report, other", default="support, purchase, claim, report, other", max_length=200)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        try:
+            panel_id = int(self.panel_channel_id.value.strip())
+        except ValueError:
+            await interaction.followup.send("❌ Invalid panel channel ID.", ephemeral=True)
+            return
+        category_id = None
+        if self.category_id.value.strip():
+            try:
+                category_id = int(self.category_id.value.strip())
+            except ValueError:
+                await interaction.followup.send("❌ Invalid category ID.", ephemeral=True)
+                return
+        set_setting(interaction.guild, "ticket_panel_channel_id", panel_id)
+        if category_id:
+            set_setting(interaction.guild, "ticket_category_id", category_id)
+        opts = [x.strip().lower() for x in self.options.value.split(",") if x.strip()][:10]
+        set_setting(interaction.guild, "ticket_options", opts)
+        ch = interaction.guild.get_channel(panel_id)
+        if isinstance(ch, discord.TextChannel):
+            e = embed("🎫 Open a ticket", "Choose the category that matches your request.\n\nA beautiful private ticket will be created and the configured staff team will be pinged.", EMBED_COLOR)
+            await ch.send(embed=e, view=TicketPanelView(interaction.guild.id))
+        refreshed = await refresh_setup_dashboard(interaction.guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Ticket settings saved, but dashboard refresh failed."
+        await send_followup_resilient(interaction, f"✅ Ticket system configured and panel posted.\n{status}")
+
+
+class SetupSimpleModal(discord.ui.Modal):
+    def __init__(self, key: str, label: str, placeholder: str, guild_id: int):
+        super().__init__(title=label[:45])
+        self.key = key
+        self.guild_id = guild_id
+        self.value = discord.ui.TextInput(label=label[:45], placeholder=placeholder[:100], required=True, max_length=300)
+        self.add_item(self.value)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        val = self.value.value.strip()
+        set_setting(interaction.guild, self.key, val)
+        refreshed = await refresh_setup_dashboard(interaction.guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Saved, but dashboard refresh failed."
+        await send_followup_resilient(interaction, f"✅ Saved **{self.key}**.\n{status}")
+
+
+class SetupDashboardView(discord.ui.View):
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=900)
+        self.guild_id = guild_id
+
+    async def ensure_admin(self, interaction: discord.Interaction) -> bool:
+        if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
+            await interaction.response.send_message("Administrator only.", ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="Staff role", emoji="🛡️", style=discord.ButtonStyle.primary, row=0)
+    async def staff(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180)
+        v.add_item(SetupRoleSelect("staff_role_id", self.guild_id, "Select staff role..."))
+        await interaction.response.send_message("Choose the staff role:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Logs", emoji="📜", style=discord.ButtonStyle.secondary, row=0)
+    async def logs(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180)
+        v.add_item(SetupChannelSelect("logs_channel_id", "logs channel", self.guild_id))
+        await interaction.response.send_message("Choose the logs channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Appeals", emoji="📝", style=discord.ButtonStyle.secondary, row=0)
+    async def appeals(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.send_modal(SetupAppealModal())
+
+    @discord.ui.button(label="Tickets", emoji="🎫", style=discord.ButtonStyle.primary, row=0)
+    async def tickets(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.send_modal(SetupTicketModal())
+
+    @discord.ui.button(label="Welcome", emoji="👋", style=discord.ButtonStyle.secondary, row=1)
+    async def welcome(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("welcome_channel_id", "welcome channel", self.guild_id))
+        await interaction.response.send_message("Choose the welcome channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Leave", emoji="🚪", style=discord.ButtonStyle.secondary, row=1)
+    async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("leave_channel_id", "leave channel", self.guild_id))
+        await interaction.response.send_message("Choose the leave channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Auto role", emoji="🎭", style=discord.ButtonStyle.secondary, row=1)
+    async def autorole(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupRoleSelect("autorole_id", self.guild_id, "Select automatic role..."))
+        await interaction.response.send_message("Choose the role new members should receive:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Anti-raid", emoji="🧱", style=discord.ButtonStyle.secondary, row=1)
+    async def antiraid(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = interaction.guild
+        enabled = not bool(setting(guild, "anti_raid", False))
+        set_setting(guild, "anti_raid", enabled)
+        changed = rate_limited = total = 0
+        if enabled:
+            changed, rate_limited, total = await apply_external_app_lock(guild)
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Setting saved, but dashboard refresh failed."
+        if enabled:
+            action = f"🧱 Anti-raid **enabled**. Protected **{changed}/{total}** channels."
+            if rate_limited:
+                action += f"\n⏳ Katabump rate-limited {rate_limited} request(s); retries were applied."
+        else:
+            action = "🧱 Anti-raid **disabled**."
+        await send_followup_resilient(interaction, f"{action}\n{status}")
+
+    @discord.ui.button(label="Anti-nuke", emoji="🛡️", style=discord.ButtonStyle.secondary, row=1)
+    async def antinuke(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = interaction.guild
+        enabled = not bool(setting(guild, "anti_nuke", False))
+        set_setting(guild, "anti_nuke", enabled)
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Setting saved, but dashboard refresh failed."
+        await send_followup_resilient(interaction, f"🛡️ Anti-nuke **{'enabled' if enabled else 'disabled'}**.\n{status}")
+
+    @discord.ui.button(label="Anti-link", emoji="🔗", style=discord.ButtonStyle.secondary, row=2)
+    async def antilink(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = interaction.guild
+        enabled = not bool(setting(guild, "anti_link", False))
+        set_setting(guild, "anti_link", enabled)
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Setting saved, but dashboard refresh failed."
+        await send_followup_resilient(interaction, f"🔗 Anti-link **{'enabled' if enabled else 'disabled'}**. GIF links remain allowed.\n{status}")
+
+    @discord.ui.button(label="Verification", emoji="✅", style=discord.ButtonStyle.secondary, row=2)
+    async def verification(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("verification_channel_id", "verification channel", self.guild_id))
+        await interaction.response.send_message("Select the verification channel:", view=v, ephemeral=True)
+        # Roles are auto-created when a member joins / when the panel is posted.
+
+    @discord.ui.button(label="Commands", emoji="⌨️", style=discord.ButtonStyle.secondary, row=2)
+    async def commands_channel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("command_channel_id", "command channel", self.guild_id))
+        await interaction.response.send_message("Choose the only channel where prefix commands are permitted:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Vouch", emoji="⭐", style=discord.ButtonStyle.secondary, row=2)
+    async def vouch(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("vouch_channel_id", "vouch channel", self.guild_id))
+        await interaction.response.send_message("Choose the vouch channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Feedback", emoji="💬", style=discord.ButtonStyle.secondary, row=3)
+    async def feedback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("feedback_channel_id", "feedback channel", self.guild_id))
+        await interaction.response.send_message("Choose the feedback channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="J4J", emoji="🤝", style=discord.ButtonStyle.secondary, row=3)
+    async def j4j(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = interaction.guild
+        enabled = not bool(setting(guild, "j4j", False))
+        set_setting(guild, "j4j", enabled)
+        set_setting(guild, "j4j_dm", enabled)
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Setting saved, but dashboard refresh failed."
+        await interaction.followup.send(f"🤝 J4J system **{'enabled' if enabled else 'disabled'}**.\n{status}", ephemeral=True)
+
+    @discord.ui.button(label="Proof", emoji="📸", style=discord.ButtonStyle.secondary, row=3)
+    async def proof(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("proof_channel_id", "proof channel", self.guild_id))
+        await interaction.response.send_message("Choose the proof channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Gamble", emoji="🎰", style=discord.ButtonStyle.secondary, row=3)
+    async def gamble(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("gamble_channel_id", "gambling channel", self.guild_id))
+        await interaction.response.send_message("Choose the gambling channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Booster role", emoji="🚀", style=discord.ButtonStyle.secondary, row=4)
+    async def booster(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupRoleSelect("booster_role_id", self.guild_id, "Select booster role..."))
+        await interaction.response.send_message("Choose the booster role:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Staff applications", emoji="📋", style=discord.ButtonStyle.secondary, row=4)
+    async def applications(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        v = discord.ui.View(timeout=180); v.add_item(SetupChannelSelect("staff_application_channel_id", "staff application panel channel", self.guild_id))
+        await interaction.response.send_message("Choose the application panel channel:", view=v, ephemeral=True)
+
+    @discord.ui.button(label="Save verification panel", emoji="🔐", style=discord.ButtonStyle.success, row=4)
+    async def verification_panel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = interaction.guild
+        await post_verification_panel(guild)
+        refreshed = await refresh_setup_dashboard(guild)
+        status = "✅ Setup dashboard updated." if refreshed else "⚠️ Verification configured, but dashboard refresh failed."
+        await interaction.followup.send(f"✅ Verification roles and panel configured.\n{status}", ephemeral=True)
+
+    @discord.ui.button(label="Jail setup", emoji="🔒", style=discord.ButtonStyle.danger, row=4)
+    async def jail_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not await self.ensure_admin(interaction): return
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = interaction.guild
+        enabled = not bool(setting(guild, "jail_enabled", False))
+        if enabled:
+            try:
+                role, category, chat, appeals = await configure_jail_system(guild)
+                message = (
+                    "🔒 **Jail system enabled!**\n\n"
+                    f"🛡️ **Role:** {role.mention}\n"
+                    f"🏠 **Category:** {category.name}\n"
+                    f"💬 **Jail chat:** {chat.mention}\n"
+                    f"📝 **Jail appeals:** {appeals.mention}\n\n"
+                    "Everything was created/configured automatically. ✨"
+                )
+            except discord.Forbidden:
+                set_setting(guild, "jail_enabled", False)
+                message = "❌ Jail setup needs **Manage Roles** and **Manage Channels**. Check the bot permissions and try again."
+            except discord.HTTPException as exc:
+                set_setting(guild, "jail_enabled", False)
+                message = f"❌ Jail setup failed: `{exc}`"
+        else:
+            set_setting(guild, "jail_enabled", False)
+            message = "🔒 **Jail system disabled.** Existing jail channels and the role were kept."
+        refreshed = await refresh_setup_dashboard(guild)
+        message += "\n" + ("✅ Setup dashboard updated." if refreshed else "⚠️ Setting saved, but dashboard refresh failed.")
+        await send_followup_resilient(interaction, message)
+
+
+# -----------------------------
+# Staff application panel
+# -----------------------------
+
+class StaffApplicationModal(discord.ui.Modal, title="📋 Staff application"):
+    age = discord.ui.TextInput(label="Age", max_length=3)
+    experience = discord.ui.TextInput(label="Moderation experience", style=discord.TextStyle.paragraph, max_length=600)
+    why = discord.ui.TextInput(label="Why should we choose you?", style=discord.TextStyle.paragraph, max_length=800)
+    availability = discord.ui.TextInput(label="Availability / timezone", max_length=200)
+    game_user = discord.ui.TextInput(label="Main game / username", max_length=200)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        guild = interaction.guild
+        channel_id = setting(guild, "logs_channel_id") or setting(guild, "staff_application_channel_id")
+        channel = guild.get_channel(channel_id) if channel_id else None
+        e = embed("📋 New staff application", f"Submitted by {interaction.user.mention}", INFO)
+        for name, value in (("Age", self.age.value), ("Experience", self.experience.value), ("Why", self.why.value), ("Availability", self.availability.value), ("Game", self.game_user.value)):
+            e.add_field(name=name, value=value[:1024], inline=False)
+        if isinstance(channel, discord.TextChannel):
+            await channel.send(embed=e)
+        await interaction.response.send_message("✅ Your application has been submitted. Thank you!", ephemeral=True)
+
+
+class StaffApplicationView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Apply for staff", emoji="📋", style=discord.ButtonStyle.primary, custom_id="testiny:staff:apply")
+    async def apply(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(StaffApplicationModal())
+
+
+# -----------------------------
+# Gamble UI helpers
+# -----------------------------
+
+async def add_coins(guild_id: int, user_id: int, delta: int):
+    conn = db_connect()
+    conn.execute("INSERT OR IGNORE INTO gambling(guild_id,user_id,coins,last_daily) VALUES(?,?,0,0)", (guild_id, user_id))
+    conn.execute("UPDATE gambling SET coins=MAX(0,coins+?) WHERE guild_id=? AND user_id=?", (delta, guild_id, user_id))
+    conn.commit()
+    row = conn.execute("SELECT coins FROM gambling WHERE guild_id=? AND user_id=?", (guild_id, user_id)).fetchone()
+    conn.close()
+    return row["coins"] if row else 0
+
+
+def get_coins(guild_id: int, user_id: int) -> int:
+    conn = db_connect()
+    conn.execute("INSERT OR IGNORE INTO gambling(guild_id,user_id,coins,last_daily) VALUES(?,?,0,0)", (guild_id, user_id))
+    conn.commit()
+    row = conn.execute("SELECT coins FROM gambling WHERE guild_id=? AND user_id=?", (guild_id, user_id)).fetchone()
+    conn.close()
+    return row["coins"] if row else 0
+
+
+# -----------------------------
+# Invite tracking helpers
+# -----------------------------
+
+invite_cache: dict[int, dict[str, int]] = {}
+anti_nuke_events: dict[tuple[int, int, str], deque[int]] = defaultdict(deque)
+raid_mentions: dict[tuple[int, int], deque[int]] = defaultdict(deque)
+
+
+def set_invite_category(guild_id: int, user_id: int, *, j4j: bool = False):
+    conn = db_connect()
+    row = conn.execute("SELECT * FROM invite_members WHERE guild_id=? AND invited_user_id=?", (guild_id, user_id)).fetchone()
+    if row:
+        category = "j4j" if j4j else row["category"]
+        conn.execute("UPDATE invite_members SET category=?, j4j=? WHERE guild_id=? AND invited_user_id=?", (category, 1 if j4j else row["j4j"], guild_id, user_id))
+    conn.commit(); conn.close()
+
+
+def invite_category(member: discord.Member, inviter_id: Optional[int], j4j=False, rejoin=False) -> str:
+    if j4j:
+        return "j4j"
+    if rejoin:
+        return "rejoin"
+    age_days = (datetime.now(timezone.utc) - member.created_at).days
+    if age_days < 90:
+        return "fake"
+    return "clean"
+
+
+def invite_counts(guild_id: int, user_id: int):
+    conn = db_connect()
+    rows = conn.execute("SELECT category, COUNT(*) c FROM invite_members WHERE guild_id=? AND inviter_id=? GROUP BY category", (guild_id, user_id)).fetchall()
+    conn.close()
+    counts = {"clean": 0, "fake": 0, "left": 0, "rejoin": 0, "j4j": 0}
+    for r in rows:
+        counts[r["category"]] = r["c"]
+    return counts
+
+
+def invited_people(guild_id: int, user_id: int):
+    conn = db_connect()
+    rows = conn.execute("SELECT invited_user_id FROM invite_members WHERE guild_id=? AND inviter_id=? AND category='clean' ORDER BY joined_at DESC", (guild_id, user_id)).fetchall()
+    conn.close()
+    return [r["invited_user_id"] for r in rows]
+
+
+def inviter_of(guild_id: int, invited_user_id: int):
+    conn = db_connect()
+    row = conn.execute("SELECT inviter_id, category FROM invite_members WHERE guild_id=? AND invited_user_id=?", (guild_id, invited_user_id)).fetchone()
+    conn.close()
+    return row
+
+
+async def cache_invites(guild: discord.Guild):
+    try:
+        invites = await guild.invites()
+        invite_cache[guild.id] = {i.code: i.uses or 0 for i in invites}
+        conn = db_connect()
+        for i in invites:
+            inviter = i.inviter.id if i.inviter else None
+            conn.execute("INSERT INTO invites(guild_id,invite_code,inviter_id,uses) VALUES(?,?,?,?) ON CONFLICT(guild_id,invite_code) DO UPDATE SET inviter_id=excluded.inviter_id,uses=excluded.uses", (guild.id, i.code, inviter, i.uses or 0))
+        conn.commit(); conn.close()
+    except (discord.Forbidden, discord.HTTPException):
+        invite_cache.setdefault(guild.id, {})
+
+
+async def find_inviter(guild: discord.Guild) -> Optional[discord.User]:
+    try:
+        invites = await guild.invites()
+    except (discord.Forbidden, discord.HTTPException):
+        return None
+    before = invite_cache.get(guild.id, {})
+    selected = None
+    for inv in invites:
+        old = before.get(inv.code, 0)
+        if (inv.uses or 0) > old:
+            selected = inv
+            break
+    invite_cache[guild.id] = {i.code: i.uses or 0 for i in invites}
+    return selected.inviter if selected and selected.inviter else None
+
+
+# -----------------------------
+# Jail system
+# -----------------------------
+
+def get_active_jail(guild_id: int, user_id: int):
+    conn = db_connect()
+    row = conn.execute(
+        "SELECT * FROM jails WHERE guild_id=? AND user_id=? AND active=1 ORDER BY jail_id DESC LIMIT 1",
+        (guild_id, user_id),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def get_jail_case(jail_id: int):
+    conn = db_connect()
+    row = conn.execute("SELECT * FROM jails WHERE jail_id=?", (jail_id,)).fetchone()
+    conn.close()
+    return row
+
+
+def set_jail_appeal_created(jail_id: int, channel_id: int):
+    conn = db_connect()
+    conn.execute(
+        "UPDATE jails SET appeal_created=1, appeal_channel_id=? WHERE jail_id=?",
+        (channel_id, jail_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def close_active_jail(guild_id: int, user_id: int):
+    conn = db_connect()
+    conn.execute(
+        "UPDATE jails SET active=0 WHERE guild_id=? AND user_id=? AND active=1",
+        (guild_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+async def get_or_create_jail_role(guild: discord.Guild) -> discord.Role:
+    role_id = setting(guild, "jail_role_id")
+    role = guild.get_role(role_id) if role_id else None
+    if role:
+        return role
+    role = discord.utils.get(guild.roles, name="🔒 Jailed") or discord.utils.get(guild.roles, name="Jailed")
+    if not role:
+        role = await guild.create_role(
+            name="🔒 Jailed",
+            color=DANGER,
+            reason="Nightfall jail system setup",
+        )
+    set_setting(guild, "jail_role_id", role.id)
+    return role
+
+
+async def apply_jail_role_permissions(guild: discord.Guild, jail_role: discord.Role):
+    """Deny jailed users from normal channels and allow only the jail area.
+
+    Permission edits are deliberately paced/retried because Katabump/KataProxy
+    can rate-limit servers that have many channels.
+    """
+    category_id = setting(guild, "jail_category_id")
+    chat_id = setting(guild, "jail_chat_channel_id")
+    appeals_id = setting(guild, "jail_appeal_channel_id")
+    targets = []
+    for channel in guild.channels:
+        if isinstance(channel, discord.CategoryChannel):
+            allowed = channel.id == category_id
+        elif isinstance(channel, (discord.TextChannel, discord.VoiceChannel, discord.StageChannel, discord.ForumChannel)):
+            allowed = channel.id in {chat_id, appeals_id}
+        else:
+            continue
+        targets.append((channel, allowed))
+
+    for index, (channel, allowed) in enumerate(targets):
+        for attempt in range(4):
+            try:
+                ow = channel.overwrites_for(jail_role)
+                ow.view_channel = allowed
+                if isinstance(channel, (discord.TextChannel, discord.ForumChannel)):
+                    ow.send_messages = True if (allowed and channel.id == chat_id) else False
+                    ow.read_message_history = allowed
+                    ow.send_messages_in_threads = True if (allowed and channel.id == chat_id) else False
+                await channel.set_permissions(
+                    jail_role,
+                    overwrite=ow,
+                    reason="Nightfall jail access control",
+                )
+                break
+            except discord.Forbidden:
+                break
+            except discord.HTTPException as exc:
+                if getattr(exc, "status", None) != 429 or attempt == 3:
+                    break
+                await asyncio.sleep(await retry_after_from_http(exc, 1.5) + (0.25 * attempt))
+            except AttributeError:
+                break
+        if index < len(targets) - 1:
+            await asyncio.sleep(0.35)
+
+
+async def configure_jail_system(guild: discord.Guild):
+    role = await get_or_create_jail_role(guild)
+
+    category = None
+    category_id = setting(guild, "jail_category_id")
+    if category_id:
+        old = guild.get_channel(category_id)
+        if isinstance(old, discord.CategoryChannel):
+            category = old
+    if category is None:
+        category = discord.utils.find(
+            lambda c: isinstance(c, discord.CategoryChannel) and c.name.lower() in {"jail", "🔒 jail"},
+            guild.categories,
+        )
+    if category is None:
+        category = await guild.create_category("🔒 Jail", reason="Nightfall jail system setup")
+    set_setting(guild, "jail_category_id", category.id)
+
+    staff_role_id = setting(guild, "staff_role_id")
+    staff_role = guild.get_role(staff_role_id) if staff_role_id else None
+
+    category_overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        role: discord.PermissionOverwrite(view_channel=True, read_message_history=True),
+    }
+    if staff_role:
+        category_overwrites[staff_role] = discord.PermissionOverwrite(
+            view_channel=True,
+            read_message_history=True,
+            send_messages=True,
+            manage_messages=True,
+        )
+    try:
+        await category.edit(overwrites=category_overwrites, reason="Nightfall jail category permissions")
+    except (discord.Forbidden, discord.HTTPException):
+        pass
+
+    async def ensure_channel(key: str, name: str, appeal: bool = False):
+        channel = None
+        channel_id = setting(guild, key)
+        if channel_id:
+            candidate = guild.get_channel(channel_id)
+            if isinstance(candidate, discord.TextChannel):
+                channel = candidate
+        if channel is None:
+            channel = discord.utils.find(
+                lambda c: isinstance(c, discord.TextChannel) and c.name == name and c.category_id == category.id,
+                guild.text_channels,
+            )
+        if channel is None:
+            channel = await guild.create_text_channel(
+                name,
+                category=category,
+                reason="Nightfall jail system setup",
+            )
+        set_setting(guild, key, channel.id)
+
+        jail_permissions = discord.PermissionOverwrite(
+            view_channel=True,
+            read_message_history=True,
+            send_messages=not appeal,
+            send_messages_in_threads=not appeal,
+        )
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            role: jail_permissions,
+        }
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                read_message_history=True,
+                send_messages=True,
+                manage_messages=True,
+            )
+        try:
+            await channel.edit(overwrites=overwrites, reason="Nightfall jail channel permissions")
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+        return channel
+
+    jail_chat = await ensure_channel("jail_chat_channel_id", "jail-chat")
+    jail_appeals = await ensure_channel("jail_appeal_channel_id", "jail-appeals", appeal=True)
+    set_setting(guild, "jail_enabled", True)
+    await apply_jail_role_permissions(guild, role)
+
+    # Only create one panel. This survives restarts because we detect the bot's component message.
+    try:
+        recent = [m async for m in jail_appeals.history(limit=15)]
+        has_panel = any(
+            bot.user and m.author.id == bot.user.id and m.embeds and m.embeds[0].title == "📝 Jail appeal"
+            for m in recent
+        )
+    except discord.HTTPException:
+        has_panel = False
+    if not has_panel:
+        await jail_appeals.send(
+            embed=embed(
+                "📝 Jail appeal",
+                "Are you jailed and want to request an appeal?\n\n"
+                "Press **Open jail appeal** below. You may submit **one appeal per jail case**. ✨",
+                WARNING,
+            ),
+            view=JailAppealPanelView(guild.id),
+        )
+    return role, category, jail_chat, jail_appeals
+
+
+async def lock_member_to_jail(member: discord.Member, jail_role: discord.Role, original_role_ids: list[int]):
+    me = member.guild.me
+    removable = []
+    if me:
+        removable = [r for r in member.roles if not r.is_default() and r != jail_role and r < me.top_role]
+    if removable:
+        try:
+            await member.remove_roles(*removable, reason="Nightfall jail")
+        except discord.HTTPException:
+            pass
+    if jail_role not in member.roles:
+        await member.add_roles(jail_role, reason="Nightfall jail")
+    await apply_jail_role_permissions(member.guild, jail_role)
+
+
+async def restore_member_from_jail(member: discord.Member, original_role_ids: list[int], jail_role: discord.Role):
+    if jail_role in member.roles:
+        try:
+            await member.remove_roles(jail_role, reason="Nightfall unjail")
+        except discord.HTTPException:
+            pass
+    me = member.guild.me
+    roles = []
+    for rid in original_role_ids:
+        role = member.guild.get_role(rid)
+        if role and not role.is_default() and (not me or role < me.top_role):
+            roles.append(role)
+    if roles:
+        try:
+            await member.add_roles(*roles, reason="Nightfall unjail restore")
+        except discord.HTTPException:
+            pass
+
+
+class JailAppealPanelView(discord.ui.View):
+    def __init__(self, guild_id: int):
+        super().__init__(timeout=None)
+        self.guild_id = guild_id
+        button = discord.ui.Button(
+            label="Open jail appeal",
+            emoji="📝",
+            style=discord.ButtonStyle.primary,
+            custom_id=f"testiny:jail:{guild_id}:appeal",
+        )
+        button.callback = self.open_appeal
+        self.add_item(button)
+
+    async def open_appeal(self, interaction: discord.Interaction):
+        guild = bot.get_guild(self.guild_id)
+        if not guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message("This jail appeal panel is unavailable.", ephemeral=True)
+            return
+        jail = get_active_jail(guild.id, interaction.user.id)
+        if not jail:
+            await interaction.response.send_message("🔓 You do not have an active jail case.", ephemeral=True)
+            return
+        if jail["appeal_created"]:
+            old = guild.get_channel(jail["appeal_channel_id"]) if jail["appeal_channel_id"] else None
+            msg = f"📝 You already used your one appeal for this case: {old.mention}" if old else "📝 You already submitted the one appeal allowed for this jail case."
+            await interaction.response.send_message(msg, ephemeral=True)
+            return
+        await interaction.response.send_modal(JailAppealModal(guild.id, int(jail["jail_id"])))
+
+
+class JailAppealModal(discord.ui.Modal, title="📝 Jail appeal"):
+    reason = discord.ui.TextInput(
+        label="Why should you be unjailed?",
+        placeholder="Explain your situation...",
+        style=discord.TextStyle.paragraph,
+        required=True,
+        max_length=1500,
+    )
+
+    def __init__(self, guild_id: int, jail_id: int):
+        super().__init__(timeout=300)
+        self.guild_id = guild_id
+        self.jail_id = jail_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        guild = bot.get_guild(self.guild_id)
+        case = get_jail_case(self.jail_id)
+        if not guild or not case or not case["active"] or case["user_id"] != interaction.user.id:
+            await send_followup_resilient(interaction, "🔓 This jail case is no longer active.")
+            return
+        if case["appeal_created"]:
+            await send_followup_resilient(interaction, "📝 You already submitted your one appeal for this jail case.")
+            return
+
+        category = guild.get_channel(setting(guild, "jail_category_id")) if setting(guild, "jail_category_id") else None
+        if not isinstance(category, discord.CategoryChannel):
+            await send_followup_resilient(interaction, "⚠️ Jail setup is incomplete. Ask an administrator to run `!setup` and enable Jail.")
+            return
+        staff_role_id = setting(guild, "staff_role_id")
+        staff_role = guild.get_role(staff_role_id) if staff_role_id else None
+        jail_role_id = setting(guild, "jail_role_id")
+        jail_role = guild.get_role(jail_role_id) if jail_role_id else None
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, attach_files=True),
+        }
+        if jail_role:
+            overwrites[jail_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True, manage_messages=True)
+        try:
+            channel = await guild.create_text_channel(
+                f"jail-appeal-{interaction.user.name[:16]}".lower(),
+                category=category,
+                overwrites=overwrites,
+                reason=f"Nightfall jail appeal #{self.jail_id}",
+            )
+            set_jail_appeal_created(self.jail_id, channel.id)
+            e = embed(
+                "📝 Jail appeal ticket",
+                f"**Member:** {interaction.user.mention}\n**Case:** `#{self.jail_id}`\n**Jailed for:** {case['reason']}\n\n**Appeal:**\n{self.reason.value}",
+                WARNING,
+            )
+            e.set_thumbnail(url=interaction.user.display_avatar.url)
+            await channel.send(embed=e, view=JailAppealControlView(self.jail_id))
+            if staff_role:
+                await channel.send(staff_role.mention, allowed_mentions=discord.AllowedMentions(roles=True))
+            await send_followup_resilient(interaction, f"✅ Your jail appeal was created: {channel.mention}")
+        except discord.Forbidden:
+            await send_followup_resilient(interaction, "❌ I cannot create the jail appeal ticket. Check **Manage Channels** and role permissions.")
+        except discord.HTTPException as exc:
+            await send_followup_resilient(interaction, f"❌ Discord rejected the appeal ticket creation: `{exc}`")
+
+
+class JailAppealControlView(discord.ui.View):
+    def __init__(self, jail_id: int):
+        super().__init__(timeout=None)
+        self.jail_id = jail_id
+        approve = discord.ui.Button(
+            label="Approve / unjail", emoji="✅", style=discord.ButtonStyle.success,
+            custom_id=f"testiny:jail:case:{jail_id}:approve",
+        )
+        deny = discord.ui.Button(
+            label="Deny / close", emoji="❌", style=discord.ButtonStyle.danger,
+            custom_id=f"testiny:jail:case:{jail_id}:deny",
+        )
+        approve.callback = self.approve
+        deny.callback = self.deny
+        self.add_item(approve)
+        self.add_item(deny)
+
+    async def approve(self, interaction: discord.Interaction):
+        if not isinstance(interaction.user, discord.Member) or not is_staff(interaction.user):
+            await interaction.response.send_message("Staff only.", ephemeral=True)
+            return
+        case = get_jail_case(self.jail_id)
+        if not case:
+            await interaction.response.send_message("Jail case not found.", ephemeral=True)
+            return
+        member = interaction.guild.get_member(case["user_id"])
+        role_id = setting(interaction.guild, "jail_role_id")
+        jail_role = interaction.guild.get_role(role_id) if role_id else None
+        if member and jail_role:
+            await restore_member_from_jail(member, json.loads(case["original_roles"] or "[]"), jail_role)
+        close_active_jail(interaction.guild.id, case["user_id"])
+        await interaction.response.send_message("✅ Appeal approved — the member has been unjailed.")
+        await log_action(interaction.guild, "✅ Jail appeal approved", f"Case `#{self.jail_id}` approved by {interaction.user.mention}.", SUCCESS)
+        await asyncio.sleep(1)
+        try:
+            await interaction.channel.delete(reason=f"Nightfall jail appeal #{self.jail_id} approved")
+        except discord.HTTPException:
+            pass
+
+    async def deny(self, interaction: discord.Interaction):
+        if not isinstance(interaction.user, discord.Member) or not is_staff(interaction.user):
+            await interaction.response.send_message("Staff only.", ephemeral=True)
+            return
+        await interaction.response.send_message("❌ Appeal denied. This ticket is closing.")
+        await log_action(interaction.guild, "❌ Jail appeal denied", f"Case `#{self.jail_id}` denied by {interaction.user.mention}.", WARNING)
+        await asyncio.sleep(1)
+        try:
+            await interaction.channel.delete(reason=f"Nightfall jail appeal #{self.jail_id} denied")
+        except discord.HTTPException:
+            pass
+
+
+# -----------------------------
+# Ticket / appeal / setup panels
+# -----------------------------
+
+async def post_verification_panel(guild: discord.Guild):
+    channel_id = setting(guild, "verification_channel_id")
+    if not channel_id:
+        return
+    channel = guild.get_channel(channel_id)
+    if not isinstance(channel, discord.TextChannel):
+        return
+    unverified, verified = await configure_verification_roles(guild)
+    try:
+        ow = channel.overwrites_for(guild.default_role)
+        ow.view_channel = False
+        await channel.set_permissions(guild.default_role, overwrite=ow)
+        await channel.set_permissions(unverified, view_channel=True, send_messages=False, read_message_history=True)
+        await channel.set_permissions(verified, view_channel=False)
+    except (discord.Forbidden, discord.HTTPException):
+        pass
+    e = embed("🔐 Welcome verification", "Press the button below to start a quick verification challenge.\n\nYour challenge is private and changes every time. ✨", EMBED_COLOR)
+    try:
+        await channel.send(embed=e, view=VerificationView(guild.id))
+    except discord.HTTPException:
+        pass
+
+
+async def post_feedback_panel(guild: discord.Guild):
+    ch = guild.get_channel(setting(guild, "feedback_channel_id")) if setting(guild, "feedback_channel_id") else None
+    if isinstance(ch, discord.TextChannel):
+        e = embed("💬 Tell us what you think", "Tap the button below, write your feedback, then pick a star rating. ⭐", INFO)
+        await ch.send(embed=e, view=FeedbackPanelView(guild.id))
+
+
+async def post_staff_application_panel(guild: discord.Guild):
+    ch = guild.get_channel(setting(guild, "staff_application_channel_id")) if setting(guild, "staff_application_channel_id") else None
+    if isinstance(ch, discord.TextChannel):
+        e = embed("📋 Staff applications", "Think you have what it takes to join the team? Click below and fill out the application.\n\nYour answers will be sent privately to the configured staff/log channel.", EMBED_COLOR)
+        await ch.send(embed=e, view=StaffApplicationView())
+
+
+async def create_j4j_ticket(guild: discord.Guild, member: discord.Member):
+    # J4J gets its own auto-created category.
+    category_name = "J4J Tickets"
+    category = discord.utils.get(guild.categories, name=category_name)
+    if not category:
+        try:
+            category = await guild.create_category(category_name, reason="Nightfall J4J system")
+        except discord.HTTPException:
+            category = None
+    staff_role = guild.get_role(setting(guild, "staff_role_id")) if setting(guild, "staff_role_id") else None
+    ow = {guild.default_role: discord.PermissionOverwrite(view_channel=False), member: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)}
+    if staff_role: ow[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
+    channel = await guild.create_text_channel(f"j4j-{member.name[:15]}", category=category, overwrites=ow, reason="Nightfall J4J ticket")
+    await channel.send(embed=embed("🤝 J4J review", f"{member.mention} reported joining from a J4J. Staff can review this ticket.\n\nUse the buttons below.", WARNING), view=J4JTicketView(member.id))
+    if staff_role:
+        await channel.send(staff_role.mention, allowed_mentions=discord.AllowedMentions(roles=True))
+    return channel
+
+
+class J4JTicketView(discord.ui.View):
+    def __init__(self, user_id: int):
+        super().__init__(timeout=None)
+        self.user_id = user_id
+
+    @discord.ui.button(label="J4J — ban", emoji="🔨", style=discord.ButtonStyle.danger, custom_id="testiny:j4j:ban")
+    async def ban(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isinstance(interaction.user, discord.Member) or not is_staff(interaction.user):
+            await interaction.response.send_message("Staff only.", ephemeral=True); return
+        member = interaction.guild.get_member(self.user_id)
+        if member:
+            try:
+                await member.ban(reason="Nightfall J4J review")
+                await log_action(interaction.guild, "🔨 J4J ban", f"{member} was banned after J4J review.", DANGER)
+            except discord.Forbidden:
+                await interaction.response.send_message("I cannot ban that member.", ephemeral=True); return
+        await interaction.response.send_message("🔨 J4J action recorded.")
+
+    @discord.ui.button(label="No J4J — dismiss", emoji="✅", style=discord.ButtonStyle.success, custom_id="testiny:j4j:no")
+    async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not isinstance(interaction.user, discord.Member) or not is_staff(interaction.user):
+            await interaction.response.send_message("Staff only.", ephemeral=True); return
+        await interaction.response.send_message("✅ No J4J action taken.")
+
+
+# -----------------------------
+# Commands
+# -----------------------------
+
+@bot.command(name="help")
+async def help_command(ctx: commands.Context):
+    e = embed("📚 Nightfall command center", "Everything uses the `!` prefix.\n\n**Moderation**\n`!ban @user [reason]` • `!kick @user [reason]` • `!warn @user [reason]` • `!timeout @user <duration>` • `!lock` • `!slowmode <seconds>`\n\n**Community**\n`!afk [reason]` • `!invites @user` • `!invited @user` • `!inviter @user` • `!reset invites @user`\n\n**Tickets / setup**\n`!setup` • `!jail @user [reason]` • `!unjail @user [reason]` • `!ticket panel` • `!ticket questions <type> q1 | q2 | ...` • `!apeal server`\n\n**Fun**\n`!giveaway <duration> <winners> <prize> [| image_url]` • `!giveaway reroll <message_id>` • `!giveaway end <message_id>` • `!highlow <bet>` • `!coinflip <bet> <heads/tails>` • `!blackjack <bet>` • `!roulette <bet> <red/black/number>` • `!daily`\n\n**Utilities**\n`!stick <message>` • `!unstick` • `!role give @user @role` • `!role make <name> <hex>` • `!autoreaction #channel 😀` • `!proof please`", EMBED_COLOR)
+    e.set_thumbnail(url=bot.user.display_avatar.url if bot.user else discord.Embed.Empty)
+    await ctx.send(embed=e)
+
+
+@bot.command()
+@staff_only()
+async def ban(ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+    if member_is_protected(member, ctx.author, ctx.guild):
+        await ctx.send(embed=embed("🛡️ Protected member", "I cannot ban the server owner, yourself, or a member above my role.", WARNING)); return
+    invite = setting(ctx.guild, "appeal_invite_url")
+    view = AppealLinkView(invite) if invite else None
+    await safe_dm(member, embed_obj=embed("🔨 You have been banned", f"You have been banned from **{ctx.guild.name}**.\n\n**Reason:** {reason}\n\nUse the button below to open the appeal server." if invite else f"You have been banned from **{ctx.guild.name}**.\n\n**Reason:** {reason}", DANGER), view=view)
+    try:
+        await member.ban(reason=reason, delete_message_seconds=0)
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Ban failed", "I need the **Ban Members** permission and a role higher than the target.", DANGER)); return
+    await log_action(ctx.guild, "🔨 Member banned", f"{member.mention} was banned by {ctx.author.mention}\n**Reason:** {reason}", DANGER)
+    m = await ctx.send(embed=embed("🔨 Banned", f"{member.mention} has been banned.\n\n✨ Action logged.", DANGER))
+    await asyncio.sleep(5)
+    try: await m.delete()
+    except discord.HTTPException: pass
+
+
+@bot.command()
+@staff_only()
+async def kick(ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+    if member_is_protected(member, ctx.author, ctx.guild):
+        await ctx.send(embed=embed("🛡️ Protected member", "I cannot kick the server owner, yourself, or a member above my role.", WARNING)); return
+    await safe_dm(member, embed_obj=embed("👢 You have been kicked", f"You have been kicked from **{ctx.guild.name}**.\n\n**Reason:** {reason}", WARNING))
+    try:
+        await member.kick(reason=reason)
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Kick failed", "I need the **Kick Members** permission and a role higher than the target.", DANGER)); return
+    await log_action(ctx.guild, "👢 Member kicked", f"{member.mention} was kicked by {ctx.author.mention}\n**Reason:** {reason}", WARNING)
+    await ctx.send(embed=embed("👢 Kicked", f"{member.mention} has been kicked.", WARNING), delete_after=5)
+
+
+@bot.command()
+@staff_only()
+async def warn(ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+    if member_is_protected(member, ctx.author, ctx.guild):
+        await ctx.send(embed=embed("🛡️ Protected member", "I cannot warn this member.", WARNING)); return
+    conn = db_connect()
+    row = conn.execute("SELECT count FROM warnings WHERE guild_id=? AND user_id=?", (ctx.guild.id, member.id)).fetchone()
+    count = (row["count"] if row else 0) + 1
+    conn.execute("INSERT INTO warnings(guild_id,user_id,count,last_reason) VALUES(?,?,?,?) ON CONFLICT(guild_id,user_id) DO UPDATE SET count=excluded.count,last_reason=excluded.last_reason", (ctx.guild.id, member.id, count, reason))
+    conn.commit(); conn.close()
+    await log_action(ctx.guild, "⚠️ Warning issued", f"{member.mention} warned by {ctx.author.mention}\n**Count:** {count}/5\n**Reason:** {reason}", WARNING)
+    await ctx.send(embed=embed("⚠️ Warning", f"{member.mention} now has **{count}/5** warnings.\n\n**Reason:** {reason}", WARNING), delete_after=7)
+    await safe_dm(member, embed_obj=embed("⚠️ You received a warning", f"You were warned in **{ctx.guild.name}**.\n**Warning:** {count}/5\n**Reason:** {reason}", WARNING))
+    if count >= 5:
+        try:
+            await member.kick(reason="Reached 5 warnings")
+            await ctx.send(embed=embed("👢 5 warnings reached", f"{member.mention} was kicked after reaching **5/5** warnings.", DANGER), delete_after=8)
+        except discord.Forbidden:
+            await ctx.send(embed=embed("❌ Auto-kick failed", "I cannot kick that member; check role hierarchy and permissions.", DANGER), delete_after=8)
+
+
+@bot.command()
+@staff_only()
+async def timeout(ctx: commands.Context, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
+    try: seconds = parse_duration(duration)
+    except ValueError as e:
+        await ctx.send(embed=embed("⏱️ Invalid duration", str(e), WARNING)); return
+    if seconds > 28 * 86400:
+        await ctx.send(embed=embed("⏱️ Too long", "Discord member timeouts cannot exceed 28 days.", WARNING)); return
+    if member_is_protected(member, ctx.author, ctx.guild):
+        await ctx.send(embed=embed("🛡️ Protected member", "I cannot timeout this member.", WARNING)); return
+    try:
+        await member.timeout(timedelta(seconds=seconds), reason=reason)
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Timeout failed", "I need **Moderate Members** permission.", DANGER)); return
+    await log_action(ctx.guild, "🔇 Member timed out", f"{member.mention} for **{human_duration(seconds)}**\n**Reason:** {reason}", WARNING)
+    await ctx.send(embed=embed("🔇 Timed out", f"{member.mention} is timed out for **{human_duration(seconds)}**.", WARNING), delete_after=6)
+
+
+@bot.command()
+@staff_only()
+async def lock(ctx: commands.Context):
+    ch = ctx.channel
+    ow = ch.overwrites_for(ctx.guild.default_role)
+    ow.send_messages = False
+    ow.send_messages_in_threads = False
+    try:
+        await ch.set_permissions(ctx.guild.default_role, overwrite=ow, reason=f"Locked by {ctx.author}")
+        await ctx.send(embed=embed("🔒 Channel locked", f"{ch.mention} is now locked for members.", DANGER))
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Lock failed", "I cannot edit this channel's permissions.", DANGER))
+
+
+@bot.command(name="unlock")
+@staff_only()
+async def unlock(ctx: commands.Context):
+    ow = ctx.channel.overwrites_for(ctx.guild.default_role)
+    ow.send_messages = None
+    ow.send_messages_in_threads = None
+    try:
+        await ctx.channel.set_permissions(ctx.guild.default_role, overwrite=ow, reason=f"Unlocked by {ctx.author}")
+        await ctx.send(embed=embed("🔓 Channel unlocked", f"{ctx.channel.mention} is open again.", SUCCESS))
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Unlock failed", "I cannot edit this channel's permissions.", DANGER))
+
+
+@bot.command(name="slowmode", aliases=["slow"])
+@staff_only()
+async def slowmode(ctx: commands.Context, seconds: int):
+    if seconds < 0 or seconds > 21600:
+        await ctx.send(embed=embed("🐢 Invalid slowmode", "Use 0–21600 seconds.", WARNING)); return
+    try:
+        await ctx.channel.edit(slowmode_delay=seconds, reason=f"Slowmode by {ctx.author}")
+        await ctx.send(embed=embed("🐢 Slowmode updated", f"This channel now has **{seconds}s** slowmode.", INFO))
+    except discord.HTTPException:
+        await ctx.send(embed=embed("❌ Failed", "Discord rejected the slowmode change.", DANGER))
+
+
+@bot.command()
+@commands.guild_only()
+async def afk(ctx: commands.Context, *, reason: str = "AFK"):
+    conn = db_connect()
+    conn.execute("INSERT OR REPLACE INTO afk(guild_id,user_id,reason,set_at) VALUES(?,?,?,?)", (ctx.guild.id, ctx.author.id, reason, utc_ts()))
+    conn.commit(); conn.close()
+    await ctx.send(embed=embed("💤 AFK enabled", f"{ctx.author.mention} is now AFK.\n**Reason:** {reason}\n\nWhen someone mentions you, Nightfall will protect the ping and let them know you're away.", INFO), delete_after=8)
+
+
+@bot.command(name="jail")
+@staff_only()
+async def jail(ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+    guild = ctx.guild
+    if not setting(guild, "jail_enabled", False):
+        await ctx.send(embed=embed("🔒 Jail is disabled", "Enable **Jail setup** from `!setup` first.", WARNING), delete_after=6)
+        return
+    if member_is_protected(member, ctx.author, guild):
+        await ctx.send(embed=embed("🛡️ Protected member", "I cannot jail the server owner, yourself, or a member above my role.", WARNING), delete_after=6)
+        return
+    jail_role_id = setting(guild, "jail_role_id")
+    jail_role = guild.get_role(jail_role_id) if jail_role_id else None
+    if not jail_role:
+        jail_role, *_ = await configure_jail_system(guild)
+    existing = get_active_jail(guild.id, member.id)
+    if existing:
+        await ctx.send(embed=embed("🔒 Already jailed", f"{member.mention} already has active jail case **#{existing['jail_id']}**.", WARNING), delete_after=6)
+        return
+
+    original_roles = [r.id for r in member.roles if not r.is_default() and r != jail_role]
+    conn = db_connect()
+    cur = conn.execute(
+        "INSERT INTO jails(guild_id,user_id,reason,jailed_at,active,original_roles) VALUES(?,?,?,?,1,?)",
+        (guild.id, member.id, reason, utc_ts(), json.dumps(original_roles)),
+    )
+    jail_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+
+    try:
+        await lock_member_to_jail(member, jail_role, original_roles)
+    except discord.Forbidden:
+        close_active_jail(guild.id, member.id)
+        await ctx.send(embed=embed("❌ Jail failed", "I could not change this member's roles. Put the bot role above the member's roles.", DANGER))
+        return
+
+    await log_action(
+        guild,
+        "🔒 Member jailed",
+        f"{member.mention} was jailed by {ctx.author.mention}.\n**Case:** #{jail_id}\n**Reason:** {reason}",
+        DANGER,
+    )
+    await ctx.send(
+        embed=embed(
+            "🔒 Member jailed",
+            f"{member.mention} is now in jail.\n\n**Case:** `#{jail_id}`\n**Reason:** {reason}\n\n📝 They can press **Open jail appeal** in the jail appeal channel.",
+            DANGER,
+        ),
+        delete_after=12,
+    )
+
+
+@bot.command(name="unjail")
+@staff_only()
+async def unjail(ctx: commands.Context, member: discord.Member, *, reason: str = "No reason provided"):
+    guild = ctx.guild
+    case = get_active_jail(guild.id, member.id)
+    if not case:
+        await ctx.send(embed=embed("🔓 Not jailed", f"{member.mention} does not have an active jail case.", INFO), delete_after=6)
+        return
+    role_id = setting(guild, "jail_role_id")
+    jail_role = guild.get_role(role_id) if role_id else None
+    if not jail_role:
+        await ctx.send(embed=embed("❌ Jail role missing", "Run Jail setup again from `!setup`.", DANGER), delete_after=6)
+        return
+    try:
+        await restore_member_from_jail(member, json.loads(case["original_roles"] or "[]"), jail_role)
+    except discord.HTTPException:
+        await ctx.send(embed=embed("❌ Unjail failed", "I couldn't restore the member's roles.", DANGER), delete_after=6)
+        return
+    close_active_jail(guild.id, member.id)
+    await log_action(
+        guild,
+        "🔓 Member unjailed",
+        f"{member.mention} was unjailed by {ctx.author.mention}.\n**Case:** #{case['jail_id']}\n**Reason:** {reason}",
+        SUCCESS,
+    )
+    await ctx.send(embed=embed("🔓 Member unjailed", f"{member.mention} has been released. ✨\n\n**Case:** `#{case['jail_id']}`", SUCCESS), delete_after=8)
+
+
+@bot.group(name="setup", invoke_without_command=True)
+@admin_only()
+async def setup(ctx: commands.Context):
+    # Keep enabled systems healthy every time !setup is used.
+    if setting(ctx.guild, "jail_enabled", False):
+        try:
+            await configure_jail_system(ctx.guild)
+        except (discord.Forbidden, discord.HTTPException) as exc:
+            print(f"Jail setup refresh failed for {ctx.guild.id}: {exc!r}")
+    # Reuse the existing dashboard when possible instead of creating duplicates.
+    if await refresh_setup_dashboard(ctx.guild):
+        await ctx.send(embed=embed("✨ Setup refreshed", "Your existing Nightfall setup dashboard was refreshed with the latest saved settings.", SUCCESS), delete_after=5)
+        return
+
+    # The saved dashboard may have been deleted. Clear stale IDs before creating
+    # a replacement so future selectors always target the new message.
+    cfg = get_settings(ctx.guild.id)
+    cfg.pop("setup_dashboard_channel_id", None)
+    cfg.pop("setup_dashboard_message_id", None)
+    save_settings(ctx.guild.id, cfg)
+
+    e = setup_dashboard_embed(ctx.guild)
+    msg = await ctx.send(embed=e, view=SetupDashboardView(ctx.guild.id))
+    set_setting(ctx.guild, "setup_dashboard_channel_id", ctx.channel.id)
+    set_setting(ctx.guild, "setup_dashboard_message_id", msg.id)
+    # Re-render once with the now-persisted dashboard IDs so every future
+    # selector can reliably locate and update this exact setup message.
+    try:
+        await msg.edit(embed=setup_dashboard_embed(ctx.guild), view=SetupDashboardView(ctx.guild.id))
+    except discord.HTTPException:
+        pass
+
+
+@bot.group(name="ticket", invoke_without_command=True)
+async def ticket(ctx: commands.Context):
+    if not ctx.guild:
+        return
+    await ctx.send(embed=embed("🎫 Tickets", "Use `!ticket panel` to post the panel or `!ticket questions <type> question 1 | question 2` to customize ticket questions.", EMBED_COLOR))
+
+
+@ticket.command(name="panel")
+@admin_only()
+async def ticket_panel(ctx: commands.Context):
+    await ctx.send(embed=embed("🎫 Open a ticket", "Select a ticket type below. Your ticket will be private and your staff role will be pinged.", EMBED_COLOR), view=TicketPanelView(ctx.guild.id))
+
+
+@ticket.command(name="questions")
+@admin_only()
+async def ticket_questions(ctx: commands.Context, ticket_type: str, *, questions: str):
+    qs = [q.strip() for q in questions.split("|") if q.strip()][:5]
+    cfg = get_settings(ctx.guild.id)
+    tq = cfg.get("ticket_questions", {})
+    tq[ticket_type.lower()] = qs
+    set_setting(ctx.guild, "ticket_questions", tq)
+    await ctx.send(embed=embed("✅ Ticket questions saved", f"**{ticket_type}** now has {len(qs)} question(s).", SUCCESS))
+
+
+# Appeal server command names support both spellings.
+@bot.command(name="appeal_server", aliases=["apeal_server", "appealserver", "apealserver"])
+@admin_only()
+async def appeal_server(ctx: commands.Context):
+    await ctx.send(embed=embed("📝 Appeal setup", "Choose the main server below. Only main servers that configured this guild as their appeal server appear here.", INFO), view=AppealServerView(ctx.guild))
+
+
+# This lets users literally type: !appeal server / !apeal server.
+@bot.group(name="appeal", invoke_without_command=True)
+async def appeal_group(ctx: commands.Context):
+    await ctx.send(embed=embed("📝 Appeals", "Use `!appeal server` here in the appeal server to choose the main server.", INFO))
+
+
+@appeal_group.command(name="server")
+@admin_only()
+async def appeal_server_subcommand(ctx: commands.Context):
+    await appeal_server(ctx)
+
+
+@bot.group(name="apeal", invoke_without_command=True)
+async def apeal_group(ctx: commands.Context):
+    await ctx.send(embed=embed("📝 Appeals", "Use `!apeal server` here in the appeal server to choose the main server.", INFO))
+
+
+@apeal_group.command(name="server")
+@admin_only()
+async def apeal_server_subcommand(ctx: commands.Context):
+    await appeal_server(ctx)
+
+
+@bot.command()
+@admin_only()
+async def autoreaction(ctx: commands.Context, channel: discord.TextChannel, emoji: str):
+    # Validate emoji before saving. It can be unicode or a Discord custom emoji.
+    try:
+        str(emoji)
+    except Exception:
+        await ctx.send(embed=embed("❌ Invalid emoji", "I couldn't use that emoji.", DANGER)); return
+    set_setting(ctx.guild, "autoreaction_channel_id", channel.id)
+    set_setting(ctx.guild, "autoreaction_emoji", emoji)
+    await ctx.send(embed=embed("✨ Auto-reaction enabled", f"Every message in {channel.mention} will receive {emoji}.", SUCCESS))
+
+
+@bot.group(name="role", invoke_without_command=True)
+@admin_only()
+async def role_group(ctx: commands.Context):
+    await ctx.send(embed=embed("🎭 Role manager", "Use `!role give @user @role` or `!role give @everyone @role`, or `!role make Name #8A5CFF`.", EMBED_COLOR))
+
+
+@role_group.command(name="give")
+@admin_only()
+async def role_give(ctx: commands.Context, target: str, role: discord.Role):
+    if target.lower() in ("@everyone", "everyone"):
+        count = 0
+        for member in ctx.guild.members:
+            try:
+                await member.add_roles(role, reason=f"Bulk role by {ctx.author}")
+                count += 1
+            except discord.HTTPException:
+                pass
+        await ctx.send(embed=embed("🎭 Role applied", f"Added {role.mention} to **{count}** members.", SUCCESS))
+        return
+    try:
+        member = await commands.MemberConverter().convert(ctx, target)
+    except commands.BadArgument:
+        await ctx.send(embed=embed("❌ Member not found", "Mention a member or use their user ID.", DANGER)); return
+    try:
+        await member.add_roles(role, reason=f"Role by {ctx.author}")
+        await ctx.send(embed=embed("🎭 Role applied", f"Added {role.mention} to {member.mention}.", SUCCESS))
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Failed", "That role is above my bot role.", DANGER))
+
+
+@role_group.command(name="make")
+@admin_only()
+async def role_make(ctx: commands.Context, name: str, color: str = "#ffffff"):
+    color = color.replace("#", "")
+    if not re.fullmatch(r"[0-9a-fA-F]{6}", color):
+        await ctx.send(embed=embed("❌ Invalid color", "Use a hex color like `#8A5CFF`.", DANGER)); return
+    role = await ctx.guild.create_role(name=name[:100], color=discord.Color(int(color, 16)), reason=f"Role created by {ctx.author}")
+    await ctx.send(embed=embed("✨ Role created", f"Created {role.mention} with color `#{color.upper()}`.", SUCCESS))
+
+
+@bot.group(name="reset", invoke_without_command=True)
+@admin_only()
+async def reset_group(ctx: commands.Context):
+    await ctx.send(embed=embed("🔄 Reset", "Use `!reset invites @user` or `!reset invites @everyone`.", INFO))
+
+
+@reset_group.command(name="invites")
+@admin_only()
+async def reset_invites(ctx: commands.Context, target: str):
+    conn = db_connect()
+    if target.lower() in ("@everyone", "everyone"):
+        conn.execute("DELETE FROM invite_members WHERE guild_id=?", (ctx.guild.id,))
+        conn.commit(); conn.close()
+        await ctx.send(embed=embed("🔄 Invites reset", "All invite tracking for this server has been reset.", SUCCESS)); return
+    try:
+        member = await commands.MemberConverter().convert(ctx, target)
+    except commands.BadArgument:
+        await ctx.send(embed=embed("❌ Member not found", "Mention a member or use their ID.", DANGER)); conn.close(); return
+    conn.execute("DELETE FROM invite_members WHERE guild_id=? AND inviter_id=?", (ctx.guild.id, member.id))
+    conn.commit(); conn.close()
+    await ctx.send(embed=embed("🔄 Invites reset", f"Clean invite tracking for {member.mention} has been reset.", SUCCESS))
+
+
+@bot.command()
+@commands.guild_only()
+async def invites(ctx: commands.Context, member: Optional[discord.Member] = None):
+    member = member or ctx.author
+    counts = invite_counts(ctx.guild.id, member.id)
+    e = embed(f"📊 Invite tracker — {member.display_name}", "Clean invites are 90+ day old accounts that have not left, rejoined, or been marked as J4J.", INFO)
+    e.set_thumbnail(url=member.display_avatar.url)
+    e.add_field(name="✅ Clean", value=str(counts["clean"]), inline=True)
+    e.add_field(name="🧪 Fake", value=str(counts["fake"]), inline=True)
+    e.add_field(name="🚪 Left", value=str(counts["left"]), inline=True)
+    e.add_field(name="🔁 Rejoined", value=str(counts["rejoin"]), inline=True)
+    e.add_field(name="🤝 J4J", value=str(counts["j4j"]), inline=True)
+    await ctx.send(embed=e)
+
+
+@bot.command()
+@commands.guild_only()
+async def invited(ctx: commands.Context, member: Optional[discord.Member] = None):
+    member = member or ctx.author
+    ids = invited_people(ctx.guild.id, member.id)
+    lines = []
+    for uid in ids[:50]:
+        m = ctx.guild.get_member(uid)
+        lines.append(f"• {m.mention if m else f'<@{uid}>'}")
+    if not lines: lines = ["No clean invites tracked yet."]
+    e = embed(f"👥 Invited by {member.display_name}", "\n".join(lines), INFO)
+    e.set_thumbnail(url=member.display_avatar.url)
+    await ctx.send(embed=e)
+
+
+@bot.command()
+@commands.guild_only()
+async def inviter(ctx: commands.Context, member: discord.Member):
+    row = inviter_of(ctx.guild.id, member.id)
+    e = embed(f"🕵️ Inviter — {member.display_name}", "The tracker could not identify an inviter." if not row or not row["inviter_id"] else f"**Invited by:** <@{row['inviter_id']}>\n**Category:** `{row['category']}`", INFO)
+    e.set_thumbnail(url=member.display_avatar.url)
+    await ctx.send(embed=e)
+
+
+@bot.group(name="j4j", invoke_without_command=True)
+@admin_only()
+async def j4j_group(ctx: commands.Context):
+    cfg = get_settings(ctx.guild.id)
+    await ctx.send(embed=embed("🤝 J4J settings", f"J4J system: **{'ON' if cfg.get('j4j') else 'OFF'}**\nJ4J DM: **{'ON' if cfg.get('j4j_dm') else 'OFF'}**\n\nUse `!j4j allowed` to toggle whether J4J entries are allowed. Use `!j4j dm on` or `!j4j dm off` for the DM check.", INFO))
+
+
+@j4j_group.command(name="allowed")
+@admin_only()
+async def j4j_allowed(ctx: commands.Context):
+    enabled = not bool(setting(ctx.guild, "j4j", False))
+    set_setting(ctx.guild, "j4j", enabled)
+    await ctx.send(embed=embed("🤝 J4J allowed", f"J4J entries are now **{'allowed' if enabled else 'not allowed'}**.", SUCCESS if enabled else WARNING))
+
+
+@j4j_group.command(name="dm")
+@admin_only()
+async def j4j_dm(ctx: commands.Context, state: str):
+    state = state.lower()
+    if state not in ("on", "off"):
+        await ctx.send(embed=embed("❌ Invalid state", "Use `on` or `off`.", WARNING)); return
+    set_setting(ctx.guild, "j4j_dm", state == "on")
+    set_setting(ctx.guild, "j4j", state == "on" or bool(setting(ctx.guild, "j4j", False)))
+    await ctx.send(embed=embed("🤝 J4J DM", f"J4J welcome DMs are now **{state.upper()}**.", SUCCESS if state == "on" else WARNING))
+
+
+@bot.group(name="giveaway", invoke_without_command=True)
+@staff_only()
+async def giveaway(ctx: commands.Context, duration: str = None, winners: int = None, *, prize: str = None):
+    if not duration or not winners or not prize:
+        await ctx.send(embed=embed("🎁 Giveaway", "Use `!giveaway <duration> <winners> <prize> [| image_url]`.", INFO)); return
+    try: seconds = parse_duration(duration)
+    except ValueError as e:
+        await ctx.send(embed=embed("❌ Invalid duration", str(e), DANGER)); return
+    if winners < 1 or winners > 20:
+        await ctx.send(embed=embed("❌ Invalid winners", "Winners must be 1–20.", DANGER)); return
+    image_url = None
+    parts = prize.split("|", 1)
+    if len(parts) == 2:
+        prize = parts[0].strip(); image_url = parts[1].strip()
+    ends = utc_ts() + seconds
+    e = embed("🎁 GIVEAWAY", f"## 🎉 {prize}\n\n⏳ Ends <t:{ends}:R>\n🏆 Winners: **{winners}**\n\nReact with 🎉 to enter!", EMBED_COLOR)
+    if image_url: e.set_image(url=image_url)
+    e.set_footer(text="Nightfall Giveaway • Good luck! 🍀")
+    msg = await ctx.send(embed=e)
+    await msg.add_reaction("🎉")
+    conn = db_connect(); conn.execute("INSERT INTO giveaways(guild_id,channel_id,message_id,prize,winners,ends_at,ended) VALUES(?,?,?,?,?,?,0)", (ctx.guild.id, ctx.channel.id, msg.id, prize, winners, ends)); conn.commit(); conn.close()
+
+
+@giveaway.command(name="reroll")
+@staff_only()
+async def giveaway_reroll(ctx: commands.Context, message_id: int):
+    conn = db_connect(); row = conn.execute("SELECT * FROM giveaways WHERE guild_id=? AND message_id=?", (ctx.guild.id, message_id)).fetchone(); conn.close()
+    if not row:
+        await ctx.send(embed=embed("❌ Giveaway not found", "That message is not a stored giveaway.", DANGER)); return
+    channel = ctx.guild.get_channel(row["channel_id"])
+    try: msg = await channel.fetch_message(message_id)
+    except Exception:
+        await ctx.send(embed=embed("❌ Message not found", "I cannot access the giveaway message.", DANGER)); return
+    reaction = discord.utils.get(msg.reactions, emoji="🎉")
+    if not reaction:
+        await ctx.send(embed=embed("❌ No entries", "There is no 🎉 reaction on the giveaway.", DANGER)); return
+    users = [u async for u in reaction.users() if not u.bot]
+    if not users:
+        await ctx.send(embed=embed("❌ No eligible entries", "Nobody entered this giveaway.", DANGER)); return
+    winner = random.choice(users)
+    await ctx.send(embed=embed("🎉 Giveaway rerolled", f"New winner: {winner.mention}\nPrize: **{row['prize']}**", SUCCESS))
+
+
+@giveaway.command(name="end")
+@staff_only()
+async def giveaway_end(ctx: commands.Context, message_id: int):
+    await finish_giveaway(ctx.guild, message_id, manual=True)
+    await ctx.send(embed=embed("🛑 Giveaway ended", f"Giveaway `{message_id}` has been ended.", WARNING))
+
+
+@bot.command()
+@staff_only()
+async def stick(ctx: commands.Context, *, message: str):
+    old = get_settings(ctx.guild.id)
+    # Delete command message and create the sticky message.
+    try: await ctx.message.delete()
+    except discord.HTTPException: pass
+    sent = await ctx.channel.send(embed=embed("📌 Sticky", message, INFO))
+    conn = db_connect(); conn.execute("INSERT OR REPLACE INTO sticks(guild_id,channel_id,content,message_id) VALUES(?,?,?,?)", (ctx.guild.id, ctx.channel.id, message, sent.id)); conn.commit(); conn.close()
+
+
+@bot.command()
+@staff_only()
+async def unstick(ctx: commands.Context):
+    conn = db_connect(); row = conn.execute("SELECT message_id FROM sticks WHERE guild_id=? AND channel_id=?", (ctx.guild.id, ctx.channel.id)).fetchone(); conn.execute("DELETE FROM sticks WHERE guild_id=? AND channel_id=?", (ctx.guild.id, ctx.channel.id)); conn.commit(); conn.close()
+    if row:
+        try: await ctx.channel.get_partial_message(row["message_id"]).delete()
+        except Exception: pass
+    await ctx.send(embed=embed("📌 Sticky removed", "This channel no longer has a sticky message.", SUCCESS), delete_after=4)
+
+
+@bot.command()
+@staff_only()
+async def proof(ctx: commands.Context, *, action: str):
+    if action.lower() != "please":
+        await ctx.send(embed=embed("📸 Proof", "Use `!proof please` inside a claim ticket after the user has posted a proof image.", INFO)); return
+    proof_channel_id = setting(ctx.guild, "proof_channel_id")
+    proof_channel = ctx.guild.get_channel(proof_channel_id) if proof_channel_id else None
+    if not isinstance(proof_channel, discord.TextChannel):
+        await ctx.send(embed=embed("❌ Proof channel not configured", "Use setup to select one.", DANGER)); return
+    found = None
+    async for msg in ctx.channel.history(limit=50):
+        if msg.attachments:
+            for att in msg.attachments:
+                if att.content_type and att.content_type.startswith("image/"):
+                    found = (msg, att); break
+        if found: break
+    if not found:
+        await ctx.send(embed=embed("📸 No image found", "Ask the user to post a photo/screenshot in this ticket first.", WARNING)); return
+    msg, att = found
+    e = embed("📸 New claim proof", f"Ticket: {ctx.channel.mention}\nSubmitted by: {msg.author.mention}", SUCCESS)
+    e.set_image(url=att.url)
+    await proof_channel.send(embed=e)
+    await ctx.send(embed=embed("✅ Proof posted", f"Sent the proof to {proof_channel.mention}.", SUCCESS), delete_after=5)
+
+
+# -----------------------------
+# Gambling commands
+# -----------------------------
+
+async def validate_bet(ctx: commands.Context, bet: int):
+    if setting(ctx.guild, "gamble_channel_id") and ctx.channel.id != setting(ctx.guild, "gamble_channel_id"):
+        await ctx.send(embed=embed("🎰 Gambling channel only", f"Use {ctx.guild.get_channel(setting(ctx.guild,'gamble_channel_id')).mention}.", WARNING), delete_after=5)
+        return False
+    if bet <= 0:
+        await ctx.send(embed=embed("❌ Invalid bet", "Bet must be greater than 0.", DANGER)); return False
+    coins = get_coins(ctx.guild.id, ctx.author.id)
+    if coins < bet:
+        await ctx.send(embed=embed("💸 Not enough coins", f"You have **{coins:,}** coins.", DANGER)); return False
+    return True
+
+
+@bot.command(name="daily")
+@commands.guild_only()
+async def daily(ctx: commands.Context):
+    conn = db_connect(); conn.execute("INSERT OR IGNORE INTO gambling(guild_id,user_id,coins,last_daily) VALUES(?,?,0,0)", (ctx.guild.id, ctx.author.id))
+    row = conn.execute("SELECT last_daily FROM gambling WHERE guild_id=? AND user_id=?", (ctx.guild.id, ctx.author.id)).fetchone()
+    last = row["last_daily"] if row else 0
+    now = utc_ts()
+    if now - last < 86400:
+        conn.close(); await ctx.send(embed=embed("🕛 Daily", f"You already claimed it. Come back <t:{last+86400}:R>.", WARNING)); return
+    conn.execute("UPDATE gambling SET coins=coins+500,last_daily=? WHERE guild_id=? AND user_id=?", (now, ctx.guild.id, ctx.author.id)); conn.commit(); conn.close()
+    await ctx.send(embed=embed("💰 Daily claimed", "You received **500 coins**. ✨", SUCCESS))
+
+
+@bot.command()
+@commands.guild_only()
+async def balance(ctx: commands.Context, member: Optional[discord.Member] = None):
+    member = member or ctx.author
+    await ctx.send(embed=embed("💰 Wallet", f"{member.mention} has **{get_coins(ctx.guild.id, member.id):,}** coins.", INFO))
+
+
+@bot.command(name="coinflip")
+@commands.guild_only()
+async def coinflip(ctx: commands.Context, bet: int, choice: str):
+    if not await validate_bet(ctx, bet): return
+    choice = choice.lower()
+    if choice not in ("heads", "tails"):
+        await ctx.send(embed=embed("🪙 Choice", "Choose `heads` or `tails`.", WARNING)); return
+    msg = await ctx.send(embed=embed("🪙 Coinflip", "Flipping... ✨", EMBED_COLOR))
+    for frame in ("🪙 •", "• 🪙", "🪙 •", "• 🪙"):
+        await asyncio.sleep(0.35); await msg.edit(embed=embed("🪙 Coinflip", frame, EMBED_COLOR))
+    result = random.choice(("heads", "tails"))
+    win = result == choice
+    delta = bet if win else -bet
+    bal = await add_coins(ctx.guild.id, ctx.author.id, delta)
+    await msg.edit(embed=embed("🪙 Coinflip", f"Landed on **{result}**!\n\n{'🎉 You won!' if win else '💥 You lost!'}\nBalance: **{bal:,}**", SUCCESS if win else DANGER))
+
+
+@bot.command(name="highlow")
+@commands.guild_only()
+async def highlow(ctx: commands.Context, bet: int):
+    if not await validate_bet(ctx, bet): return
+    current = random.randint(1, 13)
+    msg = await ctx.send(embed=embed("🎴 High / Low", f"Current card: **{current}**\n\nPick by editing your next message isn't interactive here, so the bot resolves automatically: higher or lower! 🎲", EMBED_COLOR))
+    await asyncio.sleep(1)
+    next_card = random.randint(1, 13)
+    win = next_card != current and random.random() < 0.5
+    if next_card == current: win = False
+    delta = bet if win else -bet
+    bal = await add_coins(ctx.guild.id, ctx.author.id, delta)
+    await msg.edit(embed=embed("🎴 High / Low", f"{current} ➜ **{next_card}**\n\n{'🎉 You won!' if win else '💥 You lost!'}\nBalance: **{bal:,}**", SUCCESS if win else DANGER))
+
+
+@bot.command(name="blackjack")
+@commands.guild_only()
+async def blackjack(ctx: commands.Context, bet: int):
+    if not await validate_bet(ctx, bet): return
+    deck = [r for r in range(2, 11)] * 4 + [10] * 12 + [11] * 4
+    random.shuffle(deck)
+    player = [deck.pop(), deck.pop()]
+    dealer = [deck.pop(), deck.pop()]
+    def score(cards):
+        s = sum(cards)
+        aces = cards.count(11)
+        while s > 21 and aces:
+            s -= 10; aces -= 1
+        return s
+    msg = await ctx.send(embed=embed("♠️ Blackjack", "Dealing cards... 🃏", EMBED_COLOR))
+    await asyncio.sleep(0.7)
+    while score(player) < 17:
+        player.append(deck.pop())
+    while score(dealer) < 17:
+        dealer.append(deck.pop())
+    ps, ds = score(player), score(dealer)
+    win = ps <= 21 and (ds > 21 or ps > ds)
+    push = ps == ds and ps <= 21
+    delta = bet if win else 0 if push else -bet
+    bal = await add_coins(ctx.guild.id, ctx.author.id, delta)
+    result = "🤝 Push" if push else "🎉 Blackjack won" if win else "💥 Dealer wins"
+    await msg.edit(embed=embed("♠️ Blackjack", f"**You:** {player} → **{ps}**\n**Dealer:** {dealer} → **{ds}**\n\n{result}\nBalance: **{bal:,}**", SUCCESS if win else WARNING if push else DANGER))
+
+
+@bot.command(name="roulette")
+@commands.guild_only()
+async def roulette(ctx: commands.Context, bet: int, pick: str):
+    if not await validate_bet(ctx, bet): return
+    n = random.randint(0, 36)
+    red_numbers = {1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36}
+    color = "green" if n == 0 else "red" if n in red_numbers else "black"
+    msg = await ctx.send(embed=embed("🎡 Roulette", "Spinning... 🔴 ⚫ 🟢", EMBED_COLOR))
+    for _ in range(5):
+        await asyncio.sleep(0.25); await msg.edit(embed=embed("🎡 Roulette", f"{random.randint(0,36):02d} • spinning • 🎡", EMBED_COLOR))
+    pick_l = pick.lower()
+    win = False
+    payout = 0
+    if pick_l in ("red", "black", "green"):
+        win = pick_l == color
+        payout = bet if win else -bet
+    elif pick_l.isdigit() and 0 <= int(pick_l) <= 36:
+        win = int(pick_l) == n
+        payout = bet * 35 if win else -bet
+    else:
+        await msg.edit(embed=embed("🎡 Roulette", "Choose `red`, `black`, `green`, or a number 0–36.", WARNING)); return
+    bal = await add_coins(ctx.guild.id, ctx.author.id, payout)
+    await msg.edit(embed=embed("🎡 Roulette", f"The wheel landed on **{n} — {color}**.\n\n{'🎉 You won!' if win else '💥 You lost!'}\nBalance: **{bal:,}**", SUCCESS if win else DANGER))
+
+
+# -----------------------------
+# Background loops
+# -----------------------------
+
+@tasks.loop(seconds=5)
+async def giveaway_watcher():
+    conn = db_connect(); rows = conn.execute("SELECT * FROM giveaways WHERE ended=0 AND ends_at<=?", (utc_ts(),)).fetchall(); conn.close()
+    for row in rows:
+        guild = bot.get_guild(row["guild_id"])
+        if guild:
+            await finish_giveaway(guild, row["message_id"])
+
+
+async def finish_giveaway(guild: discord.Guild, message_id: int, manual=False):
+    conn = db_connect(); row = conn.execute("SELECT * FROM giveaways WHERE guild_id=? AND message_id=?", (guild.id, message_id)).fetchone()
+    if not row or row["ended"]: conn.close(); return
+    conn.execute("UPDATE giveaways SET ended=1 WHERE guild_id=? AND message_id=?", (guild.id, message_id)); conn.commit(); conn.close()
+    channel = guild.get_channel(row["channel_id"])
+    if not isinstance(channel, discord.TextChannel): return
+    try: msg = await channel.fetch_message(message_id)
+    except Exception: return
+    reaction = discord.utils.get(msg.reactions, emoji="🎉")
+    users = [u async for u in reaction.users() if not u.bot] if reaction else []
+    winners = random.sample(users, min(row["winners"], len(users))) if users else []
+    names = ", ".join(u.mention for u in winners) if winners else "Nobody entered."
+    await channel.send(embed=embed("🎁 Giveaway ended", f"**Prize:** {row['prize']}\n**Winner(s):** {names}", SUCCESS if winners else WARNING))
+    e = embed("🎁 GIVEAWAY ENDED", f"**Prize:** {row['prize']}\n**Winner(s):** {names}", DARK)
+    try: await msg.edit(embed=e)
+    except discord.HTTPException: pass
+
+
+# -----------------------------
+# Events
+# -----------------------------
+
+@bot.event
+async def on_ready():
+    db_init()
+    for guild in bot.guilds:
+        await cache_invites(guild)
+        if setting(guild, "jail_enabled", False):
+            try:
+                jail_role, _, _, jail_appeals = await configure_jail_system(guild)
+                # Restore active jail members after a restart.
+                conn = db_connect()
+                cases = conn.execute("SELECT user_id FROM jails WHERE guild_id=? AND active=1", (guild.id,)).fetchall()
+                conn.close()
+                for case in cases:
+                    member = guild.get_member(case["user_id"])
+                    if member and jail_role not in member.roles:
+                        try:
+                            await member.add_roles(jail_role, reason="Nightfall restore active jail")
+                        except discord.HTTPException:
+                            pass
+            except (discord.Forbidden, discord.HTTPException) as exc:
+                print(f"Jail restore failed for {guild.id}: {exc!r}")
+        # Rebind/refresh any saved setup dashboard after a restart so its
+        # buttons are not left pointing at an expired in-memory View.
+        try:
+            await refresh_setup_dashboard(guild)
+        except Exception as exc:
+            print(f"Setup dashboard refresh failed for {guild.id}: {exc!r}")
+        await asyncio.sleep(0.25)
+    if not giveaway_watcher.is_running():
+        giveaway_watcher.start()
+    # Dashboard-style presence.
+    await bot.change_presence(activity=discord.Game(name=f"{PREFIX}help • Nightfall ✨"))
+    print(f"Logged in as {bot.user} ({bot.user.id}) on {len(bot.guilds)} server(s)")
+
+
+@bot.event
+async def on_guild_join(guild: discord.Guild):
+    db_init()
+    await cache_invites(guild)
+    try:
+        await guild.me.edit(nick="Nightfall ✦")
+    except Exception:
+        pass
+
+
+@bot.event
+async def on_guild_channel_create(channel: discord.abc.GuildChannel):
+    guild = channel.guild
+    if setting(guild, "anti_raid", False):
+        try:
+            ow = channel.overwrites_for(guild.default_role)
+            ow.use_external_apps = False
+            await channel.set_permissions(guild.default_role, overwrite=ow, reason="Nightfall anti-raid new-channel protection")
+        except (discord.Forbidden, discord.HTTPException, AttributeError):
+            pass
+    if setting(guild, "jail_enabled", False):
+        jail_role_id = setting(guild, "jail_role_id")
+        jail_role = guild.get_role(jail_role_id) if jail_role_id else None
+        if jail_role:
+            await apply_jail_role_permissions(guild, jail_role)
+
+
+@bot.event
+async def on_guild_channel_delete(channel: discord.abc.GuildChannel):
+    guild = channel.guild
+    if not setting(guild, "anti_nuke", False): return
+    await detect_destructive_action(guild, "channel_delete")
+
+
+@bot.event
+async def on_guild_role_delete(role: discord.Role):
+    guild = role.guild
+    if not setting(guild, "anti_nuke", False): return
+    await detect_destructive_action(guild, "role_delete")
+
+
+async def detect_destructive_action(guild: discord.Guild, action_key: str):
+    try:
+        audit = [entry async for entry in guild.audit_logs(limit=5, action=discord.AuditLogAction.channel_delete if action_key == "channel_delete" else discord.AuditLogAction.role_delete)]
+    except (discord.Forbidden, discord.HTTPException):
+        await emergency_lockdown(guild)
+        await log_action(guild, "🚨 Anti-nuke lockdown", "Audit log access failed, so Nightfall applied a safer emergency lockdown.", DANGER)
+        return
+    if not audit: return
+    entry = audit[0]
+    actor = entry.user
+    if not actor or actor.bot: return
+    now = utc_ts()
+    key = (guild.id, actor.id, action_key)
+    q = anti_nuke_events[key]
+    q.append(now)
+    while q and now - q[0] > 10: q.popleft()
+    if len(q) >= 3:
+        member = guild.get_member(actor.id)
+        if member and member.id != guild.owner_id:
+            try:
+                await guild.ban(actor, reason=f"Nightfall anti-nuke: too many {action_key.replace('_',' ')} actions")
+                await log_action(guild, "🚨 Anti-nuke action", f"Banned {actor.mention} after repeated **{action_key.replace('_',' ')}** events.", DANGER)
+            except discord.Forbidden:
+                await emergency_lockdown(guild)
+                await log_action(guild, "🚨 Anti-nuke lockdown", f"Could not ban {actor}; emergency lockdown applied instead.", DANGER)
+
+
+@bot.event
+async def on_member_join(member: discord.Member):
+    guild = member.guild
+    inviter = await find_inviter(guild)
+    await cache_invites(guild)
+    conn = db_connect()
+    old = conn.execute("SELECT category, left_at FROM invite_members WHERE guild_id=? AND invited_user_id=?", (guild.id, member.id)).fetchone()
+    was_left = bool(old and old["left_at"])
+    cat = invite_category(member, inviter.id if inviter else None, rejoin=was_left)
+    conn.execute("INSERT OR REPLACE INTO invite_members(guild_id,invited_user_id,inviter_id,invite_code,category,joined_at,left_at,rejoined,j4j) VALUES(?,?,?,?,?,?,?,?,?)", (guild.id, member.id, inviter.id if inviter else None, None, cat, utc_ts(), None, 1 if was_left else 0, old["category"] == "j4j" if old else 0))
+    conn.commit(); conn.close()
+
+    autorole_id = setting(guild, "autorole_id")
+    if autorole_id:
+        role = guild.get_role(autorole_id)
+        if role:
+            try: await member.add_roles(role, reason="Nightfall auto role")
+            except discord.Forbidden: pass
+
+    if setting(guild, "verification_channel_id"):
+        unverified, _ = await configure_verification_roles(guild)
+        try: await member.add_roles(unverified, reason="Nightfall verification")
+        except discord.Forbidden: pass
+
+    welcome_id = setting(guild, "welcome_channel_id")
+    if welcome_id:
+        ch = guild.get_channel(welcome_id)
+        if isinstance(ch, discord.TextChannel):
+            inviter_text = inviter.mention if inviter else "OAuth2 / unknown"
+            e = embed("👋 Welcome!", f"{member.mention} has joined the gang!\n\n**Invited by:** {inviter_text}\n**We are now:** {guild.member_count}\n**Inviter total:** {invite_counts(guild.id, inviter.id)['clean'] if inviter else 0} clean", SUCCESS)
+            file = await make_member_card_with_avatar(member, "WELCOME! ✨", f"Invited by {str(inviter) if inviter else 'OAuth2 / unknown'} • {guild.member_count} members")
+            e.set_image(url="attachment://member_card.png")
+            await ch.send(embed=e, file=file)
+
+    if setting(guild, "j4j", False) and setting(guild, "j4j_dm", True):
+        task = asyncio.create_task(j4j_timeout_task(guild.id, member.id))
+        j4j_tasks[member.id] = task
+        await safe_dm(member, embed_obj=embed("🤝 Welcome!", "Hi! Welcome to our server 💜\n\n**Quick question:** did you join from a J4J (Join For Join)?\n\nChoose an answer below.", INFO), view=J4JView(guild.id, member.id))
+
+
+j4j_tasks: dict[int, asyncio.Task] = {}
+
+
+async def j4j_timeout_task(guild_id: int, user_id: int):
+    await asyncio.sleep(3600)
+    task = j4j_tasks.pop(user_id, None)
+    guild = bot.get_guild(guild_id)
+    if not guild: return
+    conn = db_connect(); row = conn.execute("SELECT j4j FROM invite_members WHERE guild_id=? AND invited_user_id=?", (guild_id, user_id)).fetchone(); conn.close()
+    if row and not row["j4j"]:
+        member = guild.get_member(user_id)
+        if member:
+            try:
+                await guild.ban(member, reason="J4J system: no response within 1 hour")
+                await log_action(guild, "⏰ J4J timeout", f"Banned <@{user_id}> after no J4J response for 1 hour.", DANGER)
+            except discord.Forbidden:
+                pass
+
+
+@bot.event
+async def on_member_remove(member: discord.Member):
+    guild = member.guild
+    conn = db_connect(); conn.execute("UPDATE invite_members SET category='left',left_at=? WHERE guild_id=? AND invited_user_id=? AND category!='j4j'", (utc_ts(), guild.id, member.id)); conn.commit(); conn.close()
+    leave_id = setting(guild, "leave_channel_id")
+    if leave_id:
+        ch = guild.get_channel(leave_id)
+        if isinstance(ch, discord.TextChannel):
+            row = inviter_of(guild.id, member.id)
+            inviter = guild.get_member(row["inviter_id"]) if row and row["inviter_id"] else None
+            inviter_text = inviter.mention if inviter else "OAuth2 / unknown"
+            e = embed("🚪 Goodbye...", f"{member.mention} left the gang...\n\n**We are now:** {guild.member_count}\n**Invited by:** {inviter_text}", WARNING)
+            file = await make_member_card_with_avatar(member, "GOODBYE... 👋", f"Invited by {str(inviter) if inviter else 'OAuth2 / unknown'} • {guild.member_count} members")
+            e.set_image(url="attachment://member_card.png")
+            try: await ch.send(embed=e, file=file)
+            except discord.HTTPException: pass
+
+
+@bot.event
+async def on_member_update(before: discord.Member, after: discord.Member):
+    # Booster role + animation notification.
+    if before.premium_since is None and after.premium_since is not None:
+        role_id = setting(after.guild, "booster_role_id")
+        if role_id:
+            role = after.guild.get_role(role_id)
+            if role:
+                try: await after.add_roles(role, reason="Nightfall booster role")
+                except discord.Forbidden: pass
+        channel_id = setting(after.guild, "welcome_channel_id") or setting(after.guild, "logs_channel_id")
+        channel = after.guild.get_channel(channel_id) if channel_id else None
+        if isinstance(channel, discord.TextChannel):
+            e = embed("🚀 SERVER BOOST!", f"**{after.mention} JUST BOOSTED OUR SERVER!** 🚀\n\n**Boosts:** {after.guild.premium_subscription_count or 0}\n**Boost level:** {after.guild.premium_tier}", SUCCESS)
+            e.set_thumbnail(url=after.display_avatar.url)
+            await channel.send(content="@everyone", embed=e, allowed_mentions=discord.AllowedMentions(everyone=True))
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    if message.author.bot:
+        await bot.process_commands(message)
+        return
+    guild = message.guild
+    if not guild:
+        await bot.process_commands(message)
+        return
+
+    # AFK cleanup when the user speaks.
+    conn = db_connect(); afkrow = conn.execute("SELECT reason FROM afk WHERE guild_id=? AND user_id=?", (guild.id, message.author.id)).fetchone()
+    if afkrow:
+        conn.execute("DELETE FROM afk WHERE guild_id=? AND user_id=?", (guild.id, message.author.id)); conn.commit()
+        await message.channel.send(embed=embed("👋 Welcome back", f"{message.author.mention}, your AFK was cleared.", SUCCESS), delete_after=4)
+    conn.close()
+
+    # Anti-link, with GIF exceptions.
+    if setting(guild, "anti_link", False) and isinstance(message.author, discord.Member) and not is_staff(message.author):
+        has_link = bool(re.search(r"https?://\S+|www\.\S+", message.content, re.I))
+        is_gif = any((att.content_type or "").lower() == "image/gif" for att in message.attachments) or any(x in message.content.lower() for x in ("tenor.com/view/", "giphy.com/gifs/"))
+        if has_link and not is_gif:
+            try:
+                await message.delete()
+                await message.author.timeout(timedelta(minutes=5), reason="Nightfall anti-link")
+                await message.channel.send(embed=embed("🔗 Link blocked", f"{message.author.mention} was timed out for sending a link. GIFs are allowed.", WARNING), delete_after=5)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
+
+    # Anti-raid @everyone spam.
+    if setting(guild, "anti_raid", False) and message.mention_everyone and isinstance(message.author, discord.Member) and not is_staff(message.author):
+        key = (guild.id, message.author.id); q = raid_mentions[key]; now = utc_ts(); q.append(now)
+        while q and now - q[0] > 30: q.popleft()
+        if len(q) >= 3:
+            try:
+                await guild.ban(message.author, reason="Nightfall anti-raid: repeated @everyone")
+                await log_action(guild, "🚨 Anti-raid ban", f"Banned {message.author.mention} for repeated `@everyone` mentions.", DANGER)
+                return
+            except discord.Forbidden:
+                pass
+
+    # Commands channel enforcement.
+    command_channel = setting(guild, "command_channel_id")
+    active_prefix = await command_prefix_for(bot, message)
+    if command_channel and message.content.startswith(active_prefix) and message.channel.id != command_channel and isinstance(message.author, discord.Member) and not is_staff(message.author):
+        try:
+            await message.delete()
+            await message.author.timeout(timedelta(minutes=1), reason="Nightfall: command outside command channel")
+            ch = guild.get_channel(command_channel)
+            await message.channel.send(embed=embed("⌨️ Commands channel only", f"{message.author.mention}, please use {ch.mention if ch else 'the configured command channel'}.", WARNING), delete_after=4)
+        except (discord.Forbidden, discord.HTTPException): pass
+        return
+
+    # Vouch channel: !vouch @user is the only accepted content.
+    vouch_channel = setting(guild, "vouch_channel_id")
+    if vouch_channel and message.channel.id == vouch_channel and not is_staff(message.author):
+        if message.content.lower().startswith("!vouch "):
+            try:
+                target = await commands.MemberConverter().convert(commands.Context(bot=bot, message=message), message.content[7:].strip())
+            except Exception:
+                target = None
+            if target:
+                try: await message.delete()
+                except discord.HTTPException: pass
+                e = embed("⭐ New vouch", f"**{message.author.mention} vouched for {target.mention}!**\n\nThanks for keeping the community trustworthy. ✨", SUCCESS)
+                e.set_thumbnail(url=target.display_avatar.url)
+                await message.channel.send(embed=e)
+            else:
+                try: await message.delete(); await message.author.timeout(timedelta(minutes=5), reason="Invalid vouch")
+                except Exception: pass
+                return
+        elif message.content.startswith(active_prefix):
+            try: await message.delete(); await message.author.timeout(timedelta(minutes=5), reason="Non-vouch content in vouch channel")
+            except Exception: pass
+            return
+
+    # Auto reaction.
+    auto_ch = setting(guild, "autoreaction_channel_id")
+    if auto_ch and message.channel.id == auto_ch:
+        try: await message.add_reaction(setting(guild, "autoreaction_emoji", "✨"))
+        except discord.HTTPException: pass
+
+    # AFK mention protection.
+    if message.mentions:
+        for user in message.mentions[:5]:
+            row = db_connect().execute("SELECT reason FROM afk WHERE guild_id=? AND user_id=?", (guild.id, user.id)).fetchone()
+            if row:
+                try: await message.delete()
+                except discord.HTTPException: pass
+                await message.channel.send(embed=embed("💤 AFK user", f"{user.mention} is AFK.\n**Reason:** {row['reason']}", WARNING), delete_after=5)
+                break
+
+    # Sticky message handling (re-post after a member speaks).
+    conn = db_connect(); stick_row = conn.execute("SELECT content,message_id FROM sticks WHERE guild_id=? AND channel_id=?", (guild.id, message.channel.id)).fetchone(); conn.close()
+    if stick_row and stick_row["message_id"] and message.id != stick_row["message_id"]:
+        try: await message.channel.get_partial_message(stick_row["message_id"]).delete()
+        except Exception: pass
+        try:
+            sent = await message.channel.send(embed=embed("📌 Sticky", stick_row["content"], INFO))
+            conn = db_connect(); conn.execute("UPDATE sticks SET message_id=? WHERE guild_id=? AND channel_id=?", (sent.id, guild.id, message.channel.id)); conn.commit(); conn.close()
+        except discord.HTTPException: pass
+
+    await bot.process_commands(message)
+
+
+# -----------------------------
+# Error handler
+# -----------------------------
+
+@bot.event
+async def on_command_error(ctx: commands.Context, error: commands.CommandError):
+    if hasattr(ctx.command, "on_error"):
+        return
+    if isinstance(error, commands.CommandNotFound):
+        return
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(embed=embed("🔒 Access denied", str(error) or "You don't have permission to use that command.", DANGER), delete_after=5)
+        return
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(embed=embed("🧩 Missing argument", f"You're missing `{error.param.name}`.", WARNING), delete_after=5)
+        return
+    if isinstance(error, commands.BadArgument):
+        await ctx.send(embed=embed("🧩 Invalid argument", "Check the member, role, channel, or number you entered.", WARNING), delete_after=5)
+        return
+    if isinstance(error, commands.CommandInvokeError):
+        original = error.original
+        print(f"Command error in {ctx.command}: {original!r}")
+        await ctx.send(embed=embed("💥 Something went wrong", "I hit an unexpected error. Check the bot console/logs for details.", DANGER), delete_after=6)
+        return
+    print(f"Unhandled error in {ctx.command}: {error!r}")
+
+
+# -----------------------------
+# Dashboard API
+# -----------------------------
+
+class DashboardAPIHandler(BaseHTTPRequestHandler):
+
+    def _send_json(self, data, status=200):
+        body = json.dumps(data).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _authorized(self):
+        supplied = self.headers.get("X-Nightfall-API-Key") or self.headers.get("X-Testiny-API-Key", "")
+        return (
+            bool(DASHBOARD_API_SECRET)
+            and hmac.compare_digest(supplied, DASHBOARD_API_SECRET)
+        )
+
+    def _read_json(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+
+            if length <= 0:
+                return {}
+
+            raw = self.rfile.read(length)
+            return json.loads(raw.decode("utf-8"))
+
+        except Exception:
+            return {}
+
+    def do_GET(self):
+
+        # Health check
+        if self.path == "/health":
+            self._send_json({
+                "ok": True,
+                "service": "Nightfall Bot API"
+            })
+            return
+
+        # Authentication
+        if not self._authorized():
+            self._send_json({
+                "ok": False,
+                "error": "Unauthorized"
+            }, 401)
+            return
+
+        # List bot servers
+        if self.path == "/guilds":
+
+            guilds = []
+
+            for guild in bot.guilds:
+                guilds.append({
+                    "id": str(guild.id),
+                    "name": guild.name,
+                    "member_count": guild.member_count
+                })
+
+            self._send_json({
+                "ok": True,
+                "guilds": guilds
+            })
+            return
+
+        # Get guild settings
+        if self.path.startswith("/guilds/") and self.path.endswith("/settings"):
+
+            try:
+                guild_id = int(self.path.split("/")[2])
+            except Exception:
+                self._send_json({
+                    "ok": False,
+                    "error": "Invalid guild ID"
+                }, 400)
+                return
+
+            guild = bot.get_guild(guild_id)
+
+            if guild is None:
+                self._send_json({
+                    "ok": False,
+                    "error": "Bot is not in this server."
+                }, 404)
+                return
+
+            settings = get_settings(guild_id)
+
+            settings.setdefault("prefix", PREFIX)
+            settings.setdefault("logs_channel", str(settings.get("logs_channel_id", "")))
+
+            self._send_json({
+                "ok": True,
+                "settings": settings
+            })
+            return
+
+        self._send_json({
+            "ok": False,
+            "error": "Not found"
+        }, 404)
+
+    def do_POST(self):
+
+        # Authentication
+        if not self._authorized():
+            self._send_json({
+                "ok": False,
+                "error": "Unauthorized"
+            }, 401)
+            return
+
+        # Save guild settings
+        if self.path.startswith("/guilds/") and self.path.endswith("/settings"):
+
+            try:
+                guild_id = int(self.path.split("/")[2])
+            except Exception:
+                self._send_json({
+                    "ok": False,
+                    "error": "Invalid guild ID"
+                }, 400)
+                return
+
+            guild = bot.get_guild(guild_id)
+
+            if guild is None:
+                self._send_json({
+                    "ok": False,
+                    "error": "Bot is not in this server."
+                }, 404)
+                return
+
+            payload = self._read_json()
+            current = get_settings(guild_id)
+
+            # Prefix
+            if "prefix" in payload:
+                prefix = str(payload["prefix"]).strip()
+
+                if 1 <= len(prefix) <= 5:
+                    current["prefix"] = prefix
+
+            # Logs channel
+            if "logs_channel" in payload:
+                raw = str(payload["logs_channel"]).strip()
+
+                if raw.isdigit():
+                    current["logs_channel_id"] = int(raw)
+                else:
+                    current.pop("logs_channel_id", None)
+
+            save_settings(guild_id, current)
+            current["logs_channel"] = str(current.get("logs_channel_id", ""))
+
+            self._send_json({
+                "ok": True,
+                "settings": current
+            })
+            return
+
+        # Dashboard actions
+        if self.path.startswith("/guilds/") and self.path.endswith("/action"):
+
+            try:
+                guild_id = int(self.path.split("/")[2])
+            except Exception:
+                self._send_json({
+                    "ok": False,
+                    "error": "Invalid guild ID"
+                }, 400)
+                return
+
+            guild = bot.get_guild(guild_id)
+
+            if guild is None:
+                self._send_json({
+                    "ok": False,
+                    "error": "Bot is not in this server."
+                }, 404)
+                return
+
+            payload = self._read_json()
+            action = str(payload.get("action", "")).strip()
+
+            # Refresh existing setup dashboard
+            if action == "sync_setup":
+
+                try:
+                    future = asyncio.run_coroutine_threadsafe(
+                        refresh_setup_dashboard(guild),
+                        bot.loop
+                    )
+
+                    refreshed = future.result(timeout=20)
+
+                except Exception as exc:
+                    self._send_json({
+                        "ok": False,
+                        "error": f"Setup sync failed: {exc}"
+                    }, 500)
+                    return
+
+                self._send_json({
+                    "ok": bool(refreshed),
+                    "guild_id": str(guild_id),
+                    "action": action,
+                    "message": (
+                        "Setup dashboard refreshed."
+                        if refreshed
+                        else "No saved setup dashboard was found. Run !setup once in the server first."
+                    )
+                })
+                return
+
+            self._send_json({
+                "ok": False,
+                "error": "Unknown action"
+            }, 400)
+            return
+
+        self._send_json({
+            "ok": False,
+            "error": "Not found"
+        }, 404)
+
+    def log_message(self, format, *args):
+        # Keep API requests out of the console.
+        return
+
+
+def start_dashboard_api():
+    if not DASHBOARD_API_SECRET:
+        print("WARNING: BOT_API_SECRET is missing; website dashboard API requests will be rejected.")
+
+    server = ThreadingHTTPServer(
+        ("0.0.0.0", DASHBOARD_API_PORT),
+        DashboardAPIHandler
+    )
+
+    print(
+        f"Nightfall Dashboard API listening on "
+        f"0.0.0.0:{DASHBOARD_API_PORT}"
+    )
+
+    thread = threading.Thread(
+        target=server.serve_forever,
+        daemon=True
+    )
+
+    thread.start()
+
+# -----------------------------
+# Startup
+# -----------------------------
+
+if __name__ == "__main__":
+    db_init()
+
+    start_dashboard_api()
+
+    bot.run(TOKEN)
+

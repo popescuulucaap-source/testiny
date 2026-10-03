@@ -283,9 +283,9 @@ def servers():
     bot_api_error = None
     if bot_status != 200 or not isinstance(bot_data, dict) or bot_data.get("ok") is not True:
         bot_api_error = (
-            bot_data.get("error", "Could not read Testiny's server list.")
+            bot_data.get("error", "Could not read Nightfall's server list.")
             if isinstance(bot_data, dict)
-            else "Could not read Testiny's server list."
+            else "Could not read Nightfall's server list."
         )
 
     return render_template(
@@ -302,8 +302,10 @@ def dashboard(guild_id):
     if guilds_r.status_code != 200:
         return redirect(url_for("login"))
     guild = next((g for g in guilds_r.json() if g["id"] == guild_id), None)
+    if not guild:
+        return "You do not have permission to manage this server.", 403
     permissions = int(guild.get("permissions", "0"))
-    if not guild or not ((permissions & MANAGE_GUILD) == MANAGE_GUILD or (permissions & ADMINISTRATOR) == ADMINISTRATOR):
+    if not ((permissions & MANAGE_GUILD) == MANAGE_GUILD or (permissions & ADMINISTRATOR) == ADMINISTRATOR):
         return "You do not have permission to manage this server.", 403
 
     guild_icon_hash = guild.get("icon")
@@ -336,11 +338,11 @@ def dashboard_action(guild_id):
 
 @app.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "Testiny Dashboard"})
+    return jsonify({"ok": True, "service": "Nightfall Dashboard"})
 
 
 COMMANDS = [
-    ("!setup", "Server setup", "Open Testiny's interactive configuration system."),
+    ("!setup", "Server setup", "Open Nightfall's interactive configuration system."),
     ("!ban @user", "Moderation", "Ban a member and provide the configured appeal route."),
     ("!kick @user", "Moderation", "Kick a member from the server."),
     ("!warn @user", "Moderation", "Issue a warning. Five warnings trigger the configured kick behavior."),
@@ -390,3 +392,4 @@ COMMANDS = [
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
+

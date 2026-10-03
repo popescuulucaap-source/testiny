@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Testiny • {{ guild.name }}{% endblock %}
+{% block title %}Nightfall • {{ guild.name }}{% endblock %}
 {% block content %}
 <section class="dashboard-head">
   <div>
     <span class="eyebrow">SERVER DASHBOARD</span>
     <div class="server-title">
       {% if guild.icon_url %}<img class="dashboard-server-icon" src="{{ guild.icon_url }}" alt="{{ guild.name }} icon">{% endif %}
-      <div><h1>{{ guild.name }}</h1><p>Manage Testiny for this server.</p></div>
+      <div><h1>{{ guild.name }}</h1><p>Manage Nightfall for this server.</p></div>
     </div>
   </div>
   <a class="btn ghost" href="/servers">← Servers</a>
@@ -14,9 +14,9 @@
 
 {% if bot_error %}
 <div class="card notice error">
-  <b>Testiny is not connected to this server.</b>
+  <b>Nightfall is not connected to this server.</b>
   <p>{{ bot_error }}</p>
-  <p>Install Testiny in this server, then refresh this page.</p>
+  <p>Install Nightfall in this server, then refresh this page.</p>
 </div>
 {% else %}
 <div class="dashboard-grid">
@@ -28,9 +28,9 @@
   <section>
     <div id="overview" class="tab-panel active">
       <div class="card">
-        <span class="eyebrow">TESTINY</span>
+        <span class="eyebrow">NIGHTFALL</span>
         <h2>Bot connected</h2>
-        <p>The website can reach Testiny for this server.</p>
+        <p>The website can reach Nightfall for this server.</p>
       </div>
       <div class="card" style="margin-top:16px">
         <h2>Server management</h2>
@@ -58,5 +58,7 @@
   </section>
 </div>
 {% endif %}
-<script>window.TESTINY_GUILD_ID = "{{ guild.id }}";</script>
+<script>window.NIGHTFALL_GUILD_ID = "{{ guild.id }}";</script>
 {% endblock %}
+
+
