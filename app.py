@@ -17,7 +17,7 @@ BOT_API_URL = os.getenv("BOT_API_URL", "").rstrip("/")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 INVITE_URL = os.getenv("INVITE_URL", "#")
-SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "#").strip()
+SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 DISCORD_API = "https://discord.com/api/v10"
