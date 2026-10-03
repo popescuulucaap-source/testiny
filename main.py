@@ -192,6 +192,13 @@ def db_init():
             original_roles TEXT NOT NULL DEFAULT '[]'
         );
         CREATE INDEX IF NOT EXISTS idx_jails_active ON jails(guild_id, user_id, active);
+        CREATE TABLE IF NOT EXISTS speech_counts (
+            guild_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            metric TEXT NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (guild_id, user_id, metric)
+        );
         """
     )
     conn.commit()
@@ -224,6 +231,33 @@ def set_setting(guild: discord.Guild, key: str, value: Any):
     data = get_settings(guild.id)
     data[key] = value
     save_settings(guild.id, data)
+
+
+def add_speech_count(guild_id: int, user_id: int, metric: str, amount: int):
+    if amount <= 0:
+        return
+    conn = db_connect()
+    conn.execute(
+        "INSERT INTO speech_counts(guild_id,user_id,metric,count) VALUES(?,?,?,?) "
+        "ON CONFLICT(guild_id,user_id,metric) DO UPDATE SET count=count+excluded.count",
+        (guild_id, user_id, metric, amount),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_speech_count(guild_id: int, user_id: int, metric: str) -> int:
+    conn = db_connect()
+    row = conn.execute("SELECT count FROM speech_counts WHERE guild_id=? AND user_id=? AND metric=?", (guild_id, user_id, metric)).fetchone()
+    conn.close()
+    return int(row["count"]) if row else 0
+
+
+def swear_word_pattern(word: str):
+    parts = word.split()
+    if not parts:
+        return None
+    return re.compile(r"(?<!\w)" + r"\s+".join(re.escape(part) for part in parts) + r"(?!\w)", re.IGNORECASE)
 
 
 # -----------------------------
@@ -1982,6 +2016,7 @@ async def help_command(ctx: commands.Context):
     e.add_field(name="🌙 New tools", value="`!purge <1–100>` • `!warnings @user` • `!clearwarnings @user` (admins) • `!announce #channel <message>` • `!poll Question | Option 1 | Option 2`", inline=False)
     e.add_field(name="✨ More to explore", value="`!8ball <question>` • `!choose a | b` • `!roll 3d8` • `!rps rock` • `!avatar` • `!userinfo` • `!serverinfo` • `!quote` • `!reverse text` • `!mock text` • `!color 8B5CF6` • `!about`", inline=False)
     e.add_field(name="🤖 AI studio", value="`!ask <question>` • `!story <idea>` • `!roast [@member]` • `!compliment [@member]` • `!riddle` • `!poem [topic]` • `!joke [topic]` • `!caption <idea>` • `!namegen <theme>` • `!quiz <topic>` • `!aiimage <description>`", inline=False)
+    e.add_field(name="🧼 Counters & anti-swear", value="`!mommycount [@member]` • `!swearcount [@member]` • Admin setup: `!swearwords list/add/remove` and `!antiswear on/off/status`", inline=False)
     e.set_thumbnail(url=bot.user.display_avatar.url if bot.user else discord.Embed.Empty)
     await ctx.send(embed=e)
 
@@ -1997,6 +2032,80 @@ async def about_command(ctx: commands.Context):
     if bot.user:
         e.set_thumbnail(url=bot.user.display_avatar.url)
     await ctx.send(embed=e)
+
+
+@bot.command(name="mommycount", aliases=["mommy_count"])
+async def mommy_count(ctx: commands.Context, member: Optional[discord.Member] = None):
+    """Show persistent server-local counts of the word mommy."""
+    target = member or ctx.author
+    count = get_speech_count(ctx.guild.id, target.id, "mommy")
+    await ctx.send(embed=embed("🌙 Mommy counter", f"**{target.display_name}** has said **mommy** {count} time{'s' if count != 1 else ''} in this server.", INFO))
+
+
+@bot.command(name="swearcount", aliases=["swear_count"])
+async def swear_count(ctx: commands.Context, member: Optional[discord.Member] = None):
+    """Show matches against this server's admin-configured word list."""
+    target = member or ctx.author
+    count = get_speech_count(ctx.guild.id, target.id, "swear")
+    await ctx.send(embed=embed("🧼 Swear counter", f"**{target.display_name}** has matched configured words **{count}** time{'s' if count != 1 else ''} in this server.", INFO))
+
+
+@bot.command(name="antiswear")
+@staff_only()
+async def anti_swear_command(ctx: commands.Context, mode: str = "status"):
+    mode = mode.lower()
+    words = setting(ctx.guild, "swear_words", [])
+    enabled = bool(setting(ctx.guild, "anti_swear", False))
+    if mode == "status":
+        state = "enabled" if enabled else "disabled"
+        await ctx.send(embed=embed("🧼 Anti-swear setup", f"Filter is **{state}** with **{len(words)}** configured word(s)/phrase(s).\nUse `!swearwords add <word or phrase>` and `!antiswear on` to configure it.", INFO))
+        return
+    if mode not in {"on", "off"}:
+        await ctx.send("Use `!antiswear on`, `!antiswear off`, or `!antiswear status`.")
+        return
+    if mode == "on" and not words:
+        await ctx.send("Add at least one server-specific word or phrase first with `!swearwords add <word or phrase>`. I don't use a built-in word list.")
+        return
+    set_setting(ctx.guild, "anti_swear", mode == "on")
+    await ctx.send(embed=embed("🧼 Anti-swear updated", f"The filter is now **{mode}** for this server.", SUCCESS))
+
+
+@bot.command(name="swearwords")
+@staff_only()
+async def swear_words_command(ctx: commands.Context, action: str = "list", *, word: str = ""):
+    action = action.lower()
+    words = list(setting(ctx.guild, "swear_words", []))
+    if action == "list":
+        listing = "\n".join(f"• `{item}`" for item in words) if words else "No words or phrases configured."
+        await ctx.send(embed=embed("🧼 Configured filter list", listing[:3900], INFO))
+        return
+    if action not in {"add", "remove"} or not word.strip():
+        await ctx.send("Use `!swearwords list`, `!swearwords add <word or phrase>`, or `!swearwords remove <word or phrase>`.")
+        return
+    word = " ".join(word.split())
+    if len(word) > 40 or not re.fullmatch(r"[\w'’\- ]+", word, re.UNICODE):
+        await ctx.send("Use a word or short phrase with letters, numbers, spaces, apostrophes, or hyphens (40 characters max).")
+        return
+    match = next((item for item in words if item.casefold() == word.casefold()), None)
+    if action == "add":
+        if match:
+            await ctx.send("That word or phrase is already on the list.")
+            return
+        if len(words) >= 30:
+            await ctx.send("The list is full (30 entries). Remove an entry before adding another.")
+            return
+        words.append(word)
+        set_setting(ctx.guild, "swear_words", words)
+        await ctx.send(f"✅ Added `{word}`. Enable the filter with `!antiswear on`.")
+    else:
+        if not match:
+            await ctx.send("That word or phrase isn't on the list.")
+            return
+        words.remove(match)
+        set_setting(ctx.guild, "swear_words", words)
+        if not words and setting(ctx.guild, "anti_swear", False):
+            set_setting(ctx.guild, "anti_swear", False)
+        await ctx.send(f"✅ Removed `{match}` from the filter list.")
 
 
 @bot.command(name="8ball")
@@ -3282,6 +3391,25 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
+    active_prefix = await command_prefix_for(bot, message)
+    is_command_message = message.content.startswith(active_prefix)
+    if not is_command_message:
+        mommy_matches = len(re.findall(r"(?<!\w)mommy(?!\w)", message.content, re.IGNORECASE))
+        add_speech_count(guild.id, message.author.id, "mommy", mommy_matches)
+
+        configured_words = setting(guild, "swear_words", [])
+        swear_matches = sum(len(pattern.findall(message.content)) for item in configured_words if (pattern := swear_word_pattern(item)))
+        add_speech_count(guild.id, message.author.id, "swear", swear_matches)
+
+        anti_swear_enabled = bool(setting(guild, "anti_swear", False))
+        if anti_swear_enabled and swear_matches and not (isinstance(message.author, discord.Member) and is_staff(message.author)):
+            try:
+                await message.delete()
+                await message.channel.send(embed=embed("🧼 Keep it clean", f"{message.author.mention}, that word or phrase is filtered in this server.", WARNING), delete_after=5)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
+            return
+
     # AFK cleanup when the user speaks.
     conn = db_connect(); afkrow = conn.execute("SELECT reason FROM afk WHERE guild_id=? AND user_id=?", (guild.id, message.author.id)).fetchone()
     if afkrow:
@@ -3316,7 +3444,6 @@ async def on_message(message: discord.Message):
 
     # Commands channel enforcement.
     command_channel = setting(guild, "command_channel_id")
-    active_prefix = await command_prefix_for(bot, message)
     if command_channel and message.content.startswith(active_prefix) and message.channel.id != command_channel and isinstance(message.author, discord.Member) and not is_staff(message.author):
         try:
             await message.delete()

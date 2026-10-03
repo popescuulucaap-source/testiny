@@ -14,6 +14,40 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SESSION_SECRET", secrets.token_hex(32))
+APP_STARTED_AT = time.time()
+APP_REQUEST_COUNT = 0
+APP_METRICS_LOCK = threading.Lock()
+
+
+@app.before_request
+def count_site_request():
+    global APP_REQUEST_COUNT
+    with APP_METRICS_LOCK:
+        APP_REQUEST_COUNT += 1
+
+
+@app.template_filter("datetimeformat")
+def format_timestamp(value):
+    try:
+        dt = __import__("datetime").datetime
+        return dt.fromtimestamp(float(value), __import__("datetime").timezone.utc).strftime("%b %d, %H:%M UTC")
+    except (TypeError, ValueError, OSError):
+        return "unknown"
+
+
+@app.template_filter("durationformat")
+def format_duration(value):
+    seconds = max(0, int(value or 0))
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    if days:
+        return f"{days}d {hours}h"
+    if hours:
+        return f"{hours}h {minutes}m"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
 
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
@@ -284,7 +318,33 @@ def admin_login():
 def admin():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
-    return render_template("admin.html", announcements=load_announcements(), custom_commands=load_custom_commands(), database_enabled=bool(DATABASE_URL))
+    announcements = load_announcements()
+    custom_commands = load_custom_commands()
+    guilds = bot_guild_snapshot()
+    member_total = sum(int(guild.get("member_count") or 0) for guild in guilds)
+    last_seen = BOT_LAST_SEEN
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute("SELECT last_seen FROM bot_bridge_state WHERE state_id = 1").fetchone()
+            last_seen = float(row[0]) if row and row[0] else 0.0
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read admin bot heartbeat: %s", type(exc).__name__)
+    with APP_METRICS_LOCK:
+        request_count = APP_REQUEST_COUNT
+    stats = {
+        "bot_online": bot_online(),
+        "guild_count": len(guilds),
+        "member_count": member_total,
+        "last_seen": last_seen,
+        "uptime_seconds": max(0, int(time.time() - APP_STARTED_AT)),
+        "request_count": request_count,
+        "announcement_count": len(announcements),
+        "command_count": len(COMMANDS) + len(custom_commands),
+        "custom_command_count": len(custom_commands),
+        "database_enabled": bool(DATABASE_URL),
+    }
+    return render_template("admin.html", announcements=announcements, custom_commands=custom_commands, database_enabled=bool(DATABASE_URL), stats=stats, bot_guilds=guilds)
 
 @app.post("/admin/command")
 def admin_command():
@@ -554,6 +614,10 @@ COMMANDS = [
     ("!poll <question and options>", "Community", "Create a reaction poll."),
     ("!afk [reason]", "Utility", "Set your AFK status."),
     ("!8ball <question>", "Fun", "Ask the Nightfall 8-Ball a question."),
+    ("!mommycount [@member]", "Fun", "Count how many times a member has said “mommy” in this server."),
+    ("!swearcount [@member]", "Moderation", "Show the number of configured swear-word matches for a member."),
+    ("!antiswear <on|off|status>", "Moderation", "Admins can enable or disable the server's configurable anti-swear filter."),
+    ("!swearwords <add|remove|list> [word or phrase]", "Moderation", "Admins configure which words or phrases the anti-swear filter watches."),
     ("!choose <option> | <option> ...", "Fun", "Let Nightfall pick one of up to 20 options."),
     ("!roll [NdM]", "Fun", "Roll a die, such as `!roll 20` or `!roll 3d8`."),
     ("!rps <rock|paper|scissors>", "Fun", "Play rock, paper, scissors against Nightfall."),

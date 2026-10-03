@@ -1,13 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Nightfall • Admin{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">ADMIN CONTROL</span><h1>Manage Nightfall.</h1><p>Add commands and publish updates. Published content stays until you delete it.</p></section>
+<section class="page-head"><span class="eyebrow">ADMIN CONTROL • LIVE OVERVIEW</span><h1>Manage Nightfall.</h1><p>See bot and website health, add command notes, and publish updates. Published content stays until you delete it.</p></section>
+<section class="admin-stats" aria-label="Nightfall service statistics">
+ <article class="admin-stat"><span>BOT STATUS</span><b class="{{ 'is-online' if stats.bot_online else 'is-offline' }}"><i></i>{{ 'Online' if stats.bot_online else 'Offline' }}</b><small>{% if stats.last_seen %}Last heartbeat {{ (stats.last_seen|int)|datetimeformat }}{% else %}Waiting for the bot heartbeat{% endif %}</small></article>
+ <article class="admin-stat"><span>DISCORD SERVERS</span><b>{{ stats.guild_count }}</b><small>{{ stats.member_count }} members reported by the bot</small></article>
+ <article class="admin-stat"><span>WEBSITE UPTIME</span><b>{{ stats.uptime_seconds|durationformat }}</b><small>{{ stats.request_count }} requests since this app process started</small></article>
+ <article class="admin-stat"><span>COMMAND LIBRARY</span><b>{{ stats.command_count }}</b><small>{{ stats.custom_command_count }} custom entries · {{ stats.announcement_count }} updates</small></article>
+ <article class="admin-stat"><span>DATABASE</span><b class="{{ 'is-online' if stats.database_enabled else 'is-offline' }}">{{ 'Configured' if stats.database_enabled else 'Session mode' }}</b><small>{% if stats.database_enabled %}Admin content is set to persist{% else %}Website counters reset when the app restarts{% endif %}</small></article>
+</section>
+<p class="admin-metrics-note">Website uptime and request totals describe this running web process. Discord server and member totals reflect the bot’s latest heartbeat snapshot.</p>
+<div class="card admin-list"><h3>Connected Discord servers</h3>{% for guild in bot_guilds %}<div class="admin-row"><div><b>{{ guild.name }}</b><span> · {{ guild.member_count if guild.member_count is not none else 'Member count unavailable' }} members</span></div><code>{{ guild.id }}</code></div>{% else %}<p>No server heartbeat data has arrived yet.</p>{% endfor %}</div>
 {% if not database_enabled %}<div class="card admin-list"><h3>Persistence is not connected</h3><p>Add the <code>DATABASE_URL</code> environment variable in Render and connect a Render Postgres database. Without it, admin content uses temporary session storage.</p></div>{% endif %}
 <div class="admin-grid">
  <form class="card" method="post" action="/admin/command"><h3>Add command</h3><input name="command" placeholder="!example" required><input name="category" placeholder="Category" required><textarea name="description" placeholder="What does it do?" required></textarea><button class="btn primary">Add command</button></form>
  <form class="card" method="post" action="/admin/announcement"><h3>Publish update</h3><input name="title" placeholder="Update title" required><textarea name="body" placeholder="Announcement text" required></textarea><button class="btn primary">Publish update</button></form>
 </div>
-<div class="card admin-list"><h3>Published updates</h3>{% for a in announcements %}<div class="admin-row"><div><b>{{ a.title }}</b><span> · {{ a.date }}</span></div>{% if a.id %}<form method="post" action="/admin/announcement/{{ a.id }}/delete"><button class="btn ghost" type="submit">Delete</button></form>{% endif %}</div>{% else %}<p>No announcements yet.</p>{% endfor %}</div>
-<div class="card admin-list"><h3>Added commands</h3>{% for c in custom_commands %}<div class="admin-row"><div><b>{{ c.command }}</b><span> · {{ c.category }}</span></div><form method="post" action="/admin/command/{{ c.id }}/delete"><button class="btn ghost" type="submit">Delete</button></form></div>{% else %}<p>No custom commands yet.</p>{% endfor %}</div>
+<div class="card admin-list"><h3>Published updates</h3>{% for a in announcements %}<div class="admin-row"><div><b>{{ a.title }}</b><span> · {{ a.date }}</span><p>{{ a.body }}</p></div>{% if a.id %}<form method="post" action="/admin/announcement/{{ a.id }}/delete"><button class="btn ghost" type="submit">Delete</button></form>{% endif %}</div>{% else %}<p>No announcements yet.</p>{% endfor %}</div>
+<div class="card admin-list"><h3>Added commands</h3>{% for c in custom_commands %}<div class="admin-row"><div><b>{{ c.command }}</b><span> · {{ c.category }}</span><p>{{ c.description }}</p></div><form method="post" action="/admin/command/{{ c.id }}/delete"><button class="btn ghost" type="submit">Delete</button></form></div>{% else %}<p>No custom commands yet.</p>{% endfor %}</div>
 {% endblock %}
 
