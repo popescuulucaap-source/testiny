@@ -1,37 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Nightfall</title>
-  <desc id="desc">A luminous violet crescent surrounding a cyan Nightfall sigil.</desc>
+  <title id="title">Nightfall bird</title>
+  <desc id="desc">A midnight bird spreading its wings beneath a crescent moon.</desc>
   <defs>
-    <radialGradient id="bg" cx="32%" cy="20%" r="90%"><stop stop-color="#25204c"/><stop offset=".58" stop-color="#0c1024"/><stop offset="1" stop-color="#050710"/></radialGradient>
-    <linearGradient id="ring" x1=".12" y1=".08" x2=".9" y2=".92"><stop stop-color="#b7a1ff"/><stop offset=".45" stop-color="#845dff"/><stop offset="1" stop-color="#39ddff"/></linearGradient>
-    <linearGradient id="mark" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#c7b8ff"/><stop offset=".52" stop-color="#8e74ff"/><stop offset="1" stop-color="#4be5ff"/></linearGradient>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="9" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <clipPath id="disc"><circle cx="256" cy="256" r="226"/></clipPath>
+    <radialGradient id="night" cx="35%" cy="22%" r="85%"><stop stop-color="#202451"/><stop offset=".65" stop-color="#0b1022"/><stop offset="1" stop-color="#050711"/></radialGradient>
+    <linearGradient id="feather" x1=".12" y1=".12" x2=".88" y2=".92"><stop stop-color="#d7d3ff"/><stop offset=".42" stop-color="#9f8aff"/><stop offset="1" stop-color="#53e6ff"/></linearGradient>
+    <linearGradient id="wing" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9a83ff"/><stop offset="1" stop-color="#4adfff"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <clipPath id="disc"><circle cx="256" cy="256" r="228"/></clipPath>
   </defs>
-  <circle cx="256" cy="256" r="238" fill="#070914" stroke="url(#ring)" stroke-width="8"/>
-  <circle cx="256" cy="256" r="226" fill="url(#bg)"/>
-  <g clip-path="url(#disc)" fill="none" stroke="#9280ff" opacity=".22">
-    <path d="M30 360 174 216l54 54L386 112M88 446l152-152 44 44 166-166"/>
+  <circle cx="256" cy="256" r="244" fill="#060811" stroke="url(#wing)" stroke-width="8"/>
+  <circle cx="256" cy="256" r="228" fill="url(#night)"/>
+  <g clip-path="url(#disc)">
+    <circle cx="364" cy="141" r="66" fill="#d9d7ff" opacity=".9"/>
+    <circle cx="390" cy="120" r="66" fill="#10142a"/>
+    <g fill="#d9f8ff" opacity=".8"><path d="m113 119 5 15 15 5-15 5-5 15-5-15-15-5 15-5z"/><circle cx="398" cy="229" r="4"/><circle cx="103" cy="294" r="4"/><circle cx="372" cy="352" r="3"/></g>
+    <g class="flight-wings" fill="none" stroke="url(#wing)" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+      <path stroke-width="27" d="M249 265C199 204 126 180 46 192c42 18 69 41 91 73-37-12-69-12-107-2 47 14 84 40 116 74 27 29 60 46 110 49"/>
+      <path stroke-width="27" d="M263 265c50-61 123-85 203-73-42 18-69 41-91 73 37-12 69-12 107-2-47 14-84 40-116 74-27 29-60 46-110 49"/>
+      <path stroke-width="9" opacity=".66" d="M72 214c54 20 91 48 124 87M49 263c63 7 107 30 148 68m242-117c-54 20-91 48-124 87m147-38c-63 7-107 30-148 68"/>
+    </g>
+    <g class="bird-body" filter="url(#glow)">
+      <path d="M256 190c-55 32-78 86-68 143 8 46 35 78 68 98 33-20 60-52 68-98 10-57-13-111-68-143Z" fill="url(#feather)"/>
+      <path d="M256 213c-30 30-45 65-40 107 4 32 19 57 40 76 21-19 36-44 40-76 5-42-10-77-40-107Z" fill="#11152a" opacity=".92"/>
+      <path d="m256 254-22 20 22 13 22-13z" fill="#62eaff"/>
+      <circle cx="232" cy="247" r="8" fill="#f4f3ff"/><circle cx="280" cy="247" r="8" fill="#f4f3ff"/>
+      <circle cx="234" cy="247" r="3" fill="#11152a"/><circle cx="278" cy="247" r="3" fill="#11152a"/>
+      <path d="M227 331c17 16 41 16 58 0" fill="none" stroke="#9b8cff" stroke-width="7" stroke-linecap="round"/>
+      <path d="m219 402 37 22 37-22-37 7z" fill="#a48eff"/>
+    </g>
+    <path d="M60 414c67 38 137 58 196 58s129-20 196-58" fill="none" stroke="#7f75ff" stroke-opacity=".16" stroke-width="2"/>
   </g>
-  <g class="stars" fill="#d6f8ff" filter="url(#glow)">
-    <path d="m120 142 5 14 14 5-14 5-5 14-5-14-14-5 14-5z"/><circle cx="382" cy="171" r="4"/><circle cx="112" cy="294" r="3"/><circle cx="398" cy="337" r="5"/>
-  </g>
-  <g class="moon" filter="url(#glow)">
-    <path d="M334 102c-13 48 4 99 43 128-18 10-39 16-61 16-70 0-126-56-126-126 0-25 7-48 20-67 5 61 55 110 117 115 3-22 5-44 7-66 0 0 0 0 0 0Z" fill="url(#mark)" opacity=".96"/>
-  </g>
-  <g class="sigil" fill="none" stroke="url(#mark)" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
-    <path stroke-width="15" d="M157 339V207l99 117 99-117v132"/>
-    <path stroke-width="9" opacity=".8" d="M183 365h146"/>
-  </g>
-  <circle cx="256" cy="256" r="226" fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="2"/>
+  <circle cx="256" cy="256" r="228" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="2"/>
   <style>
-    .moon{transform-origin:256px 256px;animation:moon-drift 7s ease-in-out infinite}
-    .stars{transform-origin:256px 256px;animation:star-pulse 3s ease-in-out infinite alternate}
-    .sigil{animation:sigil-glow 4s ease-in-out infinite}
-    @keyframes moon-drift{50%{transform:translate(0,-8px) rotate(-3deg)}}
-    @keyframes star-pulse{to{opacity:.5;transform:scale(.97)}}
-    @keyframes sigil-glow{50%{opacity:.72}}
+    .flight-wings{transform-origin:256px 284px;animation:wingbeat 2.4s ease-in-out infinite}
+    .bird-body{transform-origin:256px 286px;animation:glide 4.8s ease-in-out infinite}
+    @keyframes wingbeat{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.9)}}
+    @keyframes glide{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
     @media(prefers-reduced-motion:reduce){*{animation:none!important}}
   </style>
 </svg>
-
