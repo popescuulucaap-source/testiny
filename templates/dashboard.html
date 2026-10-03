@@ -3,60 +3,72 @@
 {% block content %}
 <section class="dashboard-head">
   <div>
-    <span class="eyebrow">SERVER DASHBOARD</span>
+    <span class="eyebrow">NIGHTFALL CONTROL CENTER</span>
     <div class="server-title">
       {% if guild.icon_url %}<img class="dashboard-server-icon" src="{{ guild.icon_url }}" alt="{{ guild.name }} icon">{% endif %}
-      <div><h1>{{ guild.name }}</h1><p>Manage Nightfall for this server.</p></div>
+      <div><h1>{{ guild.name }}</h1><p>All your Nightfall systems, in one place.</p></div>
     </div>
   </div>
-  <a class="btn ghost" href="/servers">← Servers</a>
+  <a class="btn ghost" href="/servers">← All servers</a>
 </section>
 
 {% if bot_error %}
-<div class="card notice error">
-  <b>Nightfall is not connected to this server.</b>
-  <p>{{ bot_error }}</p>
-  <p>Install Nightfall in this server, then refresh this page.</p>
-</div>
+<div class="card notice error"><b>Nightfall is not connected to this server.</b><p>{{ bot_error }}</p><p>Invite Nightfall to this server, then refresh this page.</p></div>
 {% else %}
 <div class="dashboard-grid">
-  <aside class="side-menu">
-    <button class="tab active" type="button" data-tab="overview">Overview</button>
-    <button class="tab" type="button" data-tab="settings">Settings</button>
+  <aside class="side-menu" aria-label="Dashboard sections">
+    <button class="tab active" type="button" data-tab="overview">✦ Overview</button>
+    {% for group_id, title, description, fields in setting_groups %}<button class="tab" type="button" data-tab="{{ group_id }}">{{ title }}</button>{% endfor %}
   </aside>
 
-  <section>
+  <section class="dashboard-content">
     <div id="overview" class="tab-panel active">
-      <div class="card">
-        <span class="eyebrow">NIGHTFALL</span>
-        <h2>Bot connected</h2>
-        <p>Nightfall checks in securely with the website and is available for this server.</p>
-      </div>
-      <div class="card" style="margin-top:16px">
-        <h2>Server management</h2>
-        <p>Use Settings to change the configuration that the bot exposes to the dashboard.</p>
-        <p id="actionResult" class="notice">Ready.</p>
+      <div class="card overview-card"><span class="eyebrow">CONNECTED</span><h2>Nightfall is ready</h2><p>Settings sync through the secure bot connection. Choose a section to configure your server, or publish a panel below.</p><div class="dashboard-actions">
+        <button class="btn primary bot-action" data-action="post_ticket_panel" type="button">🎫 Post ticket panel</button>
+        <button class="btn ghost bot-action" data-action="post_verification_panel" type="button">🔐 Post verification</button>
+        <button class="btn ghost bot-action" data-action="post_feedback_panel" type="button">💬 Post feedback panel</button>
+        <button class="btn ghost bot-action" data-action="post_application_panel" type="button">📋 Post applications</button>
+        <button class="btn ghost bot-action" data-action="toggle_jail" type="button">🔒 Toggle jail system</button>
+        <button class="btn ghost bot-action" data-action="sync_setup" type="button">↻ Refresh Discord setup panel</button>
+      </div><p id="actionResult" class="notice" aria-live="polite">Choose a bot action to queue it.</p></div>
+      <div class="dashboard-highlights">
+        <article class="card"><span class="card-icon">🛡️</span><h3>Protect</h3><p>Manage anti raid, anti nuke, anti link, and verification.</p></article>
+        <article class="card"><span class="card-icon">🎫</span><h3>Support</h3><p>Set ticket categories, questions, appeal links, and panels.</p></article>
+        <article class="card"><span class="card-icon">🌙</span><h3>Welcome</h3><p>Choose channels and roles for your community flows.</p></article>
       </div>
     </div>
 
-    <div id="settings" class="tab-panel">
-      <div class="card settings-card">
-        <h2>Server settings</h2>
-        <label>Command prefix
-          <input id="prefix" value="{{ settings.get('prefix', '!') }}" maxlength="5">
-        </label>
-        <label>Logs channel ID
-          <input id="logs_channel" value="{{ settings.get('logs_channel', '') }}">
-        </label>
-        <div class="actions">
-          <button class="btn primary save-settings" type="button">Save settings</button>
-          <button class="btn ghost" type="button" id="syncSetup">Sync setup</button>
+    {% for group_id, title, description, fields in setting_groups %}
+    <div id="{{ group_id }}" class="tab-panel">
+      <div class="card settings-card setting-group" data-group="{{ group_id }}">
+        <span class="eyebrow">SERVER CONFIGURATION</span><h2>{{ title }}</h2><p>{{ description }}</p>
+        <div class="setting-fields">
+          {% for key, label, field_type in fields %}
+          <label class="setting-field {% if field_type == 'toggle' %}setting-toggle{% endif %}">
+            <span>{{ label }}</span>
+            {% if field_type == 'toggle' %}
+              <input type="checkbox" data-setting="{{ key }}" {% if settings.get(key, false) %}checked{% endif %}>
+            {% elif field_type == 'id' %}
+              <input type="text" inputmode="numeric" autocomplete="off" data-setting="{{ key }}" placeholder="Paste a Discord ID" value="{{ settings.get(key, '') or '' }}" maxlength="22">
+              <small class="field-help">Turn on Developer Mode in Discord, then right-click the channel, role, or server and choose Copy ID.</small>
+            {% elif field_type == 'list' %}
+              <input type="text" data-setting="{{ key }}" placeholder="support, purchase, claim, report" value="{{ (settings.get(key, ['support', 'purchase', 'claim', 'report', 'other']) | join(', ')) }}">
+            {% elif field_type == 'json' %}
+              <textarea data-setting="{{ key }}" rows="5" spellcheck="false">{{ settings.get(key, {}) | tojson(indent=2) }}</textarea>
+              <small class="field-help">Use a JSON object with ticket names and question lists, for example {"support": ["How can we help?"]}.</small>
+            {% else %}
+              <input type="text" data-setting="{{ key }}" value="{{ settings.get(key, '!') if key == 'prefix' else settings.get(key, '') }}" {% if key == 'prefix' %}maxlength="5"{% endif %}>
+            {% endif %}
+          </label>
+          {% endfor %}
         </div>
-        <p id="saveResult" class="notice">Changes are not saved yet.</p>
+        <div class="actions"><button class="btn primary save-settings" type="button">Save {{ title }}</button></div>
+        <p class="notice save-result" aria-live="polite">Changes are ready to save.</p>
       </div>
     </div>
+    {% endfor %}
   </section>
 </div>
 {% endif %}
-<script>window.NIGHTFALL_GUILD_ID = "{{ guild.id }}";</script>
+<script>window.NIGHTFALL_GUILD_ID = {{ guild.id | tojson }};</script>
 {% endblock %}
