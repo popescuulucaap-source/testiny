@@ -17,7 +17,7 @@ BOT_API_URL = os.getenv("BOT_API_URL", "").rstrip("/")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 INVITE_URL = os.getenv("INVITE_URL", "#")
-SUPPORT_URL = os.getenv("SUPPORT_URL", "#")
+SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "#").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 DISCORD_API = "https://discord.com/api/v10"
@@ -284,6 +284,8 @@ def dashboard(guild_id):
     if not guild or (int(guild.get("permissions", "0")) & MANAGE_GUILD) != MANAGE_GUILD:
         return "You do not have permission to manage this server.", 403
 
+    guild_icon_hash = guild.get("icon")
+    guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild_id}/{guild_icon_hash}.png?size=128" if guild_icon_hash else ""
     settings, status = bot_request("GET", f"/guilds/{guild_id}/settings")
     return render_template(
         "dashboard.html",
