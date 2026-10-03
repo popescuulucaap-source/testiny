@@ -265,13 +265,33 @@ def servers():
         g for g in r.json()
         if (int(g.get("permissions", "0")) & MANAGE_GUILD) == MANAGE_GUILD
     ]
-    bot_data, _ = bot_request("GET", "/guilds")
-    bot_ids = {str(x.get("id")) for x in bot_data.get("guilds", [])} if isinstance(bot_data, dict) else set()
+    bot_data, bot_status = bot_request("GET", "/guilds")
+    bot_ids = set()
+
+    if isinstance(bot_data, dict) and bot_data.get("ok") is True:
+        bot_ids = {str(x.get("id")) for x in bot_data.get("guilds", []) if x.get("id")}
+
     for guild in guilds:
-        guild["bot_present"] = guild["id"] in bot_ids
+        guild["bot_present"] = str(guild["id"]) in bot_ids
         icon_hash = guild.get("icon")
-        guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild['id']}/{icon_hash}.png?size=128" if icon_hash else ""
-    return render_template("servers.html", guilds=guilds)
+        guild["icon_url"] = (
+            f"https://cdn.discordapp.com/icons/{guild['id']}/{icon_hash}.png?size=128"
+            if icon_hash else ""
+        )
+
+    bot_api_error = None
+    if bot_status != 200 or not isinstance(bot_data, dict) or bot_data.get("ok") is not True:
+        bot_api_error = (
+            bot_data.get("error", "Could not read Testiny's server list.")
+            if isinstance(bot_data, dict)
+            else "Could not read Testiny's server list."
+        )
+
+    return render_template(
+        "servers.html",
+        guilds=guilds,
+        bot_api_error=bot_api_error,
+    )
 
 
 @app.get("/dashboard/<guild_id>")
@@ -308,7 +328,7 @@ def update_settings(guild_id):
 @login_required
 def dashboard_action(guild_id):
     payload = request.get_json(silent=True) or {}
-    data, status = bot_request("POST", f"/guilds/{guild_id}/actions", json=payload)
+    data, status = bot_request("POST", f"/guilds/{guild_id}/action", json=payload)
     return jsonify(data), status
 
 
