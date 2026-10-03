@@ -286,12 +286,13 @@ def dashboard(guild_id):
 
     guild_icon_hash = guild.get("icon")
     guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild_id}/{guild_icon_hash}.png?size=128" if guild_icon_hash else ""
-    settings, status = bot_request("GET", f"/guilds/{guild_id}/settings")
+    settings_data, status = bot_request("GET", f"/guilds/{guild_id}/settings")
+    settings = settings_data.get("settings", {}) if status == 200 else {}
     return render_template(
         "dashboard.html",
         guild=guild,
-        settings=settings if status == 200 else {},
-        bot_error=None if status == 200 else settings.get("error"),
+        settings=settings,
+        bot_error=None if status == 200 else settings_data.get("error"),
     )
 
 
