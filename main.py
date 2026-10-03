@@ -1,15 +1,13 @@
 import asyncio
 import io
-import hmac
 import json
 import os
-import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import random
 import re
 import secrets
 import sqlite3
 import time
+import requests
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -38,8 +36,10 @@ if not TOKEN:
     raise RuntimeError("Set DISCORD_TOKEN (or BOT_TOKEN) in your Katabump environment variables.")
 
 PREFIX = "!"
-DASHBOARD_API_SECRET = os.getenv("BOT_API_SECRET", "").strip()
-DASHBOARD_API_PORT = int(os.getenv("BOT_API_PORT", os.getenv("TESTINY_API_PORT", "20119")))
+NIGHTFALL_WEBSITE_URL = os.getenv("NIGHTFALL_WEBSITE_URL", "").strip().rstrip("/")
+NIGHTFALL_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
+BRIDGE_POLL_SECONDS = 10
+bridge_task = None
 
 
 async def command_prefix_for(message_bot, message):
@@ -2659,6 +2659,7 @@ async def finish_giveaway(guild: discord.Guild, message_id: int, manual=False):
 
 @bot.event
 async def on_ready():
+    global bridge_task
     db_init()
     for guild in bot.guilds:
         await cache_invites(guild)
@@ -2687,6 +2688,8 @@ async def on_ready():
         await asyncio.sleep(0.25)
     if not giveaway_watcher.is_running():
         giveaway_watcher.start()
+    if NIGHTFALL_WEBSITE_URL and NIGHTFALL_BRIDGE_SECRET and (bridge_task is None or bridge_task.done()):
+        bridge_task = asyncio.create_task(nightfall_website_bridge(), name="nightfall-website-bridge")
     # Dashboard-style presence.
     await bot.change_presence(activity=discord.Game(name=f"{PREFIX}help • Nightfall ✨"))
     print(f"Logged in as {bot.user} ({bot.user.id}) on {len(bot.guilds)} server(s)")
@@ -2989,270 +2992,89 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 
 
 # -----------------------------
-# Dashboard API
+# Website bridge (bot-initiated HTTPS)
 # -----------------------------
 
-class DashboardAPIHandler(BaseHTTPRequestHandler):
+def poll_nightfall_website():
+    if not NIGHTFALL_WEBSITE_URL or not NIGHTFALL_BRIDGE_SECRET:
+        return []
+    headers = {"X-Nightfall-Bridge-Key": NIGHTFALL_BRIDGE_SECRET}
+    heartbeat = {
+        "guilds": [
+            {
+                "id": str(guild.id),
+                "name": guild.name,
+                "member_count": guild.member_count,
+                "settings": get_settings(guild.id),
+            }
+            for guild in bot.guilds
+        ]
+    }
+    response = requests.post(
+        f"{NIGHTFALL_WEBSITE_URL}/api/bot/heartbeat",
+        headers=headers,
+        json=heartbeat,
+        timeout=12,
+    )
+    response.raise_for_status()
+    response = requests.get(
+        f"{NIGHTFALL_WEBSITE_URL}/api/bot/pull",
+        headers=headers,
+        timeout=12,
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data.get("jobs", []) if data.get("ok") else []
 
-    def _send_json(self, data, status=200):
-        body = json.dumps(data).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
 
-    def _authorized(self):
-        supplied = self.headers.get("X-Nightfall-API-Key") or self.headers.get("X-Testiny-API-Key", "")
-        return (
-            bool(DASHBOARD_API_SECRET)
-            and hmac.compare_digest(supplied, DASHBOARD_API_SECRET)
-        )
+async def handle_website_job(job):
+    try:
+        guild_id = int(job.get("guild_id", 0))
+    except (TypeError, ValueError):
+        return
+    guild = bot.get_guild(guild_id)
+    if not guild:
+        return
+    payload = job.get("payload") if isinstance(job.get("payload"), dict) else {}
 
-    def _read_json(self):
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-
-            if length <= 0:
-                return {}
-
-            raw = self.rfile.read(length)
-            return json.loads(raw.decode("utf-8"))
-
-        except Exception:
-            return {}
-
-    def do_GET(self):
-
-        # Health check
-        if self.path == "/health":
-            self._send_json({
-                "ok": True,
-                "service": "Nightfall Bot API"
-            })
-            return
-
-        # Authentication
-        if not self._authorized():
-            self._send_json({
-                "ok": False,
-                "error": "Unauthorized"
-            }, 401)
-            return
-
-        # List bot servers
-        if self.path == "/guilds":
-
-            guilds = []
-
-            for guild in bot.guilds:
-                guilds.append({
-                    "id": str(guild.id),
-                    "name": guild.name,
-                    "member_count": guild.member_count
-                })
-
-            self._send_json({
-                "ok": True,
-                "guilds": guilds
-            })
-            return
-
-        # Get guild settings
-        if self.path.startswith("/guilds/") and self.path.endswith("/settings"):
-
-            try:
-                guild_id = int(self.path.split("/")[2])
-            except Exception:
-                self._send_json({
-                    "ok": False,
-                    "error": "Invalid guild ID"
-                }, 400)
-                return
-
-            guild = bot.get_guild(guild_id)
-
-            if guild is None:
-                self._send_json({
-                    "ok": False,
-                    "error": "Bot is not in this server."
-                }, 404)
-                return
-
-            settings = get_settings(guild_id)
-
-            settings.setdefault("prefix", PREFIX)
-            settings.setdefault("logs_channel", str(settings.get("logs_channel_id", "")))
-
-            self._send_json({
-                "ok": True,
-                "settings": settings
-            })
-            return
-
-        self._send_json({
-            "ok": False,
-            "error": "Not found"
-        }, 404)
-
-    def do_POST(self):
-
-        # Authentication
-        if not self._authorized():
-            self._send_json({
-                "ok": False,
-                "error": "Unauthorized"
-            }, 401)
-            return
-
-        # Save guild settings
-        if self.path.startswith("/guilds/") and self.path.endswith("/settings"):
-
-            try:
-                guild_id = int(self.path.split("/")[2])
-            except Exception:
-                self._send_json({
-                    "ok": False,
-                    "error": "Invalid guild ID"
-                }, 400)
-                return
-
-            guild = bot.get_guild(guild_id)
-
-            if guild is None:
-                self._send_json({
-                    "ok": False,
-                    "error": "Bot is not in this server."
-                }, 404)
-                return
-
-            payload = self._read_json()
-            current = get_settings(guild_id)
-
-            # Prefix
-            if "prefix" in payload:
-                prefix = str(payload["prefix"]).strip()
-
-                if 1 <= len(prefix) <= 5:
-                    current["prefix"] = prefix
-
-            # Logs channel
-            if "logs_channel" in payload:
-                raw = str(payload["logs_channel"]).strip()
-
-                if raw.isdigit():
-                    current["logs_channel_id"] = int(raw)
-                else:
-                    current.pop("logs_channel_id", None)
-
-            save_settings(guild_id, current)
-            current["logs_channel"] = str(current.get("logs_channel_id", ""))
-
-            self._send_json({
-                "ok": True,
-                "settings": current
-            })
-            return
-
-        # Dashboard actions
-        if self.path.startswith("/guilds/") and self.path.endswith("/action"):
-
-            try:
-                guild_id = int(self.path.split("/")[2])
-            except Exception:
-                self._send_json({
-                    "ok": False,
-                    "error": "Invalid guild ID"
-                }, 400)
-                return
-
-            guild = bot.get_guild(guild_id)
-
-            if guild is None:
-                self._send_json({
-                    "ok": False,
-                    "error": "Bot is not in this server."
-                }, 404)
-                return
-
-            payload = self._read_json()
-            action = str(payload.get("action", "")).strip()
-
-            # Refresh existing setup dashboard
-            if action == "sync_setup":
-
-                try:
-                    future = asyncio.run_coroutine_threadsafe(
-                        refresh_setup_dashboard(guild),
-                        bot.loop
-                    )
-
-                    refreshed = future.result(timeout=20)
-
-                except Exception as exc:
-                    self._send_json({
-                        "ok": False,
-                        "error": f"Setup sync failed: {exc}"
-                    }, 500)
-                    return
-
-                self._send_json({
-                    "ok": bool(refreshed),
-                    "guild_id": str(guild_id),
-                    "action": action,
-                    "message": (
-                        "Setup dashboard refreshed."
-                        if refreshed
-                        else "No saved setup dashboard was found. Run !setup once in the server first."
-                    )
-                })
-                return
-
-            self._send_json({
-                "ok": False,
-                "error": "Unknown action"
-            }, 400)
-            return
-
-        self._send_json({
-            "ok": False,
-            "error": "Not found"
-        }, 404)
-
-    def log_message(self, format, *args):
-        # Keep API requests out of the console.
+    if job.get("kind") == "settings":
+        current = get_settings(guild_id)
+        if "prefix" in payload:
+            prefix = str(payload["prefix"]).strip()
+            if 1 <= len(prefix) <= 5:
+                current["prefix"] = prefix
+        if "logs_channel" in payload:
+            raw = str(payload["logs_channel"]).strip()
+            if raw.isdigit():
+                current["logs_channel_id"] = int(raw)
+            else:
+                current.pop("logs_channel_id", None)
+        save_settings(guild_id, current)
         return
 
+    if job.get("kind") == "action" and payload.get("action") == "sync_setup":
+        refreshed = await refresh_setup_dashboard(guild)
+        if not refreshed:
+            print(f"Website requested setup sync for {guild_id}, but no saved !setup dashboard exists.")
 
-def start_dashboard_api():
-    if not DASHBOARD_API_SECRET:
-        print("WARNING: BOT_API_SECRET is missing; website dashboard API requests will be rejected.")
 
-    server = ThreadingHTTPServer(
-        ("0.0.0.0", DASHBOARD_API_PORT),
-        DashboardAPIHandler
-    )
-
-    print(
-        f"Nightfall Dashboard API listening on "
-        f"0.0.0.0:{DASHBOARD_API_PORT}"
-    )
-
-    thread = threading.Thread(
-        target=server.serve_forever,
-        daemon=True
-    )
-
-    thread.start()
-
+async def nightfall_website_bridge():
+    if not NIGHTFALL_WEBSITE_URL or not NIGHTFALL_BRIDGE_SECRET:
+        print("Nightfall website bridge is disabled; set NIGHTFALL_WEBSITE_URL and NIGHTFALL_BRIDGE_SECRET.")
+        return
+    while not bot.is_closed():
+        try:
+            jobs = await asyncio.to_thread(poll_nightfall_website)
+            for job in jobs:
+                if isinstance(job, dict):
+                    await handle_website_job(job)
+        except Exception as exc:
+            print(f"Nightfall website bridge poll failed: {exc!r}")
+        await asyncio.sleep(BRIDGE_POLL_SECONDS)
 # -----------------------------
 # Startup
 # -----------------------------
 
 if __name__ == "__main__":
     db_init()
-
-    start_dashboard_api()
-
     bot.run(TOKEN)
-
