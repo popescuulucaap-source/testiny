@@ -1,4 +1,5 @@
 import os
+import json
 import secrets
 import threading
 import time
@@ -70,12 +71,26 @@ BOT_NEXT_JOB_ID = 1
 
 
 def bot_online():
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute("SELECT last_seen FROM bot_bridge_state WHERE state_id = 1").fetchone()
+            return bool(row and row[0] and time.time() - row[0] < 75)
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read shared bot heartbeat: %s", type(exc).__name__)
     with BOT_LOCK:
         return bool(BOT_LAST_SEEN and time.time() - BOT_LAST_SEEN < 75)
 
 
 def queue_bot_job(guild_id, kind, payload):
     global BOT_NEXT_JOB_ID
+    if DATABASE_URL:
+        with db_connect() as conn:
+            row = conn.execute(
+                "INSERT INTO bot_jobs (guild_id, kind, payload) VALUES (%s, %s, %s) RETURNING job_id",
+                (str(guild_id), kind, json.dumps(payload)),
+            ).fetchone()
+            return row[0]
     with BOT_LOCK:
         job_id = BOT_NEXT_JOB_ID
         BOT_NEXT_JOB_ID += 1
@@ -84,6 +99,13 @@ def queue_bot_job(guild_id, kind, payload):
 
 
 def bot_guild_snapshot():
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute("SELECT guilds FROM bot_bridge_state WHERE state_id = 1").fetchone()
+            return json.loads(row[0]) if row and row[0] else []
+        except (psycopg.Error, ValueError, TypeError) as exc:
+            app.logger.warning("Could not read shared bot state: %s", type(exc).__name__)
     with BOT_LOCK:
         return list(BOT_GUILDS.values())
 
@@ -114,9 +136,18 @@ def bot_heartbeat():
                 "member_count": guild.get("member_count"),
                 "settings": guild.get("settings") if isinstance(guild.get("settings"), dict) else {},
             }
+    last_seen = time.time()
+    guild_snapshot = list(normalized.values())
+    if DATABASE_URL:
+        with db_connect() as conn:
+            conn.execute(
+                "INSERT INTO bot_bridge_state (state_id, last_seen, guilds) VALUES (1, %s, %s) "
+                "ON CONFLICT (state_id) DO UPDATE SET last_seen = EXCLUDED.last_seen, guilds = EXCLUDED.guilds",
+                (last_seen, json.dumps(guild_snapshot)),
+            )
     with BOT_LOCK:
         BOT_GUILDS = normalized
-        BOT_LAST_SEEN = time.time()
+        BOT_LAST_SEEN = last_seen
     return jsonify({"ok": True})
 
 
@@ -125,6 +156,16 @@ def bot_pull_jobs():
     denied = require_bot_key()
     if denied:
         return denied
+    if DATABASE_URL:
+        with db_connect() as conn:
+            rows = conn.execute(
+                "SELECT job_id, guild_id, kind, payload FROM bot_jobs "
+                "ORDER BY job_id LIMIT 100 FOR UPDATE SKIP LOCKED"
+            ).fetchall()
+            if rows:
+                conn.execute("DELETE FROM bot_jobs WHERE job_id = ANY(%s)", ([row[0] for row in rows],))
+            jobs = [{"id": row[0], "guild_id": row[1], "kind": row[2], "payload": json.loads(row[3])} for row in rows]
+        return jsonify({"ok": True, "jobs": jobs})
     with BOT_LOCK:
         jobs = list(BOT_JOBS)
         BOT_JOBS.clear()
@@ -159,6 +200,8 @@ def init_db():
         with conn.cursor() as cur:
             cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
@@ -207,9 +250,9 @@ def delete_custom_command(command_id):
         conn.commit()
 
 def all_commands():
-    commands=list(COMMANDS)
-    commands.extend((x["command"],x["category"],x["description"]) for x in load_custom_commands())
-    return commands
+    # Keep the public library limited to commands implemented in main.py.
+    # Admin dashboard notes are not executable bot commands.
+    return list(COMMANDS)
 
 init_db()
 
@@ -491,51 +534,49 @@ def health():
 
 
 COMMANDS = [
-    ("!setup", "Server setup", "Open Nightfall's interactive configuration system."),
-    ("!ban @user", "Moderation", "Ban a member and provide the configured appeal route."),
-    ("!kick @user", "Moderation", "Kick a member from the server."),
-    ("!warn @user", "Moderation", "Issue a warning. Five warnings trigger the configured kick behavior."),
-    ("!timeout @user <duration>", "Moderation", "Temporarily timeout a member."),
+    ("!help", "Utility", "Show the bot's command help."),
+    ("!setup", "Admin tools", "Open the interactive server setup dashboard and configure features there."),
+    ("!ban @member [reason]", "Moderation", "Ban a member. Staff only."),
+    ("!kick @member [reason]", "Moderation", "Kick a member. Staff only."),
+    ("!warn @member [reason]", "Moderation", "Warn a member. Staff only."),
+    ("!purge <amount>", "Moderation", "Delete recent messages. Alias: !clear."),
+    ("!warnings @member", "Moderation", "Show a member's warning record. Alias: !warns."),
+    ("!clearwarnings @member", "Moderation", "Clear a member's warning record. Alias: !resetwarnings."),
+    ("!timeout @member <duration> [reason]", "Moderation", "Temporarily timeout a member."),
     ("!lock", "Moderation", "Lock the current channel."),
-    ("!slowmode <seconds>", "Moderation", "Configure channel slowmode."),
-    ("!jail @user <reason>", "Jail", "Move a member into the configured jail system."),
-    ("!unjail @user", "Jail", "Release a jailed member and restore their roles."),
-    ("!afk <reason>", "Utility", "Set an AFK reason and protect the user from repeated pings."),
-    ("!role give @user @role", "Roles", "Give a role to a member or everyone where permitted."),
-    ("!role make <name> #HEX", "Roles", "Create a role with a chosen color."),
-    ("!invites @user", "Invites", "Show invite categories and tracked invite counts."),
-    ("!invited @user", "Invites", "List clean users invited by a member."),
-    ("!inviter @user", "Invites", "Show the recorded inviter."),
-    ("!reset invites @user", "Invites", "Reset invite tracking for one user."),
-    ("!reset invites @everyone", "Invites", "Reset invite tracking for everyone."),
-    ("!vouch @user", "Community", "Create a formatted vouch entry in the configured channel."),
-    ("!proof please", "Proof", "Send a proof request into the configured proof flow."),
-    ("!highlow", "Games", "Play High-Low."),
-    ("!coinflip", "Games", "Play Coinflip."),
-    ("!blackjack", "Games", "Play Blackjack."),
-    ("!roulette", "Games", "Play Roulette."),
-    ("!daily", "Games", "Claim the daily 500-coin reward."),
-    ("!giveaway", "Giveaways", "Create a giveaway with prize, timer and winners."),
-    ("!giveaway reroll MESSAGE_ID", "Giveaways", "Reroll a completed giveaway."),
-    ("!giveaway end MESSAGE_ID", "Giveaways", "End a giveaway early."),
-    ("!stick", "Utility", "Create a sticky message."),
-    ("!unstick", "Utility", "Remove the sticky message."),
-    ("!autoreaction #channel emoji", "Utility", "Automatically react to messages in a channel."),
-    ("!welcome setup", "Community", "Configure welcome channel, invite attribution and member-count embeds."),
-    ("!leave setup", "Community", "Configure goodbye messages and invite attribution."),
-    ("!autorole setup", "Community", "Assign a configured role to new members."),
-    ("!antiraid setup", "Security", "Enable raid protections and external-app restrictions."),
-    ("!antinuke setup", "Security", "Configure channel-deletion and permission protection."),
-    ("!antilink setup", "Security", "Automatically timeout link messages while allowing GIFs."),
-    ("!verify setup", "Security", "Create the verified/unverified flow with private challenge verification."),
-    ("!commandchannel setup", "Security", "Restrict prefix commands to a configured channel."),
-    ("!feedback setup", "Community", "Create an interactive feedback and star-rating panel."),
-    ("!j4j setup", "Community", "Configure J4J detection, DM prompts and J4J tickets."),
-    ("!boost setup", "Community", "Configure booster role and boost announcements."),
-    ("!application setup", "Community", "Configure staff/application panels."),
-    ("!ticket setup", "Tickets", "Configure ticket types, questions, categories, claims and staff pings."),
-    ("!appeal setup", "Tickets", "Configure the appeal server/link used by moderation."),
-    ("!gamble setup", "Games", "Configure the gambling channel and economy."),
+    ("!unlock", "Moderation", "Unlock the current channel."),
+    ("!slowmode <seconds>", "Moderation", "Set channel slowmode. Alias: !slow."),
+    ("!jail @member [reason]", "Moderation", "Jail a member using the configured jail system."),
+    ("!unjail @member [reason]", "Moderation", "Release a jailed member."),
+    ("!announce #channel <message>", "Admin tools", "Post a server announcement."),
+    ("!poll <question and options>", "Community", "Create a reaction poll."),
+    ("!afk [reason]", "Utility", "Set your AFK status."),
+    ("!ticket", "Tickets", "Show ticket command usage."),
+    ("!ticket panel", "Tickets", "Post the configured ticket panel."),
+    ("!ticket questions <type> <questions>", "Tickets", "Set questions for a ticket type."),
+    ("!appeal server", "Tickets", "Show or set the appeal server information."),
+    ("!appeal_server", "Tickets", "Show appeal server information. Also accepts !appealserver."),
+    ("!autoreaction #channel <emoji>", "Community", "Set automatic reactions for a channel."),
+    ("!role give <member|everyone> @role", "Roles", "Give a role to a member or eligible members."),
+    ("!role make <name> [#color]", "Roles", "Create a role with an optional hex color."),
+    ("!reset invites <member|everyone>", "Invites", "Reset tracked invite counts."),
+    ("!invites [@member]", "Invites", "Show invite counts for you or a member."),
+    ("!invited [@member]", "Invites", "Show users invited by you or a member."),
+    ("!inviter @member", "Invites", "Show who invited a member."),
+    ("!j4j allowed", "Community", "Show the join-for-join allowlist."),
+    ("!j4j dm <on|off>", "Community", "Toggle join-for-join direct messages."),
+    ("!giveaway <duration> <winners> <prize>", "Giveaways", "Start a giveaway."),
+    ("!giveaway reroll <message_id>", "Giveaways", "Choose a new winner for a giveaway."),
+    ("!giveaway end <message_id>", "Giveaways", "End a giveaway early."),
+    ("!stick <message>", "Utility", "Make a message sticky in the current channel."),
+    ("!unstick", "Utility", "Remove the sticky message from the current channel."),
+    ("!proof <action>", "Community", "Use the configured proof workflow. Staff only."),
+    ("!daily", "Games", "Claim your daily coins."),
+    ("!balance [@member]", "Games", "Show your coin balance or another member's."),
+    ("!coinflip <bet> <heads|tails>", "Games", "Bet coins on a coin flip."),
+    ("!highlow <bet>", "Games", "Play High-Low with a coin bet."),
+    ("!blackjack <bet>", "Games", "Play Blackjack with a coin bet."),
+    ("!roulette <bet> <pick>", "Games", "Play Roulette with a coin bet."),
 ]
 
 

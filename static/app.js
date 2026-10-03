@@ -1,13 +1,13 @@
 document.addEventListener('DOMContentLoaded',()=>{
   const loader=document.getElementById('nightfall-loader');
   if(loader){
-    const key='nightfall-home-intro-seen';
+    const key='nightfall-home-intro-seen-v2';
     if(sessionStorage.getItem(key)) loader.remove();
     else {
       sessionStorage.setItem(key,'1');
       const bar=loader.querySelector('.intro-progress-fill');
       const label=loader.querySelector('.intro-progress-label');
-      const start=performance.now(),duration=2350;
+      const start=performance.now(),duration=4000;
       const step=now=>{
         const progress=Math.min(1,(now-start)/duration);
         if(bar)bar.style.transform=`scaleX(${progress})`;
@@ -54,9 +54,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     finally{button.disabled=false;}
   }));
 
-  const targets=document.querySelectorAll('.hero-copy,.hero-card,.section-heading,.card,.cta,.command-card,.server-card');
+  const targets=document.querySelectorAll('.hero-copy,.hero-card,.section-heading,.card,.cta,.command-card,.server-card,.home-ribbon,.workflow-art,.workflow-copy,.command-stack');
   if(!('IntersectionObserver'in window)){targets.forEach(element=>element.classList.add('is-visible'));return;}
   targets.forEach(element=>element.classList.add('reveal'));
   const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target);}}),{threshold:.12});
   targets.forEach(element=>observer.observe(element));
+
+  const consoleCard=document.querySelector('.home-console');
+  if(consoleCard&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    consoleCard.addEventListener('pointermove',event=>{
+      const rect=consoleCard.getBoundingClientRect();
+      consoleCard.style.setProperty('--px',`${event.clientX-rect.left}px`);
+      consoleCard.style.setProperty('--py',`${event.clientY-rect.top}px`);
+    },{passive:true});
+  }
 });

@@ -1974,6 +1974,7 @@ class J4JTicketView(discord.ui.View):
 @bot.command(name="help")
 async def help_command(ctx: commands.Context):
     e = embed("📚 Nightfall command center", "Everything uses the `!` prefix.\n\n**Moderation**\n`!ban @user [reason]` • `!kick @user [reason]` • `!warn @user [reason]` • `!timeout @user <duration>` • `!lock` • `!slowmode <seconds>`\n\n**Community**\n`!afk [reason]` • `!invites @user` • `!invited @user` • `!inviter @user` • `!reset invites @user`\n\n**Tickets / setup**\n`!setup` • `!jail @user [reason]` • `!unjail @user [reason]` • `!ticket panel` • `!ticket questions <type> q1 | q2 | ...` • `!apeal server`\n\n**Fun**\n`!giveaway <duration> <winners> <prize> [| image_url]` • `!giveaway reroll <message_id>` • `!giveaway end <message_id>` • `!highlow <bet>` • `!coinflip <bet> <heads/tails>` • `!blackjack <bet>` • `!roulette <bet> <red/black/number>` • `!daily`\n\n**Utilities**\n`!stick <message>` • `!unstick` • `!role give @user @role` • `!role make <name> <hex>` • `!autoreaction #channel 😀` • `!proof please`", EMBED_COLOR)
+    e.add_field(name="🌙 New tools", value="`!purge <1–100>` • `!warnings @user` • `!clearwarnings @user` (admins) • `!announce #channel <message>` • `!poll Question | Option 1 | Option 2`", inline=False)
     e.set_thumbnail(url=bot.user.display_avatar.url if bot.user else discord.Embed.Empty)
     await ctx.send(embed=e)
 
@@ -2030,6 +2031,77 @@ async def warn(ctx: commands.Context, member: discord.Member, *, reason: str = "
             await ctx.send(embed=embed("👢 5 warnings reached", f"{member.mention} was kicked after reaching **5/5** warnings.", DANGER), delete_after=8)
         except discord.Forbidden:
             await ctx.send(embed=embed("❌ Auto-kick failed", "I cannot kick that member; check role hierarchy and permissions.", DANGER), delete_after=8)
+
+
+@bot.command(name="purge", aliases=["clear"])
+@staff_only()
+async def purge(ctx: commands.Context, amount: int):
+    """Remove up to 100 recent messages from this channel."""
+    if amount < 1 or amount > 100:
+        await ctx.send(embed=embed("🧹 Pick 1–100 messages", "For safety, purge is limited to 100 messages at a time.", WARNING), delete_after=6)
+        return
+    try:
+        deleted = await ctx.channel.purge(limit=amount + 1, reason=f"Bulk cleanup by {ctx.author}")
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Purge failed", "I need **Manage Messages** permission in this channel.", DANGER), delete_after=8)
+        return
+    except discord.HTTPException:
+        await ctx.send(embed=embed("❌ Purge failed", "Discord could not remove those messages. Try a smaller amount.", DANGER), delete_after=8)
+        return
+    removed = max(0, len(deleted) - 1)
+    await log_action(ctx.guild, "🧹 Messages purged", f"**{removed}** messages removed in {ctx.channel.mention} by {ctx.author.mention}.", WARNING)
+    await ctx.send(embed=embed("🧹 Channel cleaned", f"Removed **{removed}** messages.", SUCCESS), delete_after=5)
+
+
+@bot.command(name="warnings", aliases=["warns"])
+@staff_only()
+async def warnings_command(ctx: commands.Context, member: discord.Member):
+    conn = db_connect()
+    row = conn.execute("SELECT count,last_reason FROM warnings WHERE guild_id=? AND user_id=?", (ctx.guild.id, member.id)).fetchone()
+    conn.close()
+    count = row["count"] if row else 0
+    reason = row["last_reason"] if row and row["last_reason"] else "No warning reason recorded."
+    await ctx.send(embed=embed(f"⚠️ Warnings • {member.display_name}", f"**Active count:** {count}/5\n**Latest reason:** {reason}", WARNING if count else INFO))
+
+
+@bot.command(name="clearwarnings", aliases=["resetwarnings"])
+@admin_only()
+async def clearwarnings(ctx: commands.Context, member: discord.Member):
+    conn = db_connect()
+    conn.execute("DELETE FROM warnings WHERE guild_id=? AND user_id=?", (ctx.guild.id, member.id))
+    conn.commit()
+    conn.close()
+    await log_action(ctx.guild, "🧽 Warnings cleared", f"All warnings for {member.mention} were cleared by {ctx.author.mention}.", INFO)
+    await ctx.send(embed=embed("🧽 Warning record cleared", f"Warnings for {member.mention} are now **0/5**.", SUCCESS), delete_after=7)
+
+
+@bot.command(name="announce")
+@staff_only()
+async def announce(ctx: commands.Context, channel: discord.TextChannel, *, message: str):
+    """Post a branded announcement without pinging everyone."""
+    try:
+        await channel.send(embed=embed(f"📣 {ctx.guild.name}", message[:4000], EMBED_COLOR), allowed_mentions=discord.AllowedMentions.none())
+    except discord.Forbidden:
+        await ctx.send(embed=embed("❌ Announcement failed", "I need **Send Messages** and **Embed Links** in that channel.", DANGER)); return
+    await ctx.send(embed=embed("📣 Announcement posted", f"Your announcement was sent to {channel.mention}.", SUCCESS), delete_after=6)
+    await log_action(ctx.guild, "📣 Announcement posted", f"Posted by {ctx.author.mention} in {channel.mention}.", INFO)
+
+
+@bot.command(name="poll")
+@commands.guild_only()
+async def poll(ctx: commands.Context, *, prompt: str):
+    """Create a quick reaction poll: question | option 1 | option 2."""
+    parts = [part.strip() for part in prompt.split("|") if part.strip()]
+    if len(parts) < 3 or len(parts) > 11:
+        await ctx.send(embed=embed("📊 Poll format", "Use !poll Question | Option 1 | Option 2 with 2–10 options.", WARNING)); return
+    emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+    description = "\n".join(f"{emojis[index]}  {option[:120]}" for index, option in enumerate(parts[1:]))
+    message = await ctx.send(embed=embed(f"📊 {parts[0][:240]}", description, EMBED_COLOR), allowed_mentions=discord.AllowedMentions.none())
+    for emoji in emojis[:len(parts) - 1]:
+        try:
+            await message.add_reaction(emoji)
+        except discord.HTTPException:
+            break
 
 
 @bot.command()
