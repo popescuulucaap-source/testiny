@@ -43,3 +43,14 @@ body{background-image:radial-gradient(ellipse at 18% 8%,#5e46a52b,transparent 34
 @media(max-width:850px){.setting-fields{grid-template-columns:1fr}.dashboard-highlights{grid-template-columns:1fr}.dashboard-actions .btn{width:100%}.loader-flight{width:145px;height:128px}.loader-logo{width:105px;height:105px}}
 @media(prefers-reduced-motion:reduce){.loader-flight{animation:none}.loader-logo{animation:none}}
 
+/* Command library controls and a softer Nightfall motion layer */
+.command-tools{width:min(1120px,88%);margin:0 auto 20px;padding:18px;border:1px solid #ffffff12;border-radius:20px;background:linear-gradient(135deg,#111422dd,#0c0f18dd);backdrop-filter:blur(18px)}
+.command-search{display:flex;align-items:center;gap:10px;max-width:560px;padding:0 14px;border:1px solid #a48aff30;border-radius:14px;background:#080a12;color:#aeb5c7}
+.command-search>span{font-size:25px;color:var(--nf-cyan)}.command-search input{padding:14px 0;border:0;background:transparent;font-size:15px}.command-search input:focus{outline:0}
+.command-filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}.command-filter,.copy-command{border:1px solid #ffffff16;background:#ffffff07;color:#b9bfd0;border-radius:999px;padding:8px 12px;cursor:pointer;transition:all .2s ease}.command-filter:hover,.command-filter.active{color:#fff;border-color:#9d85ff75;background:#8b5cf62a;box-shadow:0 0 22px #8b5cf61a}
+.command-count{margin:12px 0 0;color:#8f96aa;font-size:12px}.command-card{position:relative;overflow:hidden}.command-card:before{content:"";position:absolute;inset:0 auto 0 -100%;width:55%;transform:skewX(-18deg);background:linear-gradient(90deg,transparent,#ffffff08,transparent);transition:left .6s ease;pointer-events:none}.command-card:hover:before{left:150%}.command-card code{padding-right:70px;overflow-wrap:anywhere}.copy-command{position:absolute;top:19px;right:18px;font-size:11px;padding:6px 10px}.copy-command:hover{color:white;border-color:#60e8ff70;background:#60e8ff12}.empty-commands{width:min(1120px,88%);margin:0 auto 90px;padding:34px;text-align:center;color:#aeb5c7;border:1px dashed #ffffff22;border-radius:18px}
+.dashboard-content .overview-card{position:relative;overflow:hidden}.dashboard-content .overview-card:after{content:"";position:absolute;width:260px;height:260px;right:-100px;top:-130px;border-radius:50%;background:radial-gradient(circle,#8b5cf627,transparent 68%);pointer-events:none}.tab{transition:transform .2s ease,background .2s ease,border-color .2s ease}.tab:hover{transform:translateX(3px);border-color:#a48aff48}.setting-group{animation:nf-rise .35s ease both}
+@media(max-width:850px){.command-tools{padding:14px}.command-filters{gap:6px}.command-filter{padding:7px 10px}}
+@media(prefers-reduced-motion:reduce){.command-card:before{display:none}.tab:hover{transform:none}}
+
+
