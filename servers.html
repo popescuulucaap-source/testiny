@@ -9,7 +9,11 @@
 <div class="server-grid">
 {% for guild in guilds %}
   <a class="server-card" href="/dashboard/{{ guild.id }}">
-    <div class="server-icon">{{ guild.name[:1]|upper }}</div>
+    {% if guild.icon_url %}
+      <div class="server-icon server-icon-image"><img src="{{ guild.icon_url }}" alt="{{ guild.name }} icon"></div>
+    {% else %}
+      <div class="server-icon">{{ guild.name[:1]|upper }}</div>
+    {% endif %}
     <div><h3>{{ guild.name }}</h3><p>{% if guild.bot_present %}🟢 Testiny is connected{% else %}⚪ Add Testiny first{% endif %}</p></div>
     <span>→</span>
   </a>
