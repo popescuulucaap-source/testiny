@@ -1,4 +1,5 @@
 import os
+import json
 import secrets
 import threading
 import time
@@ -70,12 +71,26 @@ BOT_NEXT_JOB_ID = 1
 
 
 def bot_online():
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute("SELECT last_seen FROM bot_bridge_state WHERE state_id = 1").fetchone()
+            return bool(row and row[0] and time.time() - row[0] < 75)
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read shared bot heartbeat: %s", type(exc).__name__)
     with BOT_LOCK:
         return bool(BOT_LAST_SEEN and time.time() - BOT_LAST_SEEN < 75)
 
 
 def queue_bot_job(guild_id, kind, payload):
     global BOT_NEXT_JOB_ID
+    if DATABASE_URL:
+        with db_connect() as conn:
+            row = conn.execute(
+                "INSERT INTO bot_jobs (guild_id, kind, payload) VALUES (%s, %s, %s) RETURNING job_id",
+                (str(guild_id), kind, json.dumps(payload)),
+            ).fetchone()
+            return row[0]
     with BOT_LOCK:
         job_id = BOT_NEXT_JOB_ID
         BOT_NEXT_JOB_ID += 1
@@ -84,6 +99,13 @@ def queue_bot_job(guild_id, kind, payload):
 
 
 def bot_guild_snapshot():
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute("SELECT guilds FROM bot_bridge_state WHERE state_id = 1").fetchone()
+            return json.loads(row[0]) if row and row[0] else []
+        except (psycopg.Error, ValueError, TypeError) as exc:
+            app.logger.warning("Could not read shared bot state: %s", type(exc).__name__)
     with BOT_LOCK:
         return list(BOT_GUILDS.values())
 
@@ -114,9 +136,18 @@ def bot_heartbeat():
                 "member_count": guild.get("member_count"),
                 "settings": guild.get("settings") if isinstance(guild.get("settings"), dict) else {},
             }
+    last_seen = time.time()
+    guild_snapshot = list(normalized.values())
+    if DATABASE_URL:
+        with db_connect() as conn:
+            conn.execute(
+                "INSERT INTO bot_bridge_state (state_id, last_seen, guilds) VALUES (1, %s, %s) "
+                "ON CONFLICT (state_id) DO UPDATE SET last_seen = EXCLUDED.last_seen, guilds = EXCLUDED.guilds",
+                (last_seen, json.dumps(guild_snapshot)),
+            )
     with BOT_LOCK:
         BOT_GUILDS = normalized
-        BOT_LAST_SEEN = time.time()
+        BOT_LAST_SEEN = last_seen
     return jsonify({"ok": True})
 
 
@@ -125,6 +156,16 @@ def bot_pull_jobs():
     denied = require_bot_key()
     if denied:
         return denied
+    if DATABASE_URL:
+        with db_connect() as conn:
+            rows = conn.execute(
+                "SELECT job_id, guild_id, kind, payload FROM bot_jobs "
+                "ORDER BY job_id LIMIT 100 FOR UPDATE SKIP LOCKED"
+            ).fetchall()
+            if rows:
+                conn.execute("DELETE FROM bot_jobs WHERE job_id = ANY(%s)", ([row[0] for row in rows],))
+            jobs = [{"id": row[0], "guild_id": row[1], "kind": row[2], "payload": json.loads(row[3])} for row in rows]
+        return jsonify({"ok": True, "jobs": jobs})
     with BOT_LOCK:
         jobs = list(BOT_JOBS)
         BOT_JOBS.clear()
@@ -159,6 +200,8 @@ def init_db():
         with conn.cursor() as cur:
             cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
