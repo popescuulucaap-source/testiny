@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Nightfall • Commands{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">COMMAND LIBRARY</span><h1>Everything Nightfall can do.</h1><p>Prefix: <code>!</code> • The dashboard also exposes interactive setup panels.</p></section>
-<div class="command-grid">{% for cmd,cat,desc in commands %}<article class="command-card"><span class="tag">{{ cat }}</span><code>{{ cmd }}</code><p>{{ desc }}</p></article>{% endfor %}</div>
+<section class="page-head"><span class="eyebrow">COMMAND LIBRARY</span><h1>Everything Nightfall can do.</h1><p>Find a command fast, then copy its format into Discord. Prefix: <code>!</code></p></section>
+<section class="command-tools" aria-label="Find commands">
+  <label class="command-search"><span>⌕</span><input id="commandSearch" type="search" placeholder="Search commands or features…" autocomplete="off" aria-label="Search commands"></label>
+  <div class="command-filters" role="group" aria-label="Filter by category"><button class="command-filter active" type="button" data-category="all">All</button>{% for cat in commands|map(attribute=1)|unique|sort %}<button class="command-filter" type="button" data-category="{{ cat }}">{{ cat }}</button>{% endfor %}</div>
+  <p class="command-count" id="commandCount" aria-live="polite">{{ commands|length }} commands</p>
+</section>
+<div class="command-grid" id="commandGrid">{% for cmd,cat,desc in commands %}<article class="command-card" data-category="{{ cat|lower }}" data-search="{{ (cmd ~ ' ' ~ cat ~ ' ' ~ desc)|lower }}"><span class="tag">{{ cat }}</span><button class="copy-command" type="button" aria-label="Copy {{ cmd }}" data-copy="{{ cmd }}">Copy</button><code>{{ cmd }}</code><p>{{ desc }}</p></article>{% endfor %}</div>
+<p id="noCommands" class="empty-commands" hidden>No commands match that search. Try another word or category.</p>
+<script src="{{ url_for('static', filename='commands.js') }}" defer></script>
 {% endblock %}
+
 
