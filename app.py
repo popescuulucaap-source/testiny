@@ -498,6 +498,11 @@ COMMANDS = [
     ("!timeout @user <duration>", "Moderation", "Temporarily timeout a member."),
     ("!lock", "Moderation", "Lock the current channel."),
     ("!slowmode <seconds>", "Moderation", "Configure channel slowmode."),
+    ("!purge <1–100>", "Moderation", "Remove recent messages from the current channel (staff only)."),
+    ("!warnings @user", "Moderation", "Review a member’s warning count and latest reason (staff only)."),
+    ("!clearwarnings @user", "Moderation", "Clear a member’s warning record (server administrators only)."),
+    ("!announce #channel <message>", "Admin tools", "Post a branded announcement without pinging everyone (staff only)."),
+    ("!poll Question | Option 1 | Option 2", "Community", "Create a reaction poll with 2–10 options."),
     ("!jail @user <reason>", "Jail", "Move a member into the configured jail system."),
     ("!unjail @user", "Jail", "Release a jailed member and restore their roles."),
     ("!afk <reason>", "Utility", "Set an AFK reason and protect the user from repeated pings."),
@@ -541,3 +546,4 @@ COMMANDS = [
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
+
