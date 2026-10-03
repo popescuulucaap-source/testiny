@@ -10,15 +10,19 @@
     <div class="trust-row"><span>🛡️ Security</span><span>🎫 Tickets</span><span>🎁 Giveaways</span><span>🎰 Games</span><span>📊 Invites</span></div>
   </div>
   <div class="hero-card">
-    <div class="orb"></div><div class="logo-big">T</div><div class="status"><i></i> ONLINE • READY</div>
+    <div class="orb"></div>
+    <img class="logo-big" src="{{ url_for('static', filename='testiny-logo.svg') }}" alt="Testiny logo">
+    <div class="status"><i></i> ONLINE • READY</div>
     <div class="mini-stat"><b>50+</b><span>server tools</span></div>
   </div>
 </section>
 <section class="section">
  <div class="section-heading"><span class="eyebrow">BUILT FOR DISCORD</span><h2>One bot. A complete server toolkit.</h2><p>Everything your members and staff need, organized into clean systems.</p></div>
  <div class="cards">
-  {% for icon,title,text in features %}<article class="card"><div class="card-icon">{{ icon }}</div><h3>{{ title }}</h3><p>{{ text }}</p><a href="/commands">View features →</a></article>{% endfor %}
+  {% for icon,title,text in features %}
+  <article class="card"><div class="card-icon">{{ icon }}</div><h3>{{ title }}</h3><p>{{ text }}</p><a href="/commands">View features →</a></article>
+  {% endfor %}
  </div>
 </section>
-<section class="cta"><div><span class="eyebrow">READY WHEN YOU ARE</span><h2>Give your server Testiny.</h2><p>Install it, configure it, and let the bot handle the repetitive work.</p></div><a class="btn primary" href="{{ invite_url }}">Add Testiny →</a></section>
+<section class="cta"><div><span class="eyebrow">READY WHEN YOU ARE</span><h2>Give your server Testiny.</h2><p>50+ server tools, ready to use.</p></div><a class="btn primary" href="{{ invite_url }}">Add Testiny →</a></section>
 {% endblock %}
