@@ -17,9 +17,7 @@ services:
         sync: false
       - key: DISCORD_REDIRECT_URI
         sync: false
-      - key: BOT_API_URL
-        sync: false
-      - key: BOT_API_SECRET
+      - key: NIGHTFALL_BRIDGE_SECRET
         sync: false
       - key: DATABASE_URL
         sync: false
