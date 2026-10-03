@@ -1,10 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Testiny • Admin{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">ADMIN CONTROL</span><h1>Manage Testiny.</h1><p>Add commands and publish announcements without editing the website code.</p></section>
+<section class="page-head"><span class="eyebrow">ADMIN CONTROL</span><h1>Manage Testiny.</h1><p>Add commands and publish updates. Published content stays until you delete it.</p></section>
+{% if not database_enabled %}<div class="card admin-list"><h3>Persistence is not connected</h3><p>Add the <code>DATABASE_URL</code> environment variable in Render and connect a Render Postgres database. Without it, admin content uses temporary session storage.</p></div>{% endif %}
 <div class="admin-grid">
  <form class="card" method="post" action="/admin/command"><h3>Add command</h3><input name="command" placeholder="!example" required><input name="category" placeholder="Category" required><textarea name="description" placeholder="What does it do?" required></textarea><button class="btn primary">Add command</button></form>
  <form class="card" method="post" action="/admin/announcement"><h3>Publish update</h3><input name="title" placeholder="Update title" required><textarea name="body" placeholder="Announcement text" required></textarea><button class="btn primary">Publish update</button></form>
 </div>
-<div class="card admin-list"><h3>Recent announcements</h3>{% for a in announcements %}<div class="admin-row"><b>{{ a.title }}</b><span>{{ a.date }}</span></div>{% endfor %}</div>
+<div class="card admin-list"><h3>Published updates</h3>{% for a in announcements %}<div class="admin-row"><div><b>{{ a.title }}</b><span> · {{ a.date }}</span></div>{% if a.id %}<form method="post" action="/admin/announcement/{{ a.id }}/delete"><button class="btn ghost" type="submit">Delete</button></form>{% endif %}</div>{% else %}<p>No announcements yet.</p>{% endfor %}</div>
+<div class="card admin-list"><h3>Added commands</h3>{% for c in custom_commands %}<div class="admin-row"><div><b>{{ c.command }}</b><span> · {{ c.category }}</span></div><form method="post" action="/admin/command/{{ c.id }}/delete"><button class="btn ghost" type="submit">Delete</button></form></div>{% else %}<p>No custom commands yet.</p>{% endfor %}</div>
 {% endblock %}
