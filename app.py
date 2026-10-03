@@ -22,6 +22,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
+ADMINISTRATOR = 0x8
 
 
 def discord_headers():
@@ -263,7 +264,7 @@ def servers():
         return redirect(url_for("login"))
     guilds = [
         g for g in r.json()
-        if (int(g.get("permissions", "0")) & MANAGE_GUILD) == MANAGE_GUILD
+        if ((int(g.get("permissions", "0")) & MANAGE_GUILD) == MANAGE_GUILD or (int(g.get("permissions", "0")) & ADMINISTRATOR) == ADMINISTRATOR)
     ]
     bot_data, bot_status = bot_request("GET", "/guilds")
     bot_ids = set()
@@ -301,7 +302,8 @@ def dashboard(guild_id):
     if guilds_r.status_code != 200:
         return redirect(url_for("login"))
     guild = next((g for g in guilds_r.json() if g["id"] == guild_id), None)
-    if not guild or (int(guild.get("permissions", "0")) & MANAGE_GUILD) != MANAGE_GUILD:
+    permissions = int(guild.get("permissions", "0"))
+    if not guild or not ((permissions & MANAGE_GUILD) == MANAGE_GUILD or (permissions & ADMINISTRATOR) == ADMINISTRATOR):
         return "You do not have permission to manage this server.", 403
 
     guild_icon_hash = guild.get("icon")
