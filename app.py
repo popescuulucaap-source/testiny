@@ -1,7 +1,11 @@
 import os
 import secrets
+import threading
+import time
+from collections import deque
+from hmac import compare_digest
 from functools import wraps
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlencode
 
 import requests
 import psycopg
@@ -13,8 +17,7 @@ app.secret_key = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://testiny-7wuu.onrender.com/oauth/callback")
-BOT_API_URL = os.getenv("BOT_API_URL", "").rstrip("/")
-BOT_API_SECRET = os.getenv("BOT_API_SECRET", "")
+BOT_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
@@ -38,20 +41,87 @@ def login_required(fn):
     return wrapper
 
 
-def bot_request(method, path, **kwargs):
-    if not BOT_API_URL:
-        return {"ok": False, "error": "BOT_API_URL is not configured."}, 503
-    if urlsplit(BOT_API_URL).scheme != "https":
-        return {"ok": False, "error": "BOT_API_URL must use HTTPS to protect the bot API key."}, 503
-    headers = kwargs.pop("headers", {})
-    headers["X-Testiny-API-Key"] = BOT_API_SECRET
-    headers["Content-Type"] = "application/json"
+BOT_LOCK = threading.Lock()
+BOT_GUILDS = {}
+BOT_LAST_SEEN = 0.0
+BOT_JOBS = deque()
+BOT_NEXT_JOB_ID = 1
+
+
+def bot_online():
+    with BOT_LOCK:
+        return bool(BOT_LAST_SEEN and time.time() - BOT_LAST_SEEN < 75)
+
+
+def queue_bot_job(guild_id, kind, payload):
+    global BOT_NEXT_JOB_ID
+    with BOT_LOCK:
+        job_id = BOT_NEXT_JOB_ID
+        BOT_NEXT_JOB_ID += 1
+        BOT_JOBS.append({"id": job_id, "guild_id": str(guild_id), "kind": kind, "payload": payload})
+    return job_id
+
+
+def bot_guild_snapshot():
+    with BOT_LOCK:
+        return list(BOT_GUILDS.values())
+
+
+def require_bot_key():
+    supplied = request.headers.get("X-Nightfall-Bridge-Key", "")
+    if not BOT_BRIDGE_SECRET or not compare_digest(supplied, BOT_BRIDGE_SECRET):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    return None
+
+
+@app.post("/api/bot/heartbeat")
+def bot_heartbeat():
+    global BOT_LAST_SEEN, BOT_GUILDS
+    denied = require_bot_key()
+    if denied:
+        return denied
+    payload = request.get_json(silent=True) or {}
+    guilds = payload.get("guilds")
+    if not isinstance(guilds, list):
+        return jsonify({"ok": False, "error": "guilds must be a list"}), 400
+    normalized = {}
+    for guild in guilds:
+        if isinstance(guild, dict) and guild.get("id"):
+            normalized[str(guild["id"])] = {
+                "id": str(guild["id"]),
+                "name": str(guild.get("name") or "Discord server"),
+                "member_count": guild.get("member_count"),
+                "settings": guild.get("settings") if isinstance(guild.get("settings"), dict) else {},
+            }
+    with BOT_LOCK:
+        BOT_GUILDS = normalized
+        BOT_LAST_SEEN = time.time()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/bot/pull")
+def bot_pull_jobs():
+    denied = require_bot_key()
+    if denied:
+        return denied
+    with BOT_LOCK:
+        jobs = list(BOT_JOBS)
+        BOT_JOBS.clear()
+    return jsonify({"ok": True, "jobs": jobs})
+
+
+def user_can_manage_guild(guild_id):
     try:
-        r = requests.request(method, f"{BOT_API_URL}{path}", headers=headers, timeout=12, **kwargs)
-        data = r.json() if r.content else {}
-        return data, r.status_code
-    except requests.RequestException as exc:
-        return {"ok": False, "error": f"Bot API unavailable: {exc}"}, 502
+        response = requests.get(f"{DISCORD_API}/users/@me/guilds", headers=discord_headers(), timeout=12)
+        if response.status_code != 200:
+            return False
+        guild = next((item for item in response.json() if str(item.get("id")) == str(guild_id)), None)
+        if not guild:
+            return False
+        permissions = int(guild.get("permissions", "0"))
+        return bool((permissions & MANAGE_GUILD) == MANAGE_GUILD or (permissions & ADMINISTRATOR) == ADMINISTRATOR)
+    except (requests.RequestException, ValueError, TypeError):
+        return False
 
 
 @app.context_processor
@@ -268,11 +338,8 @@ def servers():
         g for g in r.json()
         if ((int(g.get("permissions", "0")) & MANAGE_GUILD) == MANAGE_GUILD or (int(g.get("permissions", "0")) & ADMINISTRATOR) == ADMINISTRATOR)
     ]
-    bot_data, bot_status = bot_request("GET", "/guilds")
-    bot_ids = set()
-
-    if isinstance(bot_data, dict) and bot_data.get("ok") is True:
-        bot_ids = {str(x.get("id")) for x in bot_data.get("guilds", []) if x.get("id")}
+    bot_guilds = bot_guild_snapshot()
+    bot_ids = {str(x["id"]) for x in bot_guilds} if bot_online() else set()
 
     for guild in guilds:
         guild["bot_present"] = str(guild["id"]) in bot_ids
@@ -282,13 +349,7 @@ def servers():
             if icon_hash else ""
         )
 
-    bot_api_error = None
-    if bot_status != 200 or not isinstance(bot_data, dict) or bot_data.get("ok") is not True:
-        bot_api_error = (
-            bot_data.get("error", "Could not read Nightfall's server list.")
-            if isinstance(bot_data, dict)
-            else "Could not read Nightfall's server list."
-        )
+    bot_api_error = None if bot_online() else "Nightfall has not checked in with the website yet. Make sure the bot and bridge secret are configured."
 
     return render_template(
         "servers.html",
@@ -312,30 +373,41 @@ def dashboard(guild_id):
 
     guild_icon_hash = guild.get("icon")
     guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild_id}/{guild_icon_hash}.png?size=128" if guild_icon_hash else ""
-    settings_data, status = bot_request("GET", f"/guilds/{guild_id}/settings")
-    settings = settings_data.get("settings", {}) if status == 200 else {}
+    bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), None)
+    settings = bot_guild.get("settings", {}) if bot_guild else {}
+    bot_error = None if bot_online() and bot_guild else "Nightfall is offline or is not connected to this server."
     return render_template(
         "dashboard.html",
         guild=guild,
         settings=settings,
-        bot_error=None if status == 200 else settings_data.get("error"),
+        bot_error=bot_error,
     )
 
 
 @app.post("/api/dashboard/<guild_id>/settings")
 @login_required
 def update_settings(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
+        return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
-    data, status = bot_request("POST", f"/guilds/{guild_id}/settings", json=payload)
-    return jsonify(data), status
+    job_id = queue_bot_job(guild_id, "settings", payload)
+    return jsonify({"ok": True, "queued": True, "job_id": job_id})
 
 
 @app.post("/api/dashboard/<guild_id>/action")
 @login_required
 def dashboard_action(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
+        return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
-    data, status = bot_request("POST", f"/guilds/{guild_id}/action", json=payload)
-    return jsonify(data), status
+    if payload.get("action") != "sync_setup":
+        return jsonify({"ok": False, "error": "Unknown action."}), 400
+    job_id = queue_bot_job(guild_id, "action", payload)
+    return jsonify({"ok": True, "queued": True, "job_id": job_id})
 
 
 @app.get("/health")
@@ -394,4 +466,3 @@ COMMANDS = [
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
-
