@@ -1,40 +1,26 @@
 # Nightfall setup and deployment
 
-`main.py` contains the existing Discord bot commands and the website bridge. The web app remains a Flask app deployed by Render.
+`main.py` preserves the existing Discord bot commands and uses an outbound HTTPS bridge to the Flask website on Render. KataBump does not need an inbound port, public API endpoint, tunnel, or reverse proxy.
 
-## 1. Set the bot environment on Katabump
+## KataBump bot
 
-At the root of your KataBump server, put `main.py` and upload `requirements-bot.txt` renamed as `requirements.txt` (KataBump auto-installs from a root `requirements.txt`). In the **Startup** tab, select `main.py` as the Python entry point. Keep your existing Discord token variable (`DISCORD_TOKEN`, or `BOT_TOKEN`) and add these lines to the root `.env` file:
+Upload the updated `main.py` to the server root. Upload `requirements-bot.txt` as `requirements.txt` so KataBump installs `requests` along with the bot dependencies. In **Startup**, keep `main.py` as the Python entry point.
 
-```text
-BOT_API_SECRET=<a new, long random secret>
-BOT_API_PORT=20119
-```
-
-Generate a new secret privately with a password manager. Never put it in GitHub or share it in chat. Restart the KataBump server after updating `.env`.
-
-The bot listens on port `20119` for its website API. Only use a KataBump-provided **HTTPS** web endpoint or HTTPS reverse proxy for external access. Do not expose the raw HTTP port to the public internet: the API key would be sent without transport encryption. KataBump's public setup guide does not confirm that a public HTTPS endpoint is available for this bot server; if the panel does not show one, ask KataBump support whether it can provide HTTPS ingress for port `20119` before continuing.
-
-The old API key was embedded in the uploaded script. Treat it as exposed and do not reuse it.
-
-## 2. Connect Render to the bot
-
-In the Render web service's **Environment** page, set:
+Keep the existing Discord token in KataBump's `.env` and set:
 
 ```text
-BOT_API_URL=https://<your-KataBump-HTTPS-endpoint>
-BOT_API_SECRET=<the-same-secret-you-set-on-Katabump>
+NIGHTFALL_WEBSITE_URL=https://testiny-7wuu.onrender.com
+NIGHTFALL_BRIDGE_SECRET=<same long random secret as Render>
 ```
 
-Use the exact HTTPS base URL KataBump provides, without adding `/health` to the value. Both services must be online and able to reach each other. The bot API uses `/health`, `/guilds`, and `/guilds/<server-id>/settings`. The website rejects an `http://` API URL so it cannot send the key over an unencrypted connection.
+The bridge uses HTTPS from KataBump to Render. The bot checks in every 10 seconds, reports its guild list and settings, and pulls dashboard changes. Do not add an inbound listener or expose port `20119` for the website bridge.
 
-## 3. Keep Discord OAuth pointed at the current Render address
+## Render website
 
-Set `DISCORD_REDIRECT_URI` on Render to the exact URL ending in `/oauth/callback` for the live Nightfall website. Add that same URL to the Discord application's OAuth2 redirect list. The Render service's existing hostname can remain as-is; the displayed product name is Nightfall.
+In the Render web service's **Environment** settings, set `NIGHTFALL_BRIDGE_SECRET` to the exact same random value used in the bot's `.env`. Generate the value privately with a password manager. Never put the secret in GitHub or send it in chat. Save the environment change; Render will restart the site.
 
-Keep Render's existing `SESSION_SECRET`, Discord OAuth credentials, and database settings. The dashboard needs `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `SESSION_SECRET` to be configured.
+Keep Render's existing `SESSION_SECRET`, Discord OAuth credentials, and database settings. `DISCORD_REDIRECT_URI` must end in `/oauth/callback` for the live website and that same URL must be listed in the Discord application's OAuth2 redirect list.
 
-## 4. Dashboard prefix behavior
+## Dashboard behavior
 
-The command prefix starts as `!`, preserving the existing commands. A server administrator can change it in the website dashboard; the bot reads the saved guild prefix for incoming commands. The new prefix is scoped to that server.
-
+The command prefix starts as `!`, preserving the existing commands. An administrator can change the prefix or logs channel from the website dashboard. Settings and setup refresh actions are queued by the website and picked up on the bot's next HTTPS check-in. The dashboard cache is refreshed every 10 seconds while the bot is online.
