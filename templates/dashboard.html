@@ -6,36 +6,57 @@
     <span class="eyebrow">SERVER DASHBOARD</span>
     <div class="server-title">
       {% if guild.icon_url %}<img class="dashboard-server-icon" src="{{ guild.icon_url }}" alt="{{ guild.name }} icon">{% endif %}
-      <div><h1>{{ guild.name }}</h1><p>Configure Testiny for this server.</p></div>
+      <div><h1>{{ guild.name }}</h1><p>Manage Testiny for this server.</p></div>
     </div>
   </div>
   <a class="btn ghost" href="/servers">← Servers</a>
 </section>
+
 {% if bot_error %}
-<div class="card notice error"><b>Testiny is not available in this server.</b><p>{{ bot_error }}</p><p>Install Testiny in this server first, then return here.</p></div>
+<div class="card notice error">
+  <b>Testiny is not connected to this server.</b>
+  <p>{{ bot_error }}</p>
+  <p>Install Testiny in this server, then refresh this page.</p>
+</div>
 {% else %}
 <div class="dashboard-grid">
   <aside class="side-menu">
-    <button class="tab active" type="button" onclick="showTab('overview',this)">Overview</button>
-    <button class="tab" type="button" onclick="showTab('settings',this)">Settings</button>
+    <button class="tab active" type="button" data-tab="overview">Overview</button>
+    <button class="tab" type="button" data-tab="settings">Settings</button>
   </aside>
+
   <section>
     <div id="overview" class="tab-panel active">
-      <div class="card"><span class="eyebrow">TESTINY</span><h2>Bot connected</h2><p>Testiny is installed and the dashboard can communicate with it.</p></div>
+      <div class="card">
+        <span class="eyebrow">TESTINY</span>
+        <h2>Bot connected</h2>
+        <p>The website can reach Testiny for this server.</p>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Server management</h2>
+        <p>Use Settings to change the configuration that the bot exposes to the dashboard.</p>
+        <p id="actionResult" class="notice">Ready.</p>
+      </div>
     </div>
+
     <div id="settings" class="tab-panel">
       <div class="card settings-card">
         <h2>Server settings</h2>
-        {% for key, value in settings.items() %}
-          {% if key != 'ok' %}
-          <label>{{ key }}<input value="{{ value }}" readonly></label>
-          {% endif %}
-        {% else %}
-          <p>No saved settings yet. Use <code>!setup</code> in Discord to configure Testiny.</p>
-        {% endfor %}
+        <label>Command prefix
+          <input id="prefix" value="{{ settings.get('prefix', '!') }}" maxlength="5">
+        </label>
+        <label>Logs channel ID
+          <input id="logs_channel" value="{{ settings.get('logs_channel', '') }}">
+        </label>
+        <div class="actions">
+          <button class="btn primary save-settings" type="button">Save settings</button>
+          <button class="btn ghost" type="button" id="syncSetup">Sync setup</button>
+        </div>
+        <p id="saveResult" class="notice">Changes are not saved yet.</p>
       </div>
     </div>
   </section>
 </div>
 {% endif %}
+<script>window.TESTINY_GUILD_ID = "{{ guild.id }}";</script>
 {% endblock %}
