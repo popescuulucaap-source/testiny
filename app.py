@@ -4,6 +4,7 @@ from functools import wraps
 from urllib.parse import urlencode
 
 import requests
+import psycopg
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
@@ -11,12 +12,13 @@ app.secret_key = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
-DISCORD_REDIRECT_URI = "https://testiny-7wuu.onrender.com/oauth/callback"
+DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://testiny-7wuu.onrender.com/oauth/callback")
 BOT_API_URL = os.getenv("BOT_API_URL", "").rstrip("/")
 BOT_API_SECRET = os.getenv("BOT_API_SECRET", "")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = os.getenv("SUPPORT_URL", "#")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
@@ -53,11 +55,69 @@ def bot_request(method, path, **kwargs):
 def site_context():
     return {"invite_url": INVITE_URL, "support_url": SUPPORT_URL}
 
-def load_announcements():
-    return session.get("announcements", [])
+def db_connect():
+    return psycopg.connect(DATABASE_URL) if DATABASE_URL else None
 
-def save_announcements(items):
-    session["announcements"] = items[:20]
+def init_db():
+    if not DATABASE_URL:
+        return
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
+        conn.commit()
+
+def load_announcements():
+    if not DATABASE_URL:
+        return session.get("announcements", [])
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, title, body, date FROM announcements ORDER BY id DESC")
+            return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3]} for r in cur.fetchall()]
+
+def save_announcement(title, body):
+    date=__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
+    if not DATABASE_URL:
+        items=session.get("announcements", [])
+        items.insert(0,{"title":title,"body":body,"date":date})
+        session["announcements"]=items
+        return
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO announcements (title, body, date) VALUES (%s, %s, %s)",(title,body,date))
+        conn.commit()
+
+def delete_announcement(announcement_id):
+    if not DATABASE_URL: return
+    with db_connect() as conn:
+        with conn.cursor() as cur: cur.execute("DELETE FROM announcements WHERE id = %s",(announcement_id,))
+        conn.commit()
+
+def load_custom_commands():
+    if not DATABASE_URL: return []
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, command, category, description FROM custom_commands ORDER BY id DESC")
+            return [{"id":r[0],"command":r[1],"category":r[2],"description":r[3]} for r in cur.fetchall()]
+
+def save_custom_command(command, category, description):
+    if not DATABASE_URL: return
+    with db_connect() as conn:
+        with conn.cursor() as cur: cur.execute("INSERT INTO custom_commands (command, category, description) VALUES (%s, %s, %s)",(command,category,description))
+        conn.commit()
+
+def delete_custom_command(command_id):
+    if not DATABASE_URL: return
+    with db_connect() as conn:
+        with conn.cursor() as cur: cur.execute("DELETE FROM custom_commands WHERE id = %s",(command_id,))
+        conn.commit()
+
+def all_commands():
+    commands=list(COMMANDS)
+    commands.extend((x["command"],x["category"],x["description"]) for x in load_custom_commands())
+    return commands
+
+init_db()
 
 @app.get("/")
 def index():
@@ -96,16 +156,28 @@ def admin_command():
     cat=(request.form.get("category") or "Other").strip()
     desc=(request.form.get("description") or "").strip()
     if cmd and desc:
-        COMMANDS.append((cmd,cat,desc))
+        save_custom_command(cmd,cat,desc)
     return redirect(url_for("admin"))
 
 @app.post("/admin/announcement")
 def admin_announcement():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
-    items=load_announcements()
-    items.insert(0, {"title":(request.form.get("title") or "Update").strip(), "body":(request.form.get("body") or "").strip(), "date":__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")})
-    save_announcements(items)
+    title=(request.form.get("title") or "Update").strip()
+    body=(request.form.get("body") or "").strip()
+    if title and body: save_announcement(title,body)
+    return redirect(url_for("admin"))
+
+@app.post("/admin/announcement/<int:announcement_id>/delete")
+def admin_delete_announcement(announcement_id):
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    delete_announcement(announcement_id)
+    return redirect(url_for("admin"))
+
+@app.post("/admin/command/<int:command_id>/delete")
+def admin_delete_command(command_id):
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    delete_custom_command(command_id)
     return redirect(url_for("admin"))
 
 @app.get("/admin/logout")
@@ -117,7 +189,7 @@ def admin_logout():
 
 @app.get("/commands")
 def commands():
-    return render_template("commands.html", commands=COMMANDS)
+    return render_template("commands.html", commands=all_commands())
 
 
 @app.get("/guidelines")
