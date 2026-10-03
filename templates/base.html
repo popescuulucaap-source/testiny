@@ -10,9 +10,9 @@
 <body>
 <div class="bg-grid"></div>
 <nav class="nav">
-  <a class="brand" href="/"><span class="brand-mark">T</span><span>Testiny</span></a>
+  <a class="brand" href="/"><img class="brand-logo" src="{{ url_for('static', filename='testiny-logo.svg') }}" alt="Testiny"><span>Testiny</span></a>
   <div class="nav-links">
-    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a>{% if support_url and support_url != "#" %}<a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>{% endif %}
+    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>
     {% if session.get('user') %}<a class="nav-pill" href="/servers">Dashboard</a>{% else %}<a class="nav-pill" href="/login">Dashboard</a>{% endif %}
   </div>
 </nav>
