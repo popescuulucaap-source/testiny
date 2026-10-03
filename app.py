@@ -146,7 +146,7 @@ def admin_login():
 def admin():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
-    return render_template("admin.html", announcements=load_announcements())
+    return render_template("admin.html", announcements=load_announcements(), custom_commands=load_custom_commands(), database_enabled=bool(DATABASE_URL))
 
 @app.post("/admin/command")
 def admin_command():
