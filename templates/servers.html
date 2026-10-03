@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Testiny • Your Servers{% endblock %}
+{% block title %}Nightfall • Your Servers{% endblock %}
 {% block content %}
 <section class="page-head"><span class="eyebrow">DASHBOARD</span><h1>Select a server.</h1><p>Choose a server where you have Manage Server or Administrator permission.</p></section>
-{% if bot_api_error %}<div class="card notice error bot-api-alert"><b>Testiny connection problem</b><p>{{ bot_api_error }}</p><p>The website could not read Testiny's server list. Refresh after the bot is online.</p></div>{% endif %}
+{% if bot_api_error %}<div class="card notice error bot-api-alert"><b>Nightfall connection problem</b><p>{{ bot_api_error }}</p><p>The website could not read Nightfall's server list. Refresh after the bot is online.</p></div>{% endif %}
 <div class="server-grid">
 {% for guild in guilds %}
 <a class="server-card {% if not guild.bot_present %}server-missing{% endif %}" href="{% if guild.bot_present %}/dashboard/{{ guild.id }}{% else %}{{ invite_url }}{% endif %}">
 {% if guild.icon_url %}<img class="server-avatar" src="{{ guild.icon_url }}" alt="{{ guild.name }} icon">{% else %}<div class="server-avatar">{{ guild.name[:1] }}</div>{% endif %}
-<div><h3>{{ guild.name }}</h3><p>{% if guild.bot_present %}<span class="server-status online">● Testiny is installed</span>{% else %}<span class="server-status offline">● Testiny not detected · Click to invite</span>{% endif %}</p></div><b>{% if guild.bot_present %}→{% else %}＋{% endif %}</b>
+<div><h3>{{ guild.name }}</h3><p>{% if guild.bot_present %}<span class="server-status online">● Nightfall is installed</span>{% else %}<span class="server-status offline">● Nightfall not detected · Click to invite</span>{% endif %}</p></div><b>{% if guild.bot_present %}→{% else %}＋{% endif %}</b>
 </a>
 {% else %}<div class="card"><h3>No manageable servers found.</h3><p>Make sure you are the server owner or have Manage Server/Administrator permission, then log in again.</p></div>{% endfor %}
 </div>
 {% endblock %}
+

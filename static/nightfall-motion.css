@@ -1,0 +1,30 @@
+:root{--nf-lilac:#b4a0ff;--nf-cyan:#60e8ff;--nf-glass:rgba(15,18,39,.72)}
+body{background-image:radial-gradient(ellipse at 18% 8%,#5e46a52b,transparent 34%),radial-gradient(ellipse at 86% 27%,#13b9d41c,transparent 30%)}
+.nav{box-shadow:0 10px 50px #03040c40}
+.brand-logo{filter:drop-shadow(0 0 12px #9a7dff70);transition:transform .35s ease,filter .35s ease}
+.brand:hover .brand-logo{transform:rotate(-8deg) scale(1.1);filter:drop-shadow(0 0 18px #67eaffaa)}
+.hero{position:relative;isolation:isolate}
+.hero:before{content:"";position:absolute;z-index:-1;width:min(40vw,480px);aspect-ratio:1;border-radius:50%;right:4%;top:12%;background:radial-gradient(circle,#9a7dff13,transparent 68%);animation:nf-breathe 7s ease-in-out infinite}
+.hero-copy>*{animation:nf-rise .75s both;animation-delay:calc(var(--i,0)*.1s)}
+.hero-copy .eyebrow{--i:1}.hero-copy h1{--i:2}.hero-copy .lead{--i:3}.hero-copy .actions{--i:4}.hero-copy .trust-row{--i:5}
+.hero-card{border-color:#a38aff35;box-shadow:0 28px 100px #3a2d7940,inset 0 1px #ffffff12;animation:nf-card-float 8s ease-in-out infinite;transition:border-color .35s,box-shadow .35s}
+.hero-card:hover{border-color:#71e8ff75;box-shadow:0 34px 110px #5e47a855,inset 0 1px #ffffff1c}
+.logo-big{filter:drop-shadow(0 0 24px #8e72ff55);animation:nf-logo-glow 5s ease-in-out infinite}
+.card,.command-card,.update-card,.server-card{transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease}
+.card:hover,.command-card:hover,.update-card:hover{transform:translateY(-6px);border-color:#8d75ff70;box-shadow:0 22px 55px #05061175,0 0 30px #8262ff12}
+.card-icon{transition:transform .3s ease}.card:hover .card-icon{transform:translateY(-3px) rotate(-6deg) scale(1.12)}
+.btn{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}.btn:hover{transform:translateY(-3px);box-shadow:0 12px 28px #7056e638}
+.nav-pill{box-shadow:0 0 22px #8971ff20}
+.cta{position:relative;overflow:hidden}.cta:after{content:"";position:absolute;inset:-120% auto -120% -40%;width:20%;transform:rotate(22deg);background:linear-gradient(90deg,transparent,#ffffff12,transparent);animation:nf-sheen 8s ease-in-out infinite;pointer-events:none}
+.status i{animation:nf-status 1.8s ease-in-out infinite}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s cubic-bezier(.2,.75,.25,1)}
+.reveal.is-visible{opacity:1;transform:translateY(0)}
+.site-loader{background:radial-gradient(ellipse at center,#191633 0,#080914 58%,#05060d 100%)}
+@keyframes nf-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes nf-card-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes nf-logo-glow{0%,100%{filter:drop-shadow(0 0 22px #8e72ff4a)}50%{filter:drop-shadow(0 0 38px #54dfff70)}}
+@keyframes nf-breathe{0%,100%{transform:scale(.88);opacity:.45}50%{transform:scale(1.12);opacity:1}}
+@keyframes nf-sheen{0%,30%{left:-40%}65%,100%{left:130%}}
+@keyframes nf-status{50%{box-shadow:0 0 22px #65f7b1;transform:scale(1.2)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.reveal{opacity:1;transform:none}}
+
