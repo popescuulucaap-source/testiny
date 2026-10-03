@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Testiny • {{ guild.name }}{% endblock %}
+{% block title %}Nightfall • {{ guild.name }}{% endblock %}
 {% block content %}
 <section class="dashboard-head">
   <div>
     <span class="eyebrow">SERVER CONTROL CENTER</span>
     <h1>{{ guild.name }}</h1>
-    <p>Configure Testiny without leaving your browser.</p>
+    <p>Configure Nightfall without leaving your browser.</p>
   </div>
   <a class="btn ghost" href="/servers">← Servers</a>
 </section>
@@ -28,7 +28,7 @@
   <div class="dash-content">
     <section class="tab-panel active" id="overview">
       <div class="cards three">
-        <article class="card"><span class="eyebrow">BOT</span><h3>Testiny</h3><p>Connected through the dashboard API.</p></article>
+        <article class="card"><span class="eyebrow">BOT</span><h3>Nightfall</h3><p>Connected through the dashboard API.</p></article>
         <article class="card"><span class="eyebrow">PREFIX</span><h3><code>!</code></h3><p>Default command prefix.</p></article>
         <article class="card"><span class="eyebrow">ACCESS</span><h3>Manage Server</h3><p>Discord permission verified.</p></article>
       </div>
@@ -62,7 +62,7 @@
   </div>
 </section>
 <script>
-window.TESTINY_GUILD_ID = "{{ guild.id }}";
+window.NIGHTFALL_GUILD_ID = "{{ guild.id }}";
 </script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 {% endblock %}
