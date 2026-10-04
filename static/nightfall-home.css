@@ -223,3 +223,21 @@
 @keyframes gradient-flow{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 @keyframes ribbon-color{0%{background-position:0% 50%}100%{background-position:250% 50%}}
 @media(prefers-reduced-motion:reduce){.home-page:before,.home-page:after,.home-page .hero h1 span,.home-ribbon{animation:none!important}}
+
+/* Full Nightfall motion + fixed hero typography */
+.home-page .hero h1{font-size:clamp(48px,6.1vw,76px);line-height:1.04;white-space:normal;overflow:visible}
+.home-page .hero h1 span{display:inline-block;white-space:nowrap;overflow:visible;padding-right:.08em}
+.home-page .hero,.home-about,.home-ribbon,.home-features,.home-workflow,.home-command-band,.home-cta{will-change:transform}
+.home-feature-card,.home-workflow,.home-command-band,.home-cta,.home-ribbon,.home-visual,.command-line,.btn,.tab,.card{will-change:transform}
+.home-feature-card{animation:float-card 5.5s ease-in-out infinite;animation-delay:calc(var(--card-delay,0)*-1s)}
+.home-feature-card:nth-child(2){--card-delay:.8}.home-feature-card:nth-child(3){--card-delay:1.6}.home-feature-card:nth-child(4){--card-delay:2.4}.home-feature-card:nth-child(5){--card-delay:3.2}.home-feature-card:nth-child(6){--card-delay:4}
+.home-workflow{animation:section-float 8s ease-in-out infinite}
+.home-command-band{animation:section-float 9s ease-in-out -2s infinite}
+.home-cta{animation:section-float 7s ease-in-out -1s infinite}
+.home-ribbon span{animation:ribbon-bob 2.8s ease-in-out infinite}.home-ribbon span:nth-of-type(2){animation-delay:-.7s}.home-ribbon span:nth-of-type(3){animation-delay:-1.4s}.home-ribbon span:nth-of-type(4){animation-delay:-2.1s}.home-ribbon span:nth-of-type(5){animation-delay:-2.8s}
+.btn:hover{transform:translateY(-4px) scale(1.025)}
+.command-line:hover{transform:translateX(8px) scale(1.015)}
+@keyframes float-card{0%,100%{translate:0 0}50%{translate:0 -5px}}
+@keyframes section-float{0%,100%{translate:0 0}50%{translate:0 -4px}}
+@keyframes ribbon-bob{0%,100%{translate:0 0}50%{translate:0 -3px}}
+@media(prefers-reduced-motion:reduce){.home-feature-card,.home-workflow,.home-command-band,.home-cta,.home-ribbon span{animation:none!important}.btn:hover,.command-line:hover{transform:none}.home-page .hero h1 span{white-space:normal}}
