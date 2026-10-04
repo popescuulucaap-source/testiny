@@ -496,6 +496,12 @@ def post_review():
         app.logger.warning("Could not save review: %s", type(exc).__name__)
         return jsonify({"ok": False, "error": "Could not save your review right now."}), 500
 
+
+
+@app.get("/api/bot/status")
+def bot_status():
+    return jsonify({"ok": True, "online": bot_online()})
+
 @app.get("/commands")
 def commands():
     return render_template("commands.html", commands=all_commands())
