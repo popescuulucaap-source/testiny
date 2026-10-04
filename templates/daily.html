@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block title %}Nightfall • Daily{% endblock %}{% block content %}
+<section class="page-head"><span class="eyebrow">DAILY NIGHTFALL</span><h1>{{ title }}</h1><p>{{ description }}</p></section>
+<section class="card" style="max-width:700px"><span class="eyebrow">REWARD</span><h2>+{{ reward }} XP</h2><p>Complete today's challenge and track it to your account.</p><button class="btn primary" id="claimDaily">Track challenge</button><p id="dailyResult"></p></section>
+<script>document.getElementById('claimDaily').onclick=async()=>{const r=await fetch('/api/daily/claim',{method:'POST'}),d=await r.json();document.getElementById('dailyResult').textContent=d.message||d.error||'Done.'};</script>{% endblock %}
