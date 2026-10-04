@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Nightfall • Profile{% endblock %}
+{% block title %}Nightfall • Profile<script>
+document.getElementById('saveProfile').onclick=async()=>{const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bio:document.getElementById('profileBio').value,theme:document.getElementById('profileTheme').value,title:document.getElementById('profileTitle').value})});const d=await r.json();document.getElementById('profileResult').textContent=d.ok?'Profile saved.':d.error||'Could not save.'};
+</script>{% endblock %}
 {% block content %}
 <section class="page-head"><span class="eyebrow">NIGHTFALL IDENTITY</span><h1>Your Night.</h1><p>Your Discord profile, XP, badges and Arcade progress.</p></section>
 <section class="cards" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
@@ -7,6 +9,7 @@
   <article class="card"><span class="eyebrow">RANK</span><h2>#{{ rank or '—' }}</h2><p>Global Nightfall XP ranking.</p></article>
   <article class="card"><span class="eyebrow">SOCIAL</span><h2>{{ followers }} / {{ following }}</h2><p>Followers / Following.</p></article>
 </section>
+<section class="card" style="max-width:760px"><span class="eyebrow">CUSTOMIZE</span><h2>Make the profile yours.</h2><input id="profileBio" maxlength="160" value="{{ bio }}" placeholder="Short bio"><select id="profileTheme"><option value="default" {% if theme=="default" %}selected{% endif %}>Nightfall</option><option value="midnight" {% if theme=="midnight" %}selected{% endif %}>Midnight</option><option value="nebula" {% if theme=="nebula" %}selected{% endif %}>Nebula</option><option value="ember" {% if theme=="ember" %}selected{% endif %}>Ember</option></select><input id="profileTitle" maxlength="40" value="{{ title }}" placeholder="Profile title"><button class="btn primary" id="saveProfile">Save profile</button><p id="profileResult"></p></section>
 <section class="section"><div class="section-heading"><span class="eyebrow">BADGES</span><h2>Proof you were here.</h2></div><div class="cards">{% for icon,name,desc in badges %}<article class="card"><h3>{{ icon }} {{ name }}</h3><p>{{ desc }}</p></article>{% else %}<article class="card"><h3>🌱 First steps</h3><p>Earn XP around Nightfall to unlock your first badge.</p></article>{% endfor %}</div></section>
 <section class="section"><div class="section-heading"><span class="eyebrow">ARCADE</span><h2>Your high scores.</h2></div><div class="cards">{% for s in scores %}<article class="card"><h3>{{ s.game }}</h3><p>{{ s.score }} points</p></article>{% else %}<article class="card"><p>No scores yet. Play Nightfall Arcade and submit your best runs.</p></article>{% endfor %}</div></section>
 {% endblock %}
