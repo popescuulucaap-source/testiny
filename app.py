@@ -233,6 +233,7 @@ def init_db():
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, suggestion TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
@@ -384,6 +385,39 @@ def admin_logout():
     return redirect(url_for("index"))
 
 
+
+@app.route("/suggestions", methods=["GET","POST"])
+def suggestions():
+    if request.method == "POST":
+        name = (request.form.get("name") or "Anonymous").strip()[:40] or "Anonymous"
+        suggestion = (request.form.get("suggestion") or "").strip()[:1000]
+        if not suggestion:
+            return render_template("suggestions.html", error="Please write a suggestion.")
+        date = __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
+        if DATABASE_URL:
+            with db_connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("INSERT INTO suggestions (name, suggestion, date) VALUES (%s, %s, %s)", (name, suggestion, date))
+                conn.commit()
+        else:
+            items = session.get("suggestions", [])
+            items.insert(0, {"name": name, "suggestion": suggestion, "date": date})
+            session["suggestions"] = items[:50]
+        return render_template("suggestions.html", submitted=True)
+    return render_template("suggestions.html")
+
+@app.get("/suggestions/list")
+def suggestion_list():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    if DATABASE_URL:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, name, suggestion, date FROM suggestions ORDER BY id DESC")
+                items = [{"id":r[0],"name":r[1],"suggestion":r[2],"date":r[3]} for r in cur.fetchall()]
+    else:
+        items = session.get("suggestions", [])
+    return render_template("suggestions_list.html", suggestions=items)
 
 @app.get("/commands")
 def commands():
