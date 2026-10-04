@@ -17,7 +17,7 @@
 <nav class="nav">
   <a class="brand" href="/" aria-label="Nightfall home"><img class="brand-wordmark" src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall"></a>
   <div class="nav-links">
-    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="/suggestions">Suggestions</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>
+    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="/suggestions">Suggestions</a><a href="/support">Support</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>
     <a href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">YouTube</a>
     {% if session.get('user') %}<a class="nav-pill" href="/servers">Dashboard</a>{% else %}<a class="nav-pill" href="/login">Dashboard</a>{% endif %}
   </div>
