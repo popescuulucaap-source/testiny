@@ -172,3 +172,54 @@
 @keyframes ribbon-sheen{0%,58%,100%{transform:translateX(-120%)}75%{transform:translateX(120%)}}
 @media(max-width:620px){.nightfall-audio-toggle{right:12px;bottom:12px;padding:9px 11px}.home-feature-card:hover{transform:translateY(-4px)}}
 @media(prefers-reduced-motion:reduce){.home-page .hero,.home-about,.home-workflow,.home-command-band,.home-cta,.home-ribbon:after{animation:none!important}.home-feature-card:hover{transform:none}}
+
+
+/* Colorful Nightfall atmosphere */
+.home-page{
+  background:
+    radial-gradient(ellipse at 12% 12%,#7c3aed20,transparent 30%),
+    radial-gradient(ellipse at 88% 25%,#06b6d420,transparent 30%),
+    radial-gradient(ellipse at 45% 72%,#ec489914,transparent 34%),
+    radial-gradient(ellipse at 70% 95%,#22d3ee12,transparent 32%);
+}
+.home-page:before{
+  width:520px;height:520px;top:80px;left:-250px;
+  background:radial-gradient(circle,#8b5cf638 0,#4f46e51c 30%,transparent 70%);
+  filter:blur(16px);animation:color-orb-a 16s ease-in-out infinite alternate;
+}
+.home-page:after{
+  width:650px;height:650px;top:600px;right:-320px;
+  background:radial-gradient(circle,#22d3ee2b 0,#ec48991a 32%,transparent 70%);
+  filter:blur(18px);animation:color-orb-b 19s ease-in-out infinite alternate;
+}
+.home-page .hero h1 span{
+  background:linear-gradient(100deg,#f5f3ff 0%,#a78bfa 28%,#67e8f9 55%,#f0abfc 78%,#c4b5fd 100%);
+  background-size:220% auto;animation:gradient-flow 6s ease-in-out infinite;
+}
+.home-feature-card{
+  background:
+    radial-gradient(circle at 100% 0,#8b5cf612,transparent 34%),
+    linear-gradient(145deg,#15172aee,#0a0d16e8);
+}
+.home-feature-card:nth-child(3n+2){background:radial-gradient(circle at 0 0,#06b6d415,transparent 35%),linear-gradient(145deg,#111a25ee,#0a0d16e8)}
+.home-feature-card:nth-child(3n){background:radial-gradient(circle at 100% 0,#ec489914,transparent 35%),linear-gradient(145deg,#191421ee,#0a0d16e8)}
+.home-feature-card:hover{box-shadow:0 24px 65px #0009,0 0 35px #8b5cf61c}
+.home-feature-card:nth-child(3n+2):hover{box-shadow:0 24px 65px #0009,0 0 35px #22d3ee18}
+.home-feature-card:nth-child(3n):hover{box-shadow:0 24px 65px #0009,0 0 35px #ec489918}
+.home-ribbon{background:linear-gradient(90deg,#8b5cf60a,#22d3ee0b,#ec48990b,#8b5cf60a);background-size:250% 100%;animation:ribbon-color 10s linear infinite}
+.home-workflow{background:radial-gradient(circle at 12% 20%,#8b5cf614,transparent 32%),radial-gradient(circle at 90% 80%,#22d3ee10,transparent 32%),linear-gradient(135deg,#111321ed,#090c14f2)}
+.home-command-band{background:radial-gradient(ellipse at 100% 0,#8b5cf625,transparent 42%),radial-gradient(ellipse at 0 100%,#22d3ee12,transparent 35%),linear-gradient(120deg,#11131f,#0b0d14)}
+.home-cta{background:radial-gradient(ellipse at 0 0,#8b5cf632,transparent 42%),radial-gradient(ellipse at 100% 100%,#22d3ee18,transparent 42%),linear-gradient(110deg,#17142a,#0d1820)}
+.nightfall-audio-toggle{
+  border-color:#a78bfa55!important;
+  background:linear-gradient(135deg,#15122adf,#09151bdf)!important;
+  box-shadow:0 0 25px #8b5cf625,0 12px 35px #0008!important;
+}
+.nightfall-audio-toggle.on{border-color:#67e8f977!important;box-shadow:0 0 30px #22d3ee30,0 12px 35px #0009!important}
+.nightfall-audio-toggle.on b{color:#f0f9ff}
+.nightfall-audio-toggle.on small{color:#67e8f9}
+@keyframes color-orb-a{to{transform:translate3d(180px,100px,0) scale(1.25)}}
+@keyframes color-orb-b{to{transform:translate3d(-120px,-90px,0) scale(1.18)}}
+@keyframes gradient-flow{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes ribbon-color{0%{background-position:0% 50%}100%{background-position:250% 50%}}
+@media(prefers-reduced-motion:reduce){.home-page:before,.home-page:after,.home-page .hero h1 span,.home-ribbon{animation:none!important}}
