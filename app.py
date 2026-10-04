@@ -237,6 +237,7 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS reviews (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, rating INTEGER NOT NULL, review TEXT NOT NULL, date TEXT NOT NULL, approved BOOLEAN NOT NULL DEFAULT TRUE)")
         conn.commit()
 
 def load_announcements():
@@ -449,6 +450,51 @@ def suggestion_list():
     else:
         items = session.get("suggestions", [])
     return render_template("suggestions_list.html", suggestions=items)
+
+
+
+REVIEW_BAD_WORDS = {"fuck","fucking","shit","bitch","cunt","nigger","nigga","retard","retarded","kys"}
+def review_is_clean(text_value):
+    words = {w.lower() for w in __import__("re").findall(r"[a-zA-Z0-9']+", text_value)}
+    return not bool(words & REVIEW_BAD_WORDS)
+
+@app.get("/api/reviews")
+def get_reviews():
+    if not DATABASE_URL:
+        return jsonify({"ok": True, "reviews": []})
+    try:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT name, rating, review, date FROM reviews WHERE approved = TRUE ORDER BY id DESC LIMIT 50")
+                rows = cur.fetchall()
+        return jsonify({"ok": True, "reviews": [{"name": r[0], "rating": r[1], "review": r[2], "date": r[3]} for r in rows]})
+    except psycopg.Error as exc:
+        app.logger.warning("Could not load reviews: %s", type(exc).__name__)
+        return jsonify({"ok": False, "reviews": []}), 500
+
+@app.post("/api/reviews")
+def post_review():
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "Anonymous").strip()[:40] or "Anonymous"
+    review = str(payload.get("review") or "").strip()[:500]
+    try: rating = int(payload.get("rating", 5))
+    except (TypeError, ValueError): rating = 0
+    if not review: return jsonify({"ok": False, "error": "Please write a review."}), 400
+    if rating not in {1,2,3,4,5}: return jsonify({"ok": False, "error": "Choose a rating from 1 to 5."}), 400
+    if not review_is_clean(review) or not review_is_clean(name):
+        return jsonify({"ok": False, "error": "That review was filtered. Please keep it respectful."}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Reviews are temporarily unavailable."}), 503
+    date = __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO reviews (name, rating, review, date, approved) VALUES (%s, %s, %s, %s, TRUE)", (name, rating, review, date))
+            conn.commit()
+        return jsonify({"ok": True})
+    except psycopg.Error as exc:
+        app.logger.warning("Could not save review: %s", type(exc).__name__)
+        return jsonify({"ok": False, "error": "Could not save your review right now."}), 500
 
 @app.get("/commands")
 def commands():
