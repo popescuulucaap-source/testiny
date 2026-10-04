@@ -543,6 +543,125 @@ def admin_support_reply(ticket_id):
             session.modified=True
     return redirect(url_for("admin_support"))
 
+def _social_user():
+    user = session.get("user")
+    if not user:
+        return None
+    uid = str(user.get("id") or "")
+    username = str(user.get("global_name") or user.get("username") or "Discord user")
+    avatar = user.get("avatar")
+    avatar_url = (
+        f"https://cdn.discordapp.com/avatars/{uid}/{avatar}.png?size=128"
+        if avatar else "https://cdn.discordapp.com/embed/avatars/0.png"
+    )
+    return {"id": uid, "username": username, "avatar_url": avatar_url}
+
+
+def _youtube_url(raw):
+    parsed = urlparse((raw or "").strip())
+    host = parsed.netloc.lower().split(":")[0]
+    if parsed.scheme != "https" or host not in {"youtube.com", "www.youtube.com", "youtu.be", "m.youtube.com"}:
+        return None
+    return parsed.geturl()
+
+
+@app.get("/community")
+def community():
+    return render_template("community.html", social_user=_social_user())
+
+
+@app.get("/api/social/feed")
+def social_feed():
+    if not DATABASE_URL:
+        return jsonify({"ok": True, "videos": []})
+    viewer = _social_user()
+    viewer_id = viewer["id"] if viewer else ""
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT v.id,v.discord_id,v.username,v.avatar_url,v.video_url,v.title,v.description,v.created_at, "
+                "EXISTS(SELECT 1 FROM social_follows f WHERE f.follower_id=%s AND f.following_id=v.discord_id) "
+                "FROM social_videos v WHERE v.status='approved' ORDER BY v.id DESC LIMIT 100",
+                (viewer_id,),
+            )
+            videos = [{
+                "id": r[0], "discord_id": r[1], "username": r[2], "avatar_url": r[3],
+                "video_url": r[4], "title": r[5], "description": r[6],
+                "created_at": r[7].isoformat() if hasattr(r[7], "isoformat") else str(r[7]),
+                "following": bool(r[8]),
+            } for r in cur.fetchall()]
+    return jsonify({"ok": True, "videos": videos})
+
+
+@app.post("/api/social/videos")
+@login_required
+def social_submit_video():
+    user = _social_user()
+    payload = request.get_json(silent=True) or {}
+    title = str(payload.get("title") or "").strip()[:120]
+    description = str(payload.get("description") or "").strip()[:500]
+    video_url = _youtube_url(payload.get("video_url"))
+    if not title or not video_url:
+        return jsonify({"ok": False, "error": "Add a title and a valid HTTPS YouTube link."}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Community storage is not configured yet."}), 503
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO social_videos (discord_id,username,avatar_url,video_url,title,description,status) "
+                "VALUES (%s,%s,%s,%s,%s,%s,'pending')",
+                (user["id"], user["username"], user["avatar_url"], video_url, title, description),
+            )
+        conn.commit()
+    return jsonify({"ok": True, "message": "Submitted for moderator approval."})
+
+
+@app.post("/api/social/follow/<discord_id>")
+@login_required
+def social_follow(discord_id):
+    viewer = _social_user()
+    target = str(discord_id).strip()
+    if not target or target == viewer["id"]:
+        return jsonify({"ok": False, "error": "You cannot follow yourself."}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Community storage is not configured yet."}), 503
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM social_follows WHERE follower_id=%s AND following_id=%s", (viewer["id"], target))
+            exists = cur.fetchone()
+            if exists:
+                cur.execute("DELETE FROM social_follows WHERE follower_id=%s AND following_id=%s", (viewer["id"], target))
+                following = False
+            else:
+                cur.execute("INSERT INTO social_follows (follower_id,following_id) VALUES (%s,%s)", (viewer["id"], target))
+                following = True
+        conn.commit()
+    return jsonify({"ok": True, "following": following})
+
+
+@app.post("/api/social/report/<int:video_id>")
+@login_required
+def social_report(video_id):
+    viewer = _social_user()
+    payload = request.get_json(silent=True) or {}
+    reason = str(payload.get("reason") or "").strip()[:300]
+    if not reason:
+        return jsonify({"ok": False, "error": "Give a short reason for the report."}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Community storage is not configured yet."}), 503
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM social_videos WHERE id=%s AND status='approved'", (video_id,))
+            if not cur.fetchone():
+                return jsonify({"ok": False, "error": "Video not found."}), 404
+            cur.execute(
+                "INSERT INTO social_reports (video_id,reporter_id,reason) VALUES (%s,%s,%s)",
+                (video_id, viewer["id"], reason),
+            )
+        conn.commit()
+    return jsonify({"ok": True, "message": "Report sent to Nightfall moderators."})
+
+
 @app.get("/admin/community")
 def admin_community():
     if not session.get("admin"): return redirect(url_for("admin_login"))
