@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Premium{% endblock %}
+{% block content %}
+<div class="premium-page">
+  <section class="premium-hero">
+    <div>
+      <span class="eyebrow">NIGHTFALL PREMIUM • ROBUX</span>
+      <h1>Unlock the <span>premium night.</span></h1>
+      <p>Premium is attached to a Discord server, so everyone on that server can use the premium features. Purchase through Roblox, then activate it with a short claim code.</p>
+      {% if not session.get('access_token') %}
+        <a class="btn primary" href="/login">Connect Discord to continue →</a>
+      {% else %}
+        <a class="btn ghost" href="/servers">Open dashboard →</a>
+      {% endif %}
+    </div>
+    <div class="premium-orb"><div class="premium-orb-ring"></div><b>✦</b><span>PREMIUM</span></div>
+  </section>
+
+  <section class="premium-plans">
+    <article class="premium-plan">
+      <span class="eyebrow">30 DAYS</span>
+      <h2>Premium</h2>
+      <p>One month of Nightfall Premium for your server.</p>
+      <ul><li>🌙 Premium server badge</li><li>✨ Premium-only features</li><li>⚡ Future premium upgrades</li></ul>
+      {% if robux_ready %}<small>Robux product configured by the Nightfall owner.</small>{% else %}<small>Robux product ID still needs to be configured.</small>{% endif %}
+    </article>
+    <article class="premium-plan premium-plan-featured">
+      <span class="eyebrow">90 DAYS</span>
+      <h2>Premium+</h2>
+      <p>Three months of Premium for a longer run.</p>
+      <ul><li>🌙 Premium server badge</li><li>✨ Premium-only features</li><li>⚡ Future premium upgrades</li></ul>
+      {% if robux_ready %}<small>Robux product configured by the Nightfall owner.</small>{% else %}<small>Robux product ID still needs to be configured.</small>{% endif %}
+    </article>
+  </section>
+
+  {% if not database_ready %}
+    <section class="premium-notice"><b>Premium storage isn't connected yet.</b><span>Nightfall needs its Render Postgres database connected before server Premium can be activated.</span></section>
+  {% endif %}
+
+  {% if session.get('access_token') %}
+    <section class="premium-servers">
+      <div class="section-heading"><span class="eyebrow">YOUR SERVERS</span><h2>Choose where Premium goes.</h2><p>Generate a temporary claim code for a server you manage, then use that code in the Nightfall Roblox purchase flow.</p></div>
+      <div class="premium-server-grid">
+      {% for guild in managed_guilds %}
+        <article class="premium-server-card">
+          <div class="premium-server-icon">{% if guild.icon_url %}<img src="{{ guild.icon_url }}" alt="">{% else %}<span>✦</span>{% endif %}</div>
+          <div class="premium-server-copy"><h3>{{ guild.name }}</h3>
+          {% if guild.premium and guild.premium.active %}
+            <p class="premium-active">🌙 {{ guild.premium.plan }} active{% if guild.premium.expires_at %} · expires {{ guild.premium.expires_at.strftime('%b %d, %Y') }}{% endif %}</p>
+          {% else %}
+            <p>Premium is not active on this server.</p>
+          {% endif %}</div>
+          <button class="btn primary premium-claim-btn" data-guild="{{ guild.id }}" type="button">Generate claim code</button>
+        </article>
+      {% else %}
+        <div class="premium-notice"><b>No manageable servers found.</b><span>Connect Discord with permission to manage at least one server.</span></div>
+      {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="premium-steps">
+    <div><span>01</span><b>Generate</b><p>Create a short-lived code for your Discord server.</p></div>
+    <div><span>02</span><b>Purchase</b><p>Buy the matching Nightfall Premium developer product with Robux on Roblox.</p></div>
+    <div><span>03</span><b>Activate</b><p>The Roblox receipt is verified by the Nightfall backend before Premium is granted.</p></div>
+  </section>
+  <p class="premium-footnote">Never share your claim code publicly. Nightfall only grants Premium after the Roblox receipt reaches the configured purchase endpoint.</p>
+</div>
+<script>
+document.querySelectorAll('.premium-claim-btn').forEach(button => {
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = 'Generating…';
+    try {
+      const response = await fetch('/premium/claim/' + encodeURIComponent(button.dataset.guild), {method:'POST'});
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.error || 'Could not create a claim code.');
+      button.textContent = data.code;
+      button.title = 'Copy this code';
+      await navigator.clipboard?.writeText(data.code);
+      setTimeout(() => { button.textContent = 'Generate new code'; button.disabled = false; }, 20000);
+    } catch (error) {
+      button.textContent = error.message;
+      setTimeout(() => { button.textContent = 'Generate claim code'; button.disabled = false; }, 3500);
+    }
+  });
+});
+</script>
+{% endblock %}
