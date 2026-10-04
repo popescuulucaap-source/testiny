@@ -14,7 +14,6 @@
       <div class="visual-halo"></div><div class="visual-orbit visual-orbit-one"></div><div class="visual-orbit visual-orbit-two"></div>
       <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span><span class="visual-star star-three">✦</span>
       <img class="home-mark" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bird logo">
-      <button class="nightfall-secret-button" type="button" aria-label="Open Nightfall secret" title="A little secret">✦ <span>SECRET</span></button>
       <div class="visual-caption"><span class="visual-caption-mark"><i></i></span><div><b>Nightfall</b><small>Your server, in good hands.</small></div><span class="visual-caption-tools">{{ command_count }} commands</span></div>
     </div>
   </section>
@@ -41,6 +40,18 @@
   <section class="home-command-band" id="commands"><div><span class="eyebrow">THE COMMAND LIBRARY</span><h2>Clear commands.<br>Quick answers.</h2><p>Browse {{ command_count }} tools, search by name or task, and copy a command format in one click.</p><a class="btn ghost" href="/commands">Find your command <span aria-hidden="true">↗</span></a></div><div class="command-stack" aria-hidden="true"><div class="command-line"><span>!</span> setup <i>SERVER CONFIGURATION</i></div><div class="command-line"><span>!</span> 8ball will it be a good night? <i>FUN</i></div><div class="command-line"><span>!</span> ask why is the sky blue? <i>AI STUDIO</i></div><div class="command-line"><span>!</span> ticket panel <i>COMMUNITY SUPPORT</i></div></div></section>
 
   <section class="suggestion-hero" id="suggestions"><div><span class="eyebrow">SHAPE THE NIGHT</span><h2>Have an idea?</h2><p>Tell us what Nightfall should add, improve, or remove.</p></div><a class="btn primary" href="/suggestions">Suggest something <span aria-hidden="true">→</span></a></section>
+
+
+  <section class="nightfall-premium-coming" id="premium">
+    <div class="premium-coming-mark">✦</div>
+    <div><span class="eyebrow">NIGHTFALL PREMIUM</span><h2>Premium is coming soon.</h2><p>AI tools, deeper customization and premium server controls are on the way.</p></div>
+    <span class="premium-coming-badge">COMING SOON</span>
+  </section>
+  <section class="nightfall-code-vault" id="codes">
+    <div class="code-vault-head"><div><span class="eyebrow">SECRET CODE VAULT</span><h2>Found a Nightfall code?</h2><p>Enter a code you've discovered. Codes only work after you've found their secret.</p></div><span class="code-vault-count" id="secretCount">0 / 100 FOUND</span></div>
+    <form class="nightfall-code-form" id="nightfallCodeForm" autocomplete="off"><input id="nightfallCodeInput" name="code" type="text" maxlength="32" placeholder="Enter a discovered code…" aria-label="Nightfall secret code"><button class="btn primary" type="submit">Redeem code <span aria-hidden="true">→</span></button></form>
+    <div class="nightfall-code-result" id="nightfallCodeResult" role="status" aria-live="polite"></div>
+  </section>
 
   <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
 
