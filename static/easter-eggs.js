@@ -190,6 +190,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const gameBox = document.getElementById("nightfall-games");
   const result = document.getElementById("gameResult");
   const gameButtons = document.querySelectorAll("[data-game]");
+  const submitScore = (game, score) => {
+    if (!Number.isFinite(score) || score < 0) return;
+    fetch("/api/arcade/score",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({game,score:Math.round(score)})}).catch(()=>{});
+  };
   const setGame = name => {
     if (!result) return;
     const render = {
@@ -201,22 +205,22 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     result.innerHTML = render[name] || "";
     if (name === "coin") {
-      let n=0; document.getElementById("coinBtn").onclick=()=>{ const v=Math.random()<.5?"HEADS":"TAILS"; document.getElementById("coinOut").textContent=v+" — nice flip."; if(++n>=3) reveal(76,"COINMASTER"); };
+      let n=0; document.getElementById("coinBtn").onclick=()=>{ const v=Math.random()<.5?"HEADS":"TAILS"; document.getElementById("coinOut").textContent=v+" — nice flip."; if(++n>=3) { submitScore("coin", n * 100); reveal(76,"COINMASTER"); } };
     }
     if (name === "guess") {
       const secret=Math.floor(Math.random()*20)+1; let tries=0;
-      document.getElementById("guessBtn").onclick=()=>{ const g=Number(document.getElementById("guessInput").value); if(!g)return; tries++; const out=document.getElementById("guessOut"); if(g===secret){out.textContent="Correct!"; reveal(77,"GUESSER");} else out.textContent=g<secret?"Higher…":"Lower…"; if(tries>=8) reveal(78,"STUBBORN GUESSER"); };
+      document.getElementById("guessBtn").onclick=()=>{ const g=Number(document.getElementById("guessInput").value); if(!g)return; tries++; const out=document.getElementById("guessOut"); if(g===secret){out.textContent="Correct!"; submitScore("guess", Math.max(100, 1000 - tries * 100)); reveal(77,"GUESSER");} else out.textContent=g<secret?"Higher…":"Lower…"; if(tries>=8) reveal(78,"STUBBORN GUESSER"); };
     }
     if (name === "reaction") {
       const b=document.getElementById("reactBtn"), out=document.getElementById("reactOut"); let start=0, timer=setTimeout(()=>{b.textContent="GO! CLICK!";start=performance.now();},1500+Math.random()*2500);
-      b.onclick=()=>{ if(!start){clearTimeout(timer);out.textContent="Too early!"; reveal(79,"FALSE START"); return;} out.textContent=Math.round(performance.now()-start)+" ms"; reveal(80,"REACTION NIGHT"); };
+      b.onclick=()=>{ if(!start){clearTimeout(timer);out.textContent="Too early!"; reveal(79,"FALSE START"); return;} const ms=Math.round(performance.now()-start); out.textContent=ms+" ms"; submitScore("reaction", Math.max(0, 10000-ms)); reveal(80,"REACTION NIGHT"); };
     }
     if (name === "tap") {
-      let n=0; document.getElementById("tapBtn").onclick=()=>{n++;document.getElementById("tapOut").textContent=n+" / 20";if(n>=20)reveal(81,"TAP CHAMPION");};
+      let n=0; document.getElementById("tapBtn").onclick=()=>{n++;document.getElementById("tapOut").textContent=n+" / 20";if(n>=20){submitScore("tap", n * 50);reveal(81,"TAP CHAMPION");}};
     }
     if (name === "memory") {
       const vals=["✦","☾","✧","★","✦","☾","✧","★"].sort(()=>Math.random()-.5), grid=document.getElementById("memoryGrid"); let open=[],matched=0;
-      vals.forEach((v,i)=>{const b=document.createElement("button");b.className="memory-card";b.textContent="?";b.dataset.v=v;b.onclick=()=>{if(open.includes(b)||b.disabled)return;b.textContent=v;open.push(b);if(open.length===2){if(open[0].dataset.v===open[1].dataset.v){open.forEach(x=>x.disabled=true);matched++;open=[];if(matched===4)reveal(82,"MEMORY KEEPER");}else{const pair=[...open];open=[];setTimeout(()=>pair.forEach(x=>x.textContent="?"),450);}}};grid.appendChild(b);});
+      vals.forEach((v,i)=>{const b=document.createElement("button");b.className="memory-card";b.textContent="?";b.dataset.v=v;b.onclick=()=>{if(open.includes(b)||b.disabled)return;b.textContent=v;open.push(b);if(open.length===2){if(open[0].dataset.v===open[1].dataset.v){open.forEach(x=>x.disabled=true);matched++;open=[];if(matched===4){submitScore("memory", 1000);reveal(82,"MEMORY KEEPER");}}else{const pair=[...open];open=[];setTimeout(()=>pair.forEach(x=>x.textContent="?"),450);}}};grid.appendChild(b);});
     }
     if (name === "trivia") {
       const questions = [
@@ -228,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const ask=()=>{
         const item=questions[q%questions.length];
         result.innerHTML='<p>'+item[0]+'</p>'+item[2].map(x=>'<button class="game-action trivia-answer">'+x+'</button>').join("");
-        result.querySelectorAll(".trivia-answer").forEach(b=>b.onclick=()=>{if(b.textContent===item[1])score++;q++;if(q>=3){result.innerHTML="<p>Score: "+score+"/3</p>";if(score===3)reveal(93,"NIGHT TRIVIA");}else ask();});
+        result.querySelectorAll(".trivia-answer").forEach(b=>b.onclick=()=>{if(b.textContent===item[1])score++;q++;if(q>=3){result.innerHTML="<p>Score: "+score+"/3</p>";submitScore("trivia", score*100);if(score===3)reveal(93,"NIGHT TRIVIA");}else ask();});
       };
       ask();
     }
@@ -237,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const nextMath=()=>{
         const a=Math.floor(Math.random()*20)+1,b=Math.floor(Math.random()*20)+1,answer=a+b;
         result.innerHTML='<p>'+a+' + '+b+' = ?</p><input id="mathInput" type="number"><button class="game-action" id="mathBtn">ANSWER</button><p id="mathOut"></p>';
-        document.getElementById("mathBtn").onclick=()=>{const ok=Number(document.getElementById("mathInput").value)===answer;if(ok)score++;round++;if(round>=5){document.getElementById("mathOut").textContent="Score: "+score+"/5";if(score>=4)reveal(94,"MATH RUSH");}else nextMath();};
+        document.getElementById("mathBtn").onclick=()=>{const ok=Number(document.getElementById("mathInput").value)===answer;if(ok)score++;round++;if(round>=5){document.getElementById("mathOut").textContent="Score: "+score+"/5";submitScore("math", score*100);if(score>=4)reveal(94,"MATH RUSH");}else nextMath();};
       };
       nextMath();
     }
@@ -246,14 +250,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const word=words[Math.floor(Math.random()*words.length)];
       const scrambled=word.split("").sort(()=>Math.random()-.5).join("");
       result.innerHTML='<p>Unscramble: <b>'+scrambled+'</b></p><input id="wordInput" maxlength="8"><button class="game-action" id="wordBtn">CHECK</button><p id="wordOut"></p>';
-      document.getElementById("wordBtn").onclick=()=>{const ok=document.getElementById("wordInput").value.trim().toUpperCase()===word;document.getElementById("wordOut").textContent=ok?"Correct!":"Try again.";if(ok)reveal(95,"WORD HUNTER");};
+      document.getElementById("wordBtn").onclick=()=>{const ok=document.getElementById("wordInput").value.trim().toUpperCase()===word;document.getElementById("wordOut").textContent=ok?"Correct!":"Try again.";if(ok){submitScore("word", 100);reveal(95,"WORD HUNTER");}};
     }
     if (name === "stars") {
       result.innerHTML='<div class="star-field" id="starField"><button class="game-action star-target">⭐</button></div><p id="starOut">Catch 8 stars.</p>';
       let score=0;
       const field=document.getElementById("starField");
       const move=()=>{const b=field.querySelector(".star-target");b.style.position="absolute";b.style.left=(Math.random()*80)+"%";b.style.top=(Math.random()*70)+"%";};
-      field.querySelector(".star-target").onclick=()=>{score++;document.getElementById("starOut").textContent=score+" / 8";if(score>=8){reveal(96,"STAR CATCHER");}else move();};
+      field.querySelector(".star-target").onclick=()=>{score++;document.getElementById("starOut").textContent=score+" / 8";if(score>=8){submitScore("stars", score*100);reveal(96,"STAR CATCHER");}else move();};
       move();
     }
     if (name === "pattern") {
@@ -261,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let shown=true, step=0;
       result.innerHTML='<p id="patternOut">Watch: '+seq.map(x=>"●").join(" ")+'</p><div class="pattern-grid">'+[0,1,2,3].map(x=>'<button class="game-action pattern-btn" data-p="'+x+'">●</button>').join("")+'</div>';
       setTimeout(()=>{shown=false;document.getElementById("patternOut").textContent="Repeat the pattern.";},1200);
-      result.querySelectorAll(".pattern-btn").forEach(b=>b.onclick=()=>{if(shown)return;const p=Number(b.dataset.p);if(p!==seq[step]){step=0;document.getElementById("patternOut").textContent="Wrong — try again.";return;}step++;if(step===seq.length){reveal(97,"PATTERN KEEPER");}});
+      result.querySelectorAll(".pattern-btn").forEach(b=>b.onclick=()=>{if(shown)return;const p=Number(b.dataset.p);if(p!==seq[step]){step=0;document.getElementById("patternOut").textContent="Wrong — try again.";return;}step++;if(step===seq.length){submitScore("pattern", seq.length*200);reveal(97,"PATTERN KEEPER");}});
     }
   };
   gameButtons.forEach(b => b.addEventListener("click", () => { setGame(b.dataset.game); const i=[...gameButtons].indexOf(b); if(i<5) reveal(83+i, "GAME DISCOVERY"); }));
