@@ -2256,8 +2256,8 @@ async def generate_ai_text(ctx: commands.Context, task: str, prompt: str, *, max
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
         await ctx.send(embed=embed(
-            "🤖 AI studio needs a key",
-            "The server owner can enable AI commands by adding `OPENAI_API_KEY` privately in KataBump. Requests use the OpenAI API and may incur charges.",
+            "🤖 AI commands are not enabled",
+            "Nightfall is missing its `OPENAI_API_KEY`. The bot owner needs to add the key to KataBump's environment variables and restart Nightfall.",
             WARNING,
         ))
         return
@@ -2300,12 +2300,18 @@ async def generate_ai_text(ctx: commands.Context, task: str, prompt: str, *, max
         )
         if response.status_code != 200:
             if response.status_code in (401, 403):
-                message = "The AI key is invalid or does not have API access. Ask the server owner to check the private key setting."
+                message = "The `OPENAI_API_KEY` is invalid or no longer authorized. Ask the bot owner to replace it in KataBump, then restart Nightfall."
+                title = "🔑 AI key needs attention"
             elif response.status_code == 429:
-                message = "The AI service is busy or the account is out of quota. Try again later."
+                message = "The AI service is temporarily unavailable or the API account has reached its usage limit. Try again later."
+                title = "⏳ AI service unavailable"
+            elif response.status_code == 400:
+                message = "The AI request was rejected by the API. Check the configured AI model and API access in KataBump."
+                title = "⚙️ AI configuration problem"
             else:
-                message = f"The AI service returned an error ({response.status_code}). Try again later."
-            await status.edit(embed=embed("⚠️ AI studio unavailable", message, WARNING))
+                message = f"The AI service returned an unexpected error ({response.status_code}). Try again later."
+                title = "⚠️ AI studio unavailable"
+            await status.edit(embed=embed(title, message, WARNING))
             return
         result = extract_response_text(response.json())
         if not result:
@@ -2387,7 +2393,11 @@ async def ai_quiz(ctx: commands.Context, *, topic: str):
 async def aiimage_command(ctx: commands.Context, *, prompt: str):
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
-        await ctx.send(embed=embed("🌌 AI image is not connected yet", "The server owner needs to add `OPENAI_API_KEY` to the KataBump environment variables and restart Nightfall. Image generations use the OpenAI API and may incur usage charges.", WARNING))
+        await ctx.send(embed=embed(
+            "🌌 AI image is not enabled",
+            "Nightfall is missing its `OPENAI_API_KEY`. The bot owner needs to add the key to KataBump's environment variables and restart Nightfall.",
+            WARNING,
+        ))
         return
     prompt = prompt.strip()
     if len(prompt) < 4 or len(prompt) > 700:
@@ -2404,12 +2414,18 @@ async def aiimage_command(ctx: commands.Context, *, prompt: str):
         )
         if response.status_code != 200:
             if response.status_code in (401, 403):
-                message = "The image service key is invalid or not enabled for image generation. Ask the server owner to check it."
+                message = "The `OPENAI_API_KEY` is invalid or not authorized for this account. Ask the bot owner to replace it in KataBump and restart Nightfall."
+                title = "🔑 AI image key needs attention"
             elif response.status_code == 429:
-                message = "The image service is busy or out of quota. Please try again later."
+                message = "The image service is temporarily unavailable or the API account has reached its usage limit. Try again later."
+                title = "⏳ AI image service unavailable"
+            elif response.status_code == 400:
+                message = "The image request was rejected by the API. Check the image model and API access configured for Nightfall."
+                title = "⚙️ AI image configuration problem"
             else:
-                message = f"The image service returned an error ({response.status_code}). Please try again later."
-            await ctx.send(embed=embed("❌ Image generation failed", message, WARNING))
+                message = f"The image service returned an unexpected error ({response.status_code}). Please try again later."
+                title = "❌ Image generation failed"
+            await ctx.send(embed=embed(title, message, WARNING))
             return
         encoded = response.json()["data"][0]["b64_json"]
         image_bytes = base64.b64decode(encoded, validate=True)
