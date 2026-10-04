@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     "NF091ZSKC5WP","NF092E7YRJB4","NF093TLD6XQH","NF0948ZSKC5W","NF095ME7YRJB","NF0962TLD6XQ",
     "NF097F8ZSKC5","NF098UME7YRJ","NF09992TLD6X","NF100NF8ZSKC"
   ];
-  const rewards = codes.map((_, i) => i === 0 ? "10% off Premium" : (i % 10 === 9 ? ((i % 3) + 1) + " day(s) of Premium" : ((i % 3) + 1) * 5 + "% off Premium"));
+  const rewards = codes.map(() => "1% off Premium");
   const foundKey = "nightfall-found-secrets-v2";
   let found = new Set();
   try { found = new Set(JSON.parse(localStorage.getItem(foundKey) || "[]").filter(n => Number.isInteger(n) && n >= 0 && n < 100)); } catch (_) {}
