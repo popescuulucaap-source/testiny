@@ -666,10 +666,8 @@ def _official_youtube_videos(limit=15):
 
 
 @app.get("/community")
-def mark_community_visit():
-    session["daily_community_visit"]=True
-
 def community():
+    session["daily_community_visit"]=True
     return render_template("community.html", social_user=_social_user())
 
 
@@ -1352,7 +1350,17 @@ def leaderboards():
                     rows=[{"discord_id":r[0],"username":r[1],"xp":r[2],"level":site_level(r[2])} for r in cur.fetchall()]
         except psycopg.Error as exc:
             app.logger.warning("Could not load XP leaderboard: %s", type(exc).__name__)
-    return render_template("leaderboards.html", rows=rows)
+    arcade=[]
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                games=["coin","guess","reaction","tap","memory","trivia","math","word","stars","pattern"]
+                for game in games:
+                    top=conn.execute("SELECT username,discord_id,MAX(score) FROM arcade_scores WHERE game=%s GROUP BY username,discord_id ORDER BY MAX(score) DESC LIMIT 10",(game,)).fetchall()
+                    arcade.append({"game":game,"rows":[{"username":x[0],"discord_id":x[1],"score":x[2]} for x in top]})
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load Arcade leaderboards: %s", type(exc).__name__)
+    return render_template("leaderboards.html", rows=rows, arcade=arcade)
 
 @app.get("/api/social/video/<int:video_id>/likes")
 def social_likes(video_id):
