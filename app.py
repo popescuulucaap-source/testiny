@@ -333,9 +333,27 @@ def admin():
             app.logger.warning("Could not read admin bot heartbeat: %s", type(exc).__name__)
     with APP_METRICS_LOCK:
         request_count = APP_REQUEST_COUNT
+    heartbeat_age = int(max(0, time.time() - last_seen)) if last_seen else None
+    snapshot_age = heartbeat_age if guilds else None
+    suggestion_count = 0
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute("SELECT COUNT(*) FROM suggestions").fetchone()
+            suggestion_count = int(row[0] or 0)
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read suggestion count: %s", type(exc).__name__)
+    else:
+        suggestion_count = len(session.get("suggestions", []))
+    avg_members = int(round(member_total / len(guilds))) if guilds else 0
     stats = {
         "bot_online": bot_online(),
         "guild_count": len(guilds),
+        "active_guild_count": len(guilds),
+        "heartbeat_age": f"{heartbeat_age}s" if heartbeat_age is not None else "—",
+        "snapshot_age": f"{snapshot_age}s" if snapshot_age is not None else "—",
+        "avg_members": avg_members,
+        "suggestion_count": suggestion_count,
         "member_count": member_total,
         "last_seen": last_seen,
         "uptime_seconds": max(0, int(time.time() - APP_STARTED_AT)),
