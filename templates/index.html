@@ -18,6 +18,8 @@
     </div>
   </section>
 
+
+  <section class="nightfall-status-card" aria-label="Nightfall status"><div class="status-dot" id="nightfallStatusDot"></div><div><span class="eyebrow">NIGHTFALL STATUS</span><h2 id="nightfallStatusTitle">Checking Nightfall…</h2><p id="nightfallStatusText">Checking the latest bot heartbeat.</p></div></section>
   <section class="home-about" id="about">
     <div class="about-wordmark-wrap"><img src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall wordmark"><span>BUILT FOR DISCORD.</span></div>
     <div class="about-copy"><span class="eyebrow">ABOUT • 1.0v UPDATE</span><p>🌙 Nightfall keeps the busywork out of your way with moderation, security, tickets, invites, games, and creative tools—so your community can shine. ✨</p><div class="about-actions"><a class="about-copy-link" href="/commands">Explore all commands ↗</a></div></div>
@@ -52,6 +54,9 @@
     <form class="nightfall-code-form" id="nightfallCodeForm" autocomplete="off"><input id="nightfallCodeInput" name="code" type="text" maxlength="32" placeholder="Enter a discovered code…" aria-label="Nightfall secret code"><button class="btn primary" type="submit">Redeem code <span aria-hidden="true">→</span></button></form>
     <div class="nightfall-code-result" id="nightfallCodeResult" role="status" aria-live="polite"></div>
   </section>
+
+
+  <section class="nightfall-reviews" id="reviews"><div class="section-heading"><span class="eyebrow">COMMUNITY REVIEWS</span><h2>Rate Nightfall.</h2><p>Leave a rating and tell the community what you think. Reviews with spam, heavy profanity, or abusive content are automatically filtered.</p></div><div class="review-layout"><form class="review-form" id="reviewForm"><input name="name" maxlength="40" placeholder="Your name (optional)" autocomplete="nickname"><select name="rating" aria-label="Rating"><option value="5">★★★★★ — 5</option><option value="4">★★★★☆ — 4</option><option value="3">★★★☆☆ — 3</option><option value="2">★★☆☆☆ — 2</option><option value="1">★☆☆☆☆ — 1</option></select><textarea name="review" maxlength="500" required placeholder="Write your review…"></textarea><button class="btn primary" type="submit">Post review →</button><div id="reviewResult" class="review-result" role="status"></div></form><div class="review-list" id="reviewList"><p class="review-loading">Loading community reviews…</p></div></div></section>
 
   <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
 
