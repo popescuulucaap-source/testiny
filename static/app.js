@@ -184,44 +184,4 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.querySelectorAll('.command-line').forEach((line,i)=>line.addEventListener('dblclick',()=>revealSecret(10+i,'COMMAND SIGNAL')));
   let huntClicks=0,huntTimer=null;document.addEventListener('click',event=>{if(event.target.closest('a,button,input,textarea,select,.home-mark,.visual-star,.nightfall-audio-toggle'))return;huntClicks++;clearTimeout(huntTimer);huntTimer=setTimeout(()=>huntClicks=0,2600);if(huntClicks>=9){huntClicks=0;discoverNext()}},{passive:true});
 
-  // Nightfall easter eggs — all client-side and intentionally harmless.
-  const egg=document.querySelector('.easter-egg-panel');
-  const toast=document.createElement('div');
-  toast.className='nightfall-secret-toast';
-  toast.setAttribute('role','status');
-  toast.setAttribute('aria-live','polite');
-  document.body.appendChild(toast);
-  let toastTimer=null;
-  const showSecret=(title,message)=>{
-    if(egg){egg.hidden=false;egg.scrollIntoView({behavior:'smooth',block:'center'});}
-    toast.innerHTML='<b>✦ '+title+'</b><span>'+message+'</span>';
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer=setTimeout(()=>toast.classList.remove('show'),4200);
-    if(audioOn){ensureAudio();note(493.88,.16,'sine',.03);note(659.25,.22,'sine',.024,.09);note(987.77,.3,'sine',.018,.18);}
-  };
-  let secret='';
-  document.addEventListener('keydown',event=>{
-    if(event.ctrlKey||event.altKey||event.metaKey)return;
-    if(event.key.length===1){
-      secret=(secret+event.key.toLowerCase()).slice(-8);
-      if(secret==='nightfall'){secret='';showSecret('SECRET SIGNAL 01','You found the quiet side of Nightfall. ✦');}
-    }
-  });
-  const secretLogo=document.querySelector('.home-mark');
-  if(secretLogo){
-    let clicks=0,last=0;
-    secretLogo.addEventListener('click',()=>{
-      const now=Date.now();
-      clicks=now-last<1400?clicks+1:1;last=now;
-      if(clicks>=5){clicks=0;showSecret('SECRET SIGNAL 02','The emblem noticed you. Keep looking around. ✦');}
-    });
-  }
-  document.querySelectorAll('.visual-star').forEach(star=>star.addEventListener('click',event=>{
-    event.preventDefault();
-    showSecret('SECRET SIGNAL 03','A star has fallen into Nightfall. ✧');
-    star.classList.add('secret-star-hit');
-    setTimeout(()=>star.classList.remove('secret-star-hit'),900);
-  }));
-
 });
