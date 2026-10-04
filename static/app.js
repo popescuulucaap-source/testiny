@@ -68,4 +68,75 @@ document.addEventListener('DOMContentLoaded',()=>{
       consoleCard.style.setProperty('--py',`${event.clientY-rect.top}px`);
     },{passive:true});
   }
+
+  // Nightfall audio: original ambient WebAudio and small UI sound effects.
+  // Audio starts only after the visitor presses the Ambient control because browsers block autoplay.
+  let audioCtx=null,master=null,ambientGain=null,ambientTimer=null,audioOn=false;
+  const audioButton=document.createElement('button');
+  audioButton.className='nightfall-audio-toggle';
+  audioButton.type='button';
+  audioButton.setAttribute('aria-label','Toggle Nightfall ambient audio');
+  audioButton.innerHTML='<span>◉</span><b>Ambient</b><small>OFF</small>';
+  document.body.appendChild(audioButton);
+
+  const ensureAudio=()=>{
+    if(audioCtx)return;
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    master=audioCtx.createGain();
+    master.gain.value=.075;
+    master.connect(audioCtx.destination);
+  };
+  const tone=(freq,dur,type='sine',gain=.035,delay=0)=>{
+    ensureAudio();
+    const t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type;o.frequency.setValueAtTime(freq,t);
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(gain,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.03);
+  };
+  const startAmbient=()=>{
+    ensureAudio();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    if(ambientTimer)return;
+    ambientGain=audioCtx.createGain();
+    ambientGain.gain.value=.18;
+    ambientGain.connect(master);
+    const play=()=>{
+      if(!audioCtx||!audioOn)return;
+      const now=audioCtx.currentTime;
+      [130.81,164.81,196,246.94].forEach((f,i)=>{
+        const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+        o.type=i%2?'sine':'triangle';o.frequency.value=f;o.detune.value=i*2;
+        g.gain.setValueAtTime(.0001,now);
+        g.gain.exponentialRampToValueAtTime(.018,now+1.2);
+        g.gain.exponentialRampToValueAtTime(.0001,now+7);
+        o.connect(g);g.connect(ambientGain);o.start(now);o.stop(now+7.2);
+      });
+      ambientTimer=setTimeout(()=>{ambientTimer=null;play();},6200);
+    };
+    play();
+  };
+  const stopAmbient=()=>{
+    if(ambientTimer){clearTimeout(ambientTimer);ambientTimer=null;}
+    if(ambientGain){
+      ambientGain.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.5);
+      setTimeout(()=>{try{ambientGain.disconnect();}catch(e){}ambientGain=null;},550);
+    }
+  };
+  const setAudio=on=>{
+    audioOn=on;
+    audioButton.classList.toggle('on',on);
+    audioButton.querySelector('small').textContent=on?'ON':'OFF';
+    if(on){startAmbient();tone(392,.16,'sine',.03);}else stopAmbient();
+  };
+  audioButton.addEventListener('click',()=>setAudio(!audioOn));
+  document.querySelectorAll('a.btn,.nav-links a').forEach(el=>el.addEventListener('click',()=>{
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    tone(520,.08,'sine',.018);tone(740,.11,'sine',.012,.045);
+  }));
+  document.querySelectorAll('.home-feature-card,.command-line,.home-cta').forEach(el=>el.addEventListener('mouseenter',()=>{
+    if(audioOn)tone(680,.045,'sine',.008);
+  }));
+
 });
