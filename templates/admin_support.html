@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Support Inbox{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">ADMIN CONTROL • SUPPORT</span><h1>Support inbox.</h1><p>Reply to community support tickets from here.</p></section>
+<section class="support-admin-list">
+{% for ticket in tickets %}
+<article class="card support-admin-ticket"><div class="support-ticket-header"><div><span class="eyebrow">TICKET #{{ ticket.id }} • {{ ticket.status|upper }}</span><h2>{{ ticket.subject }}</h2><p>From {{ ticket.name }}</p></div>{% if ticket.status != "closed" %}<form method="post" action="/admin/support/{{ ticket.id }}/close"><button class="btn ghost">Close</button></form>{% endif %}</div><div class="support-admin-messages">{% for m in ticket.messages %}<div class="support-admin-message {{ m.from }}"><b>{{ "Admin" if m.from == "admin" else ticket.name }}</b><p>{{ m.text }}</p></div>{% endfor %}</div>{% if ticket.status != "closed" %}<form class="support-form" method="post" action="/admin/support/{{ ticket.id }}/reply"><textarea name="message" maxlength="2000" required placeholder="Write a reply…"></textarea><button class="btn primary">Reply →</button></form>{% endif %}</article>
+{% else %}<div class="card"><h2>No support tickets yet.</h2><p>New community requests will appear here.</p></div>{% endfor %}
+</section>
+{% endblock %}
