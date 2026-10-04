@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded',()=>{
+  // Account progression: meaningful sections award a small, server-side XP bonus once per hour.
+  const xpActions={"/":"profile","/community":"community","/suggestions":"suggestion","/secrets":"secrets"};
+  const xpAction=xpActions[location.pathname];
+  if(xpAction) fetch('/api/xp/award',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:xpAction})}).catch(()=>{});
+
   const loader=document.getElementById('nightfall-loader');
   if(loader){
     const key='nightfall-home-intro-seen-v2';
