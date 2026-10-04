@@ -41,7 +41,7 @@ NIGHTFALL_WEBSITE_URL = os.getenv("NIGHTFALL_WEBSITE_URL", "").strip().rstrip("/
 NIGHTFALL_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
 BRIDGE_POLL_SECONDS = 10
 bridge_task = None
-OPENAI_TEXT_MODEL = os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini").strip() or "gpt-5.4-mini"
+GEMINI_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash-lite").strip() or "gemini-2.5-flash-lite"
 AI_TEXT_COOLDOWN_SECONDS = 20
 AI_TEXT_LAST_USED: dict[int, float] = {}
 AI_TEXT_LOCK = asyncio.Lock()
@@ -2238,26 +2238,24 @@ async def color_command(ctx: commands.Context, hex_code: str):
     await ctx.send(embed=e)
 
 
-def extract_response_text(data: dict) -> str:
-    direct = data.get("output_text")
-    if isinstance(direct, str) and direct.strip():
-        return direct.strip()
+def extract_gemini_text(data: dict) -> str:
     chunks = []
-    for item in data.get("output", []):
-        if not isinstance(item, dict) or item.get("type") != "message":
+    for candidate in data.get("candidates", []):
+        if not isinstance(candidate, dict):
             continue
-        for part in item.get("content", []):
-            if isinstance(part, dict) and part.get("type") == "output_text" and isinstance(part.get("text"), str):
+        content = candidate.get("content") or {}
+        for part in content.get("parts", []):
+            if isinstance(part, dict) and isinstance(part.get("text"), str):
                 chunks.append(part["text"])
     return "\n".join(chunks).strip()
 
 
 async def generate_ai_text(ctx: commands.Context, task: str, prompt: str, *, max_prompt: int = 700):
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         await ctx.send(embed=embed(
             "🤖 AI commands are not enabled",
-            "Nightfall is missing its `OPENAI_API_KEY`. The bot owner needs to add the key to KataBump's environment variables and restart Nightfall.",
+            "Nightfall is missing its Gemini AI key. The bot owner needs to add GEMINI_API_KEY to the bot's .env file and restart Nightfall.",
             WARNING,
         ))
         return
@@ -2280,44 +2278,44 @@ async def generate_ai_text(ctx: commands.Context, task: str, prompt: str, *, max
 
     status = await ctx.send(embed=embed("🌙 Nightfall is thinking…", "A little stardust is on the way.", INFO))
     instructions = (
-        "You are Nightfall, a friendly Discord community assistant. Follow the requested creative task. "
-        "Keep the result concise, safe for a general audience, and under 180 words. Avoid slurs, sexual content, "
-        "threats, targeted harassment, and claims that you verified facts. Never ping users or output mass mentions."
+        "You are Nightfall, a friendly Discord community assistant. Follow the requested task. "
+        "Keep the result concise, safe for a general audience, and under 180 words. "
+        "Avoid slurs, sexual content, threats, targeted harassment, and claims that you verified facts. "
+        "Never ping users or output mass mentions."
     )
     try:
         response = await asyncio.to_thread(
             requests.post,
-            "https://api.openai.com/v1/responses",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_TEXT_MODEL}:generateContent",
+            params={"key": api_key},
+            headers={"Content-Type": "application/json"},
             json={
-                "model": OPENAI_TEXT_MODEL,
-                "instructions": instructions,
-                "input": f"Task: {task}\nUser request: {prompt}",
-                "max_output_tokens": 260,
-                "store": False,
+                "systemInstruction": {"parts": [{"text": instructions}]},
+                "contents": [{"role": "user", "parts": [{"text": f"Task: {task}\nUser request: {prompt}"}]}],
+                "generationConfig": {"maxOutputTokens": 260, "temperature": 0.8},
             },
             timeout=(12, 50),
         )
         if response.status_code != 200:
             if response.status_code in (401, 403):
-                message = "The `OPENAI_API_KEY` is invalid or no longer authorized. Ask the bot owner to replace it in KataBump, then restart Nightfall."
+                message = "The Gemini API key is invalid or not authorized. Replace GEMINI_API_KEY in the bot's .env file and restart Nightfall."
                 title = "🔑 AI key needs attention"
             elif response.status_code == 429:
-                message = "The AI service is temporarily unavailable or the API account has reached its usage limit. Try again later."
-                title = "⏳ AI service unavailable"
+                message = "The free AI limit has been reached temporarily. Try again later."
+                title = "⏳ AI limit reached"
             elif response.status_code == 400:
-                message = "The AI request was rejected by the API. Check the configured AI model and API access in KataBump."
+                message = "Gemini rejected the request. Check the configured Gemini model and API access."
                 title = "⚙️ AI configuration problem"
             else:
                 message = f"The AI service returned an unexpected error ({response.status_code}). Try again later."
                 title = "⚠️ AI studio unavailable"
             await status.edit(embed=embed(title, message, WARNING))
             return
-        result = extract_response_text(response.json())
+        result = extract_gemini_text(response.json())
         if not result:
             await status.edit(embed=embed("⚠️ No answer this time", "Nightfall couldn't read the AI response. Try again shortly.", WARNING))
             return
-        e = embed("✨ Nightfall AI studio", result[:3800], EMBED_COLOR)
+        e = embed("✨ Nightfall AI", result[:3800], EMBED_COLOR)
         e.set_footer(text=f"Requested by {ctx.author.display_name} • AI responses can be imperfect")
         await status.edit(embed=e, allowed_mentions=discord.AllowedMentions.none())
     except (requests.RequestException, ValueError, KeyError) as exc:
@@ -2391,50 +2389,11 @@ async def ai_quiz(ctx: commands.Context, *, topic: str):
 @commands.guild_only()
 @commands.cooldown(1, 90, commands.BucketType.user)
 async def aiimage_command(ctx: commands.Context, *, prompt: str):
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        await ctx.send(embed=embed(
-            "🌌 AI image is not enabled",
-            "Nightfall is missing its `OPENAI_API_KEY`. The bot owner needs to add the key to KataBump's environment variables and restart Nightfall.",
-            WARNING,
-        ))
-        return
-    prompt = prompt.strip()
-    if len(prompt) < 4 or len(prompt) > 700:
-        await ctx.send("Give me an image description between 4 and 700 characters.")
-        return
-    await ctx.send(embed=embed("🎨 Nightfall is creating your image", "This can take a little while. ✨", INFO))
-    try:
-        response = await asyncio.to_thread(
-            requests.post,
-            "https://api.openai.com/v1/images/generations",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"model": "gpt-image-2.5-flare", "prompt": prompt, "size": "1024x1024", "quality": "low", "output_format": "png"},
-            timeout=(15, 150),
-        )
-        if response.status_code != 200:
-            if response.status_code in (401, 403):
-                message = "The `OPENAI_API_KEY` is invalid or not authorized for this account. Ask the bot owner to replace it in KataBump and restart Nightfall."
-                title = "🔑 AI image key needs attention"
-            elif response.status_code == 429:
-                message = "The image service is temporarily unavailable or the API account has reached its usage limit. Try again later."
-                title = "⏳ AI image service unavailable"
-            elif response.status_code == 400:
-                message = "The image request was rejected by the API. Check the image model and API access configured for Nightfall."
-                title = "⚙️ AI image configuration problem"
-            else:
-                message = f"The image service returned an unexpected error ({response.status_code}). Please try again later."
-                title = "❌ Image generation failed"
-            await ctx.send(embed=embed(title, message, WARNING))
-            return
-        encoded = response.json()["data"][0]["b64_json"]
-        image_bytes = base64.b64decode(encoded, validate=True)
-        file = discord.File(io.BytesIO(image_bytes), filename="nightfall-ai.png")
-        e = embed("🌌 Made with Nightfall AI", f"**Prompt:** {prompt[:900]}", EMBED_COLOR)
-        await ctx.send(embed=e, file=file)
-    except (requests.RequestException, KeyError, IndexError, ValueError) as exc:
-        print(f"Nightfall image generation failed: {type(exc).__name__}")
-        await ctx.send(embed=embed("❌ Image generation failed", "I couldn't finish that image. Please try a simpler prompt in a moment.", WARNING))
+    await ctx.send(embed=embed(
+        "🌌 AI image generation",
+        "Image generation is not included in Nightfall's free Gemini setup yet. The text AI commands are available through Gemini's free tier.",
+        INFO,
+    ))
 
 
 @bot.command()
