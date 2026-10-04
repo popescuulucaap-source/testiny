@@ -7,6 +7,7 @@ from collections import deque
 from hmac import compare_digest
 from functools import wraps
 from urllib.parse import urlencode, urlparse
+from xml.etree import ElementTree as ET
 
 import requests
 import psycopg
@@ -57,6 +58,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+NIGHTFALL_YOUTUBE_CHANNEL_ID = os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID", "").strip()
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
@@ -565,6 +567,46 @@ def _youtube_url(raw):
     return parsed.geturl()
 
 
+def _official_youtube_videos(limit=15):
+    """Read the public Nightfall YouTube upload feed."""
+    if not NIGHTFALL_YOUTUBE_CHANNEL_ID:
+        return []
+    feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + NIGHTFALL_YOUTUBE_CHANNEL_ID
+    try:
+        response = requests.get(feed_url, timeout=10, headers={"User-Agent": "Nightfall Community"})
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        ns = {"yt": "http://www.youtube.com/xml/schemas/2015", "media": "http://search.yahoo.com/mrss/"}
+        videos = []
+        for entry in root.findall("{http://www.w3.org/2005/Atom}entry")[:limit]:
+            video_id = (entry.findtext("yt:videoId", default="", namespaces=ns) or "").strip()
+            title = (entry.findtext("{http://www.w3.org/2005/Atom}title", default="Nightfall upload") or "Nightfall upload").strip()
+            published = (entry.findtext("{http://www.w3.org/2005/Atom}published", default="") or "").strip()
+            media_group = entry.find("media:group", ns)
+            description = ""
+            if media_group is not None:
+                description = (media_group.findtext("media:description", default="", namespaces=ns) or "").strip()
+            if not video_id:
+                continue
+            videos.append({
+                "id": "youtube:" + video_id,
+                "discord_id": "",
+                "username": "Nightfall • YouTube",
+                "avatar_url": "/static/nightfall-logo.svg",
+                "video_url": "https://www.youtube.com/watch?v=" + video_id,
+                "title": title,
+                "description": description[:500],
+                "created_at": published,
+                "following": False,
+                "source": "youtube",
+                "official": True,
+            })
+        return videos
+    except (requests.RequestException, ET.ParseError, ValueError) as exc:
+        app.logger.warning("Could not load Nightfall YouTube feed: %s", type(exc).__name__)
+        return []
+
+
 @app.get("/community")
 def community():
     return render_template("community.html", social_user=_social_user())
@@ -572,8 +614,7 @@ def community():
 
 @app.get("/api/social/feed")
 def social_feed():
-    if not DATABASE_URL:
-        return jsonify({"ok": True, "videos": []})
+    official_videos = _official_youtube_videos()
     viewer = _social_user()
     viewer_id = viewer["id"] if viewer else ""
     with db_connect() as conn:
@@ -590,7 +631,7 @@ def social_feed():
                 "created_at": r[7].isoformat() if hasattr(r[7], "isoformat") else str(r[7]),
                 "following": bool(r[8]),
             } for r in cur.fetchall()]
-    return jsonify({"ok": True, "videos": videos})
+    return jsonify({"ok": True, "videos": official_videos + videos})
 
 
 @app.post("/api/social/videos")
