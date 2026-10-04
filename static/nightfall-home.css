@@ -145,3 +145,30 @@
     animation:none!important;
   }
 }
+
+
+/* Nightfall cinematic interaction layer */
+.home-page .hero,.home-about,.home-workflow,.home-command-band,.home-cta{
+  animation:cinematic-rise .9s cubic-bezier(.16,.8,.25,1) both;
+}
+.home-about{animation-delay:.12s}.home-workflow{animation-delay:.18s}.home-command-band{animation-delay:.24s}.home-cta{animation-delay:.3s}
+.home-feature-card{transition:transform .35s cubic-bezier(.16,.8,.25,1),border-color .35s,box-shadow .35s;will-change:transform}
+.home-feature-card:hover{transform:translateY(-8px) rotateX(1deg);border-color:#a68cff38;box-shadow:0 22px 55px #05060d88}
+.hero-card,.workflow-art{will-change:transform}
+.home-ribbon{position:relative;overflow:hidden}
+.home-ribbon:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 20%,#ffffff0a 50%,transparent 80%);transform:translateX(-120%);animation:ribbon-sheen 8s ease-in-out infinite}
+.nightfall-audio-toggle{
+  position:fixed;z-index:1000;right:20px;bottom:20px;display:flex;align-items:center;gap:8px;
+  padding:10px 13px;border:1px solid #9a84ff35;border-radius:999px;background:#0b0e18dd;
+  color:#c9c2e8;backdrop-filter:blur(14px);box-shadow:0 12px 35px #0007;cursor:pointer;
+  font:700 11px Inter,system-ui,sans-serif;transition:transform .25s,border-color .25s,box-shadow .25s
+}
+.nightfall-audio-toggle:hover{transform:translateY(-3px);border-color:#9a84ff75;box-shadow:0 16px 42px #0009}
+.nightfall-audio-toggle span{color:#70e6ff;text-shadow:0 0 12px #70e6ff}
+.nightfall-audio-toggle small{color:#7f8aa3;font-size:8px;letter-spacing:.12em}
+.nightfall-audio-toggle.on{border-color:#72e7bd66;box-shadow:0 0 28px #72e7bd18}
+.nightfall-audio-toggle.on span{color:#72e7bd}
+@keyframes cinematic-rise{from{opacity:0;transform:translateY(22px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes ribbon-sheen{0%,58%,100%{transform:translateX(-120%)}75%{transform:translateX(120%)}}
+@media(max-width:620px){.nightfall-audio-toggle{right:12px;bottom:12px;padding:9px 11px}.home-feature-card:hover{transform:translateY(-4px)}}
+@media(prefers-reduced-motion:reduce){.home-page .hero,.home-about,.home-workflow,.home-command-band,.home-cta,.home-ribbon:after{animation:none!important}.home-feature-card:hover{transform:none}}
