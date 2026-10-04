@@ -4,4 +4,8 @@
 <section class="page-head"><span class="eyebrow">NIGHTFALL RANKINGS</span><h1>Who owns the night?</h1><p>XP, levels and Arcade scores across Nightfall.</p></section>
 <section class="card"><div style="display:grid;gap:10px">{% for r in rows %}<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:14px;background:rgba(255,255,255,.04)"><div><b>#{{ loop.index }} · <a href="/u/{{ r.discord_id }}">{{ r.username }}</a></b><small style="display:block;opacity:.65">Level {{ r.level }}</small></div><strong>{{ r.xp }} XP</strong></div>{% else %}<p>No XP players yet. Start exploring Nightfall.</p>{% endfor %}</div></section>
 <section class="card" style="margin-top:20px"><span class="eyebrow">ARCADE</span><h2>Top scores</h2><p>Game-specific leaderboards are built from submitted Arcade runs.</p></section>
+{% if arcade %}
+<section class="section"><div class="section-heading"><span class="eyebrow">ARCADE RANKINGS</span><h2>Best runs</h2></div>
+<div class="cards">{% for board in arcade %}<article class="card"><h3>{{ board.game|title }}</h3>{% for r in board.rows %}<p>#{{ loop.index }} · <a href="/u/{{ r.discord_id }}">{{ r.username }}</a> — <b>{{ r.score }}</b></p>{% else %}<p>No scores yet.</p>{% endfor %}</article>{% endfor %}</div></section>
+{% endif %}
 {% endblock %}
