@@ -569,9 +569,13 @@ def _youtube_url(raw):
 
 def _official_youtube_videos(limit=15):
     """Read the public Nightfall YouTube upload feed."""
-    if not NIGHTFALL_YOUTUBE_CHANNEL_ID:
+    channel_id = NIGHTFALL_YOUTUBE_CHANNEL_ID
+    if not channel_id:
+        match = re.search(r"youtube\.com/channel/(UC[\w-]+)", "https://www.youtube.com/@nightfall-bot")
+        channel_id = match.group(1) if match else ""
+    if not channel_id:
         return []
-    feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + NIGHTFALL_YOUTUBE_CHANNEL_ID
+    feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + channel_id
     try:
         response = requests.get(feed_url, timeout=10, headers={"User-Agent": "Nightfall Community"})
         response.raise_for_status()
