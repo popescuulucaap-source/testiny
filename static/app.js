@@ -69,9 +69,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     },{passive:true});
   }
 
-  // Nightfall audio: original ambient WebAudio and small UI sound effects.
-  // Audio starts only after the visitor presses the Ambient control because browsers block autoplay.
-  let audioCtx=null,master=null,ambientGain=null,ambientTimer=null,audioOn=false;
+  // Nightfall audio: original ambient soundtrack + UI sounds.
+  // Browsers require a user gesture, so the first click/tap can start it automatically.
+  let audioCtx=null,master=null,ambientGain=null,ambientTimer=null,audioOn=localStorage.getItem('nightfall-audio')==='on';
   const audioButton=document.createElement('button');
   audioButton.className='nightfall-audio-toggle';
   audioButton.type='button';
@@ -83,60 +83,66 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(audioCtx)return;
     audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     master=audioCtx.createGain();
-    master.gain.value=.075;
+    master.gain.value=.28;
     master.connect(audioCtx.destination);
   };
-  const tone=(freq,dur,type='sine',gain=.035,delay=0)=>{
+  const tone=(freq,dur,type='sine',gain=.06,delay=0)=>{
     ensureAudio();
+    if(audioCtx.state==='suspended')audioCtx.resume();
     const t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();
     o.type=type;o.frequency.setValueAtTime(freq,t);
     g.gain.setValueAtTime(.0001,t);
-    g.gain.exponentialRampToValueAtTime(gain,t+.02);
+    g.gain.exponentialRampToValueAtTime(gain,t+.025);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
-    o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.03);
+    o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.04);
   };
   const startAmbient=()=>{
     ensureAudio();
     if(audioCtx.state==='suspended')audioCtx.resume();
     if(ambientTimer)return;
-    ambientGain=audioCtx.createGain();
-    ambientGain.gain.value=.18;
-    ambientGain.connect(master);
+    if(!ambientGain){ambientGain=audioCtx.createGain();ambientGain.gain.value=.7;ambientGain.connect(master);}
     const play=()=>{
       if(!audioCtx||!audioOn)return;
       const now=audioCtx.currentTime;
-      [130.81,164.81,196,246.94].forEach((f,i)=>{
-        const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-        o.type=i%2?'sine':'triangle';o.frequency.value=f;o.detune.value=i*2;
-        g.gain.setValueAtTime(.0001,now);
-        g.gain.exponentialRampToValueAtTime(.018,now+1.2);
-        g.gain.exponentialRampToValueAtTime(.0001,now+7);
-        o.connect(g);g.connect(ambientGain);o.start(now);o.stop(now+7.2);
+      // Original dreamy chord progression; not a recording of any commercial song.
+      const chords=[[130.81,164.81,196,246.94],[146.83,174.61,220,293.66],[123.47,155.56,196,246.94],[138.59,174.61,207.65,277.18]];
+      const chord=chords[Math.floor(Date.now()/7600)%chords.length];
+      chord.forEach((f,i)=>{
+        const o=audioCtx.createOscillator(),g=audioCtx.createGain(),filter=audioCtx.createBiquadFilter();
+        o.type=i%2?'sine':'triangle';o.frequency.value=f;filter.type='lowpass';filter.frequency.value=1100;
+        g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.055,now+.9);g.gain.exponentialRampToValueAtTime(.0001,now+7.2);
+        o.connect(filter);filter.connect(g);g.connect(ambientGain);o.start(now);o.stop(now+7.4);
       });
-      ambientTimer=setTimeout(()=>{ambientTimer=null;play();},6200);
+      // Soft high notes for a more audible, colorful atmosphere.
+      [392,493.88,587.33].forEach((f,i)=>tone(f,2.7,'sine',.018,i*1.9));
+      ambientTimer=setTimeout(()=>{ambientTimer=null;play();},6800);
     };
     play();
   };
   const stopAmbient=()=>{
     if(ambientTimer){clearTimeout(ambientTimer);ambientTimer=null;}
-    if(ambientGain){
-      ambientGain.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.5);
-      setTimeout(()=>{try{ambientGain.disconnect();}catch(e){}ambientGain=null;},550);
-    }
+    if(ambientGain){ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);ambientGain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.18);}
   };
   const setAudio=on=>{
-    audioOn=on;
+    audioOn=on;localStorage.setItem('nightfall-audio',on?'on':'off');
     audioButton.classList.toggle('on',on);
     audioButton.querySelector('small').textContent=on?'ON':'OFF';
-    if(on){startAmbient();tone(392,.16,'sine',.03);}else stopAmbient();
+    if(on){startAmbient();tone(523.25,.18,'sine',.06);tone(783.99,.22,'sine',.045,.08);}
+    else stopAmbient();
   };
-  audioButton.addEventListener('click',()=>setAudio(!audioOn));
+  audioButton.addEventListener('click',event=>{event.stopPropagation();setAudio(!audioOn);});
+  if(audioOn){audioButton.classList.add('on');audioButton.querySelector('small').textContent='ON';}
+  // Any normal button/link click starts the saved ambient mode instead of accidentally turning it off.
+  document.addEventListener('click',event=>{
+    if(event.target.closest('.nightfall-audio-toggle'))return;
+    if(audioOn){ensureAudio();startAmbient();tone(660,.07,'sine',.025);}
+  },{capture:true});
   document.querySelectorAll('a.btn,.nav-links a').forEach(el=>el.addEventListener('click',()=>{
     if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-    tone(520,.08,'sine',.018);tone(740,.11,'sine',.012,.045);
+    if(audioOn){tone(520,.1,'sine',.035);tone(740,.13,'sine',.025,.05);}
   }));
   document.querySelectorAll('.home-feature-card,.command-line,.home-cta').forEach(el=>el.addEventListener('mouseenter',()=>{
-    if(audioOn)tone(680,.045,'sine',.008);
+    if(audioOn)tone(680,.06,'sine',.018);
   }));
 
 });
