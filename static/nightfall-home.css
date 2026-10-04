@@ -1,30 +1,8 @@
 undefined
 
 /* ===== VISIBLE SECRET BUTTON ===== */
-.nightfall-secret-button{
-  position:absolute;
-  z-index:6;
-  top:18px;
-  right:18px;
-  display:flex;
-  align-items:center;
-  gap:7px;
-  min-height:38px;
-  padding:9px 13px;
-  border:1px solid rgba(167,139,250,.5);
-  border-radius:999px;
-  background:rgba(11,10,24,.86);
-  color:#ddd6ff;
-  box-shadow:0 0 22px rgba(139,92,246,.18),0 10px 28px rgba(0,0,0,.3);
-  backdrop-filter:blur(12px);
-  cursor:pointer;
-  font:800 10px Inter,system-ui,sans-serif;
-  letter-spacing:.12em;
-  transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease,background .25s ease;
-}
-.nightfall-secret-button:first-letter{font-size:15px}
+.nightfall-secret-button{position:absolute;z-index:6;top:18px;right:18px;display:flex;align-items:center;gap:7px;min-height:38px;padding:9px 13px;border:1px solid rgba(167,139,250,.5);border-radius:999px;background:rgba(11,10,24,.86);color:#ddd6ff;box-shadow:0 0 22px rgba(139,92,246,.18),0 10px 28px rgba(0,0,0,.3);backdrop-filter:blur(12px);cursor:pointer;font:800 10px Inter,system-ui,sans-serif;letter-spacing:.12em;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease,background .25s ease}
 .nightfall-secret-button:hover{transform:translateY(-3px) scale(1.04);border-color:#a78bfa;box-shadow:0 0 30px rgba(139,92,246,.35),0 14px 34px rgba(0,0,0,.4);background:rgba(22,17,43,.94)}
-.nightfall-secret-button:active{transform:translateY(-1px) scale(.98)}
-.nightfall-secret-button span{color:#a78bfa}
+.nightfall-secret-button:active{transform:translateY(-1px) scale(.98)}.nightfall-secret-button span{color:#a78bfa}
 @media(max-width:620px){.nightfall-secret-button{top:12px;right:12px;min-height:34px;padding:8px 10px;font-size:9px}}
 @media(prefers-reduced-motion:reduce){.nightfall-secret-button{transition:none}}
