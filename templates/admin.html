@@ -8,6 +8,14 @@
  <article class="admin-stat"><span>WEBSITE UPTIME</span><b>{{ stats.uptime_seconds|durationformat }}</b><small>{{ stats.request_count }} requests since this app process started</small></article>
  <article class="admin-stat"><span>COMMAND LIBRARY</span><b>{{ stats.command_count }}</b><small>{{ stats.custom_command_count }} custom entries · {{ stats.announcement_count }} updates</small></article>
  <article class="admin-stat"><span>DATABASE</span><b class="{{ 'is-online' if stats.database_enabled else 'is-offline' }}">{{ 'Configured' if stats.database_enabled else 'Session mode' }}</b><small>{% if stats.database_enabled %}Admin content is set to persist{% else %}Website counters reset when the app restarts{% endif %}</small></article>
+ <article class="admin-stat"><span>BOT HEARTBEAT</span><b>{{ stats.heartbeat_age }}</b><small>Seconds since the latest bot report</small></article>
+ <article class="admin-stat"><span>ACTIVE SERVERS</span><b>{{ stats.active_guild_count }}</b><small>Servers included in the latest snapshot</small></article>
+ <article class="admin-stat"><span>REPORTED MEMBERS</span><b>{{ stats.member_count }}</b><small>Total members across reported servers</small></article>
+ <article class="admin-stat"><span>AVG MEMBERS / SERVER</span><b>{{ stats.avg_members }}</b><small>Average from the latest bot snapshot</small></article>
+ <article class="admin-stat"><span>CUSTOM COMMANDS</span><b>{{ stats.custom_command_count }}</b><small>Extra commands added from admin</small></article>
+ <article class="admin-stat"><span>UPDATES</span><b>{{ stats.announcement_count }}</b><small>Published website updates</small></article>
+ <article class="admin-stat"><span>SUGGESTIONS</span><b>{{ stats.suggestion_count }}</b><small>Community ideas received</small></article>
+ <article class="admin-stat"><span>BOT SNAPSHOT</span><b>{{ stats.snapshot_age }}</b><small>Age of the latest server snapshot</small></article>
 </section>
 <p class="admin-metrics-note">Website uptime and request totals describe this running web process. Discord server and member totals reflect the bot’s latest heartbeat snapshot.</p>
 <div class="card admin-list"><h3>Connected Discord servers</h3>{% for guild in bot_guilds %}<div class="admin-row"><div><b>{{ guild.name }}</b><span> · {{ guild.member_count if guild.member_count is not none else 'Member count unavailable' }} members</span></div><code>{{ guild.id }}</code></div>{% else %}<p>No server heartbeat data has arrived yet.</p>{% endfor %}</div>
