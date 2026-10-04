@@ -345,6 +345,13 @@ def admin():
             app.logger.warning("Could not read suggestion count: %s", type(exc).__name__)
     else:
         suggestion_count = len(session.get("suggestions", []))
+    settings_rows = [guild.get("settings") or {} for guild in guilds]
+    configured_servers = sum(1 for s in settings_rows if any(v not in (None, "", False, [], {}) for v in s.values()))
+    anti_raid_servers = sum(1 for s in settings_rows if s.get("anti_raid"))
+    anti_nuke_servers = sum(1 for s in settings_rows if s.get("anti_nuke"))
+    jail_servers = sum(1 for s in settings_rows if s.get("jail_enabled"))
+    verification_servers = sum(1 for s in settings_rows if s.get("verification_enabled") or s.get("verification_channel_id"))
+    ticket_servers = sum(1 for s in settings_rows if s.get("ticket_panel_channel_id") or s.get("ticket_options"))
     avg_members = int(round(member_total / len(guilds))) if guilds else 0
     stats = {
         "bot_online": bot_online(),
@@ -362,6 +369,12 @@ def admin():
         "command_count": len(COMMANDS) + len(custom_commands),
         "custom_command_count": len(custom_commands),
         "database_enabled": bool(DATABASE_URL),
+        "configured_servers": configured_servers,
+        "anti_raid_servers": anti_raid_servers,
+        "anti_nuke_servers": anti_nuke_servers,
+        "jail_servers": jail_servers,
+        "verification_servers": verification_servers,
+        "ticket_servers": ticket_servers,
     }
     return render_template("admin.html", announcements=announcements, custom_commands=custom_commands, database_enabled=bool(DATABASE_URL), stats=stats, bot_guilds=guilds)
 
