@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Leaderboards{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">NIGHTFALL RANKINGS</span><h1>Who owns the night?</h1><p>Global XP leaderboard for the Nightfall community.</p></section>
+<section class="card"><div style="display:grid;gap:10px">{% for r in rows %}<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:14px;background:rgba(255,255,255,.04)"><div><b>#{{ loop.index }} · {{ r.username }}</b><small style="display:block;opacity:.65">Level {{ r.level }}</small></div><strong>{{ r.xp }} XP</strong></div>{% else %}<p>No XP players yet. Start exploring Nightfall.</p>{% endfor %}</div></section>
+{% endblock %}
