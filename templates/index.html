@@ -44,6 +44,18 @@
   <section class="suggestion-hero" id="suggestions"><div><span class="eyebrow">SHAPE THE NIGHT</span><h2>Have an idea?</h2><p>Tell us what Nightfall should add, improve, or remove.</p></div><a class="btn primary" href="/suggestions">Suggest something <span aria-hidden="true">→</span></a></section>
 
 
+  <section class="nightfall-games" id="nightfall-games">
+    <div class="section-heading"><span class="eyebrow">NIGHTFALL ARCADE • SECRET ZONE</span><h2>Play while you hunt.</h2><p>Five tiny games are hidden in the night. Winning them can reveal extra secrets.</p></div>
+    <div class="game-menu">
+      <button class="game-tab" data-game="coin">🪙 Coin Flip</button>
+      <button class="game-tab" data-game="guess">🔢 Guess 1–20</button>
+      <button class="game-tab" data-game="reaction">⚡ Reaction</button>
+      <button class="game-tab" data-game="memory">🧠 Memory</button>
+      <button class="game-tab" data-game="tap">🌙 Night Tap</button>
+    </div>
+    <div class="game-result" id="gameResult">Choose a game above.</div>
+  </section>
+
   <section class="nightfall-premium-coming" id="premium">
     <div class="premium-coming-mark">✦</div>
     <div><span class="eyebrow">NIGHTFALL PREMIUM</span><h2>Premium is coming soon.</h2><p>AI tools, deeper customization and premium server controls are on the way.</p></div>
@@ -57,6 +69,15 @@
 
 
   <section class="nightfall-reviews" id="reviews"><div class="section-heading"><span class="eyebrow">COMMUNITY REVIEWS</span><h2>Rate Nightfall.</h2><p>Leave a rating and tell the community what you think. Reviews with spam, heavy profanity, or abusive content are automatically filtered.</p></div><div class="review-layout"><form class="review-form" id="reviewForm"><input name="name" maxlength="40" placeholder="Your name (optional)" autocomplete="nickname"><select name="rating" aria-label="Rating"><option value="5">★★★★★ — 5</option><option value="4">★★★★☆ — 4</option><option value="3">★★★☆☆ — 3</option><option value="2">★★☆☆☆ — 2</option><option value="1">★☆☆☆☆ — 1</option></select><textarea name="review" maxlength="500" required placeholder="Write your review…"></textarea><button class="btn primary" type="submit">Post review →</button><div id="reviewResult" class="review-result" role="status"></div></form><div class="review-list" id="reviewList"><p class="review-loading">Loading community reviews…</p></div></div></section>
+
+  <section class="nightfall-secret-social" id="nightfall-secret-social" hidden>
+    <div><span class="eyebrow">YOU FOUND THE HIDDEN FEED</span><h2>Nightfall, off the map.</h2><p>This social corner is intentionally hidden from the main navigation.</p></div>
+    <div class="secret-social-links">
+      <a class="secret-social-link" href="https://discord.gg/ddjhskT4VY" target="_blank" rel="noopener">💬 Secret Discord</a>
+      <a class="secret-social-link" href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">▶ Secret YouTube</a>
+      <a class="secret-social-link" href="#" onclick="return false">✦ Secret feed coming soon</a>
+    </div>
+  </section>
 
   <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
 
