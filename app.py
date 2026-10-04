@@ -1282,6 +1282,24 @@ def profile():
         except psycopg.Error: pass
     return render_template("profile.html", user=user, xp=xp, level=site_level(xp), rank=rank, followers=followers, following=following, badges=site_badges(xp), scores=scores, bio=bio, theme=theme, title=title)
 
+@app.get("/u/<discord_id>")
+def public_profile(discord_id):
+    if not DATABASE_URL:
+        return "Profiles are unavailable right now.", 503
+    try:
+        with db_connect() as conn:
+            user_row=conn.execute("SELECT username,avatar_url,xp FROM site_profiles WHERE discord_id=%s",(str(discord_id),)).fetchone()
+            if not user_row:
+                return "Profile not found.",404
+            settings=conn.execute("SELECT bio,theme,title FROM site_settings WHERE discord_id=%s",(str(discord_id),)).fetchone()
+            scores=conn.execute("SELECT game,MAX(score) FROM arcade_scores WHERE discord_id=%s GROUP BY game ORDER BY MAX(score) DESC LIMIT 10",(str(discord_id),)).fetchall()
+            followers=conn.execute("SELECT COUNT(*) FROM social_follows WHERE following_id=%s",(str(discord_id),)).fetchone()[0]
+            following=conn.execute("SELECT COUNT(*) FROM social_follows WHERE follower_id=%s",(str(discord_id),)).fetchone()[0]
+        return render_template("public_profile.html", user={"id":str(discord_id),"username":user_row[0],"avatar_url":user_row[1]}, xp=int(user_row[2]), level=site_level(user_row[2]), bio=settings[0] if settings else "", theme=settings[1] if settings else "default", title=settings[2] if settings else "", scores=[{"game":x[0],"score":x[1]} for x in scores], followers=int(followers), following=int(following), badges=site_badges(user_row[2]))
+    except psycopg.Error as exc:
+        app.logger.warning("Could not load public profile: %s", type(exc).__name__)
+        return "Profile unavailable.",503
+
 @app.get("/leaderboards")
 def leaderboards():
     rows=[]
