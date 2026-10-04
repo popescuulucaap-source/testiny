@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='nightfall-logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-motion.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=7">\n  <link rel="stylesheet" href="{{ url_for('static', filename='premium.css') }}">
 </head>
 <body>
 {% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div></div>{% endif %}
@@ -17,7 +17,7 @@
 <nav class="nav">
   <a class="brand" href="/" aria-label="Nightfall home"><img class="brand-wordmark" src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall"></a>
   <div class="nav-links">
-    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="/suggestions">Suggestions</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>
+    <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="/suggestions">Suggestions</a><a href="/premium">Premium</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support Server</a>
     <a href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">YouTube</a>
     {% if session.get('user') %}<a class="nav-pill" href="/servers">Dashboard</a>{% else %}<a class="nav-pill" href="/login">Dashboard</a>{% endif %}
   </div>
