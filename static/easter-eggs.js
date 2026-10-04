@@ -218,8 +218,53 @@ document.addEventListener("DOMContentLoaded", () => {
       const vals=["✦","☾","✧","★","✦","☾","✧","★"].sort(()=>Math.random()-.5), grid=document.getElementById("memoryGrid"); let open=[],matched=0;
       vals.forEach((v,i)=>{const b=document.createElement("button");b.className="memory-card";b.textContent="?";b.dataset.v=v;b.onclick=()=>{if(open.includes(b)||b.disabled)return;b.textContent=v;open.push(b);if(open.length===2){if(open[0].dataset.v===open[1].dataset.v){open.forEach(x=>x.disabled=true);matched++;open=[];if(matched===4)reveal(82,"MEMORY KEEPER");}else{const pair=[...open];open=[];setTimeout(()=>pair.forEach(x=>x.textContent="?"),450);}}};grid.appendChild(b);});
     }
+    if (name === "trivia") {
+      const questions = [
+        ["What command opens Nightfall setup?", "!setup", ["!setup","!ban","!help"]],
+        ["What symbol is Nightfall's default prefix?", "!", ["?","!","/"]],
+        ["Which feature protects against raid activity?", "Anti-raid", ["AFK","Anti-raid","Vouch"]]
+      ];
+      let q=0, score=0;
+      const ask=()=>{
+        const item=questions[q%questions.length];
+        result.innerHTML='<p>'+item[0]+'</p>'+item[2].map(x=>'<button class="game-action trivia-answer">'+x+'</button>').join("");
+        result.querySelectorAll(".trivia-answer").forEach(b=>b.onclick=()=>{if(b.textContent===item[1])score++;q++;if(q>=3){result.innerHTML="<p>Score: "+score+"/3</p>";if(score===3)reveal(93,"NIGHT TRIVIA");}else ask();});
+      };
+      ask();
+    }
+    if (name === "math") {
+      let round=0, score=0;
+      const nextMath=()=>{
+        const a=Math.floor(Math.random()*20)+1,b=Math.floor(Math.random()*20)+1,answer=a+b;
+        result.innerHTML='<p>'+a+' + '+b+' = ?</p><input id="mathInput" type="number"><button class="game-action" id="mathBtn">ANSWER</button><p id="mathOut"></p>';
+        document.getElementById("mathBtn").onclick=()=>{const ok=Number(document.getElementById("mathInput").value)===answer;if(ok)score++;round++;if(round>=5){document.getElementById("mathOut").textContent="Score: "+score+"/5";if(score>=4)reveal(94,"MATH RUSH");}else nextMath();};
+      };
+      nextMath();
+    }
+    if (name === "word") {
+      const words=["NIGHT","MOON","STAR","GUARD","FALL"];
+      const word=words[Math.floor(Math.random()*words.length)];
+      const scrambled=word.split("").sort(()=>Math.random()-.5).join("");
+      result.innerHTML='<p>Unscramble: <b>'+scrambled+'</b></p><input id="wordInput" maxlength="8"><button class="game-action" id="wordBtn">CHECK</button><p id="wordOut"></p>';
+      document.getElementById("wordBtn").onclick=()=>{const ok=document.getElementById("wordInput").value.trim().toUpperCase()===word;document.getElementById("wordOut").textContent=ok?"Correct!":"Try again.";if(ok)reveal(95,"WORD HUNTER");};
+    }
+    if (name === "stars") {
+      result.innerHTML='<div class="star-field" id="starField"><button class="game-action star-target">⭐</button></div><p id="starOut">Catch 8 stars.</p>';
+      let score=0;
+      const field=document.getElementById("starField");
+      const move=()=>{const b=field.querySelector(".star-target");b.style.position="absolute";b.style.left=(Math.random()*80)+"%";b.style.top=(Math.random()*70)+"%";};
+      field.querySelector(".star-target").onclick=()=>{score++;document.getElementById("starOut").textContent=score+" / 8";if(score>=8){reveal(96,"STAR CATCHER");}else move();};
+      move();
+    }
+    if (name === "pattern") {
+      const seq=Array.from({length:5},()=>Math.floor(Math.random()*4));
+      let shown=true, step=0;
+      result.innerHTML='<p id="patternOut">Watch: '+seq.map(x=>"●").join(" ")+'</p><div class="pattern-grid">'+[0,1,2,3].map(x=>'<button class="game-action pattern-btn" data-p="'+x+'">●</button>').join("")+'</div>';
+      setTimeout(()=>{shown=false;document.getElementById("patternOut").textContent="Repeat the pattern.";},1200);
+      result.querySelectorAll(".pattern-btn").forEach(b=>b.onclick=()=>{if(shown)return;const p=Number(b.dataset.p);if(p!==seq[step]){step=0;document.getElementById("patternOut").textContent="Wrong — try again.";return;}step++;if(step===seq.length){reveal(97,"PATTERN KEEPER");}});
+    }
   };
-  gameButtons.forEach(b => b.addEventListener("click", () => { setGame(b.dataset.game); reveal(83 + [...gameButtons].indexOf(b), "GAME DISCOVERY"); }));
+  gameButtons.forEach(b => b.addEventListener("click", () => { setGame(b.dataset.game); const i=[...gameButtons].indexOf(b); if(i<5) reveal(83+i, "GAME DISCOVERY"); }));
   if (gameBox) gameBox.addEventListener("mouseenter", () => reveal(88, "ARCADE SHADOW"));
   document.addEventListener("keydown", e => { if(e.key==="ArrowUp") reveal(89,"UP ARROW"); if(e.key==="Escape") reveal(90,"ESCAPE SIGNAL"); });
 
