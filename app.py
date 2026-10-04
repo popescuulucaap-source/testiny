@@ -3,6 +3,7 @@ import json
 import secrets
 import threading
 import time
+from datetime import timedelta
 from collections import deque
 from hmac import compare_digest
 from functools import wraps
@@ -14,7 +15,11 @@ import psycopg
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SESSION_SECRET", secrets.token_hex(32))
+app.secret_key = os.getenv("SESSION_SECRET", secrets.token_urlsafe(48))
+app.permanent_session_lifetime = timedelta(days=3650)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 APP_STARTED_AT = time.time()
 APP_REQUEST_COUNT = 0
 APP_METRICS_LOCK = threading.Lock()
@@ -98,6 +103,46 @@ def login_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+def refresh_discord_session():
+    if "access_token" not in session or "refresh_token" not in session:
+        return False
+    expires_at = float(session.get("token_expires_at", 0) or 0)
+    if expires_at and time.time() < expires_at - 60:
+        return True
+    try:
+        response = requests.post(
+            f"{DISCORD_API}/oauth2/token",
+            data={
+                "client_id": DISCORD_CLIENT_ID,
+                "client_secret": DISCORD_CLIENT_SECRET,
+                "grant_type": "refresh_token",
+                "refresh_token": session["refresh_token"],
+            },
+            timeout=12,
+        )
+        if response.status_code != 200:
+            return False
+        data = response.json()
+        session["access_token"] = data["access_token"]
+        if data.get("refresh_token"):
+            session["refresh_token"] = data["refresh_token"]
+        session["token_expires_at"] = time.time() + int(data.get("expires_in", 604800))
+        session.permanent = True
+        return True
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return False
+
+@app.before_request
+def require_discord_for_site():
+    endpoint = request.endpoint or ""
+    if endpoint in {"login", "oauth_callback", "health"} or endpoint.startswith("static"):
+        return None
+    if "access_token" not in session:
+        return redirect(url_for("login", next=request.path))
+    if not refresh_discord_session():
+        session.clear()
+        return redirect(url_for("login", next=request.path))
+    return None
 
 BOT_LOCK = threading.Lock()
 BOT_GUILDS = {}
@@ -245,6 +290,10 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS social_videos (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, avatar_url TEXT NOT NULL, video_url TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'pending', strikes INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS social_follows (follower_id TEXT NOT NULL, following_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (follower_id, following_id))")
             cur.execute("CREATE TABLE IF NOT EXISTS social_reports (id BIGSERIAL PRIMARY KEY, video_id BIGINT NOT NULL REFERENCES social_videos(id) ON DELETE CASCADE, reporter_id TEXT NOT NULL, reason TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS site_profiles (discord_id TEXT PRIMARY KEY, username TEXT NOT NULL, avatar_url TEXT NOT NULL DEFAULT '', xp INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS site_xp_events (discord_id TEXT NOT NULL, action TEXT NOT NULL, last_awarded TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, action))")
+            cur.execute("CREATE TABLE IF NOT EXISTS site_notifications (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
@@ -930,6 +979,11 @@ def oauth_callback():
 
     token_data = token.json()
     session["access_token"] = token_data["access_token"]
+    session["refresh_token"] = token_data.get("refresh_token", "")
+    session["token_expires_at"] = time.time() + int(token_data.get("expires_in", 604800))
+    session.permanent = True
+    session.modified = True
+    award_site_xp("login", 25)
 
     me = requests.get(f"{DISCORD_API}/users/@me", headers=discord_headers(), timeout=12)
     if me.status_code != 200:
@@ -937,7 +991,7 @@ def oauth_callback():
         return "Could not read your Discord profile.", 400
 
     session["user"] = me.json()
-    return redirect(url_for("servers"))
+    return redirect(request.args.get("next") or url_for("servers"))
 
 
 @app.get("/logout")
@@ -1087,6 +1141,116 @@ def dashboard_action(guild_id):
 def health():
     return jsonify({"ok": True, "service": "Nightfall Dashboard"})
 
+
+def current_site_user():
+    user = session.get("user") or {}
+    uid = str(user.get("id") or "")
+    if not uid:
+        return None
+    return {"id": uid, "username": str(user.get("global_name") or user.get("username") or "Discord user"), "avatar_url": str(user.get("avatar_url") or "")}
+
+def site_level(xp):
+    return max(1, int(xp // 100) + 1)
+
+def site_badges(xp):
+    badges = []
+    if xp >= 100: badges.append(("🌙", "Night Walker", "Reach 100 XP."))
+    if xp >= 500: badges.append(("⭐", "Nightfall Veteran", "Reach 500 XP."))
+    if xp >= 1000: badges.append(("👑", "Nightfall Legend", "Reach 1,000 XP."))
+    return badges
+
+def award_site_xp(action, amount=10):
+    user = current_site_user()
+    if not user or not DATABASE_URL:
+        return
+    try:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO site_profiles (discord_id, username, avatar_url) VALUES (%s,%s,%s) ON CONFLICT (discord_id) DO UPDATE SET username=EXCLUDED.username, avatar_url=EXCLUDED.avatar_url, last_seen=NOW()", (user["id"], user["username"], user["avatar_url"]))
+                cur.execute("INSERT INTO site_xp_events (discord_id, action) VALUES (%s,%s) ON CONFLICT (discord_id, action) DO UPDATE SET last_awarded=NOW() WHERE site_xp_events.last_awarded < NOW() - INTERVAL '1 hour' RETURNING discord_id", (user["id"], action))
+                if cur.fetchone():
+                    cur.execute("UPDATE site_profiles SET xp=xp+%s,last_seen=NOW() WHERE discord_id=%s", (amount, user["id"]))
+            conn.commit()
+    except psycopg.Error as exc:
+        app.logger.warning("Could not award site XP: %s", type(exc).__name__)
+
+@app.get("/profile")
+def profile():
+    user=current_site_user()
+    xp=0; rank=None; followers=0; following=0; scores=[]
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT xp FROM site_profiles WHERE discord_id=%s", (user["id"],)); row=cur.fetchone(); xp=int(row[0]) if row else 0
+                    cur.execute("SELECT COUNT(*) FROM social_follows WHERE following_id=%s", (user["id"],)); followers=int(cur.fetchone()[0])
+                    cur.execute("SELECT COUNT(*) FROM social_follows WHERE follower_id=%s", (user["id"],)); following=int(cur.fetchone()[0])
+                    cur.execute("SELECT COUNT(*)+1 FROM site_profiles WHERE xp > %s", (xp,)); rank=int(cur.fetchone()[0])
+                    cur.execute("SELECT game, MAX(score) FROM arcade_scores WHERE discord_id=%s GROUP BY game ORDER BY MAX(score) DESC LIMIT 10", (user["id"],)); scores=[{"game":r[0],"score":r[1]} for r in cur.fetchall()]
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load profile: %s", type(exc).__name__)
+    return render_template("profile.html", user=user, xp=xp, level=site_level(xp), rank=rank, followers=followers, following=following, badges=site_badges(xp), scores=scores)
+
+@app.get("/leaderboards")
+def leaderboards():
+    rows=[]
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT discord_id,username,xp FROM site_profiles ORDER BY xp DESC,created_at ASC LIMIT 100")
+                    rows=[{"discord_id":r[0],"username":r[1],"xp":r[2],"level":site_level(r[2])} for r in cur.fetchall()]
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load XP leaderboard: %s", type(exc).__name__)
+    return render_template("leaderboards.html", rows=rows)
+
+@app.get("/notifications")
+def notifications():
+    items=[]
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT id,title,body,read,created_at FROM site_notifications WHERE discord_id=%s ORDER BY id DESC LIMIT 50", (current_site_user()["id"],))
+                    items=[{"id":r[0],"title":r[1],"body":r[2],"read":r[3],"created_at":r[4]} for r in cur.fetchall()]
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load notifications: %s", type(exc).__name__)
+    return render_template("notifications.html", notifications=items)
+
+@app.post("/api/notifications/read")
+def mark_notifications_read():
+    if DATABASE_URL:
+        with db_connect() as conn:
+            conn.execute("UPDATE site_notifications SET read=TRUE WHERE discord_id=%s", (current_site_user()["id"],))
+            conn.commit()
+    return jsonify({"ok":True})
+
+@app.post("/api/xp/award")
+def api_award_xp():
+    payload=request.get_json(silent=True) or {}
+    action=str(payload.get("action") or "").strip().lower()
+    allowed={"community","arcade","secrets","suggestion","review","profile"}
+    if action not in allowed:
+        return jsonify({"ok":False,"error":"Unknown XP action."}),400
+    award_site_xp(action, 10)
+    return jsonify({"ok":True})
+
+@app.post("/api/arcade/score")
+def arcade_score():
+    payload=request.get_json(silent=True) or {}
+    game=str(payload.get("game") or "").strip()[:40]
+    try: score=int(payload.get("score",0))
+    except (TypeError,ValueError): score=-1
+    if not game or score < 0 or score > 100000000:
+        return jsonify({"ok":False,"error":"Invalid score."}),400
+    if not DATABASE_URL:
+        return jsonify({"ok":False,"error":"Leaderboard storage is unavailable."}),503
+    user=current_site_user()
+    with db_connect() as conn:
+        conn.execute("INSERT INTO arcade_scores (discord_id,username,game,score) VALUES (%s,%s,%s,%s)", (user["id"],user["username"],game,score))
+        conn.commit()
+    award_site_xp("arcade_"+game, 10)
+    return jsonify({"ok":True})
 
 COMMANDS = [
     ("!help", "Utility", "Show the bot's command help."),
