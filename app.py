@@ -543,6 +543,45 @@ def admin_support_reply(ticket_id):
             session.modified=True
     return redirect(url_for("admin_support"))
 
+@app.get("/admin/community")
+def admin_community():
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id,discord_id,username,avatar_url,video_url,title,description,status,strikes,created_at FROM social_videos ORDER BY id DESC LIMIT 200")
+            videos=[{"id":r[0],"discord_id":r[1],"username":r[2],"avatar_url":r[3],"video_url":r[4],"title":r[5],"description":r[6],"status":r[7],"strikes":r[8],"created_at":r[9].isoformat() if hasattr(r[9],"isoformat") else str(r[9])} for r in cur.fetchall()]
+            cur.execute("SELECT id,video_id,reporter_id,reason,status,created_at FROM social_reports WHERE status='open' ORDER BY id DESC")
+            reports=[{"id":r[0],"video_id":r[1],"reporter_id":r[2],"reason":r[3],"status":r[4],"created_at":r[5].isoformat() if hasattr(r[5],"isoformat") else str(r[5])} for r in cur.fetchall()]
+    return render_template("admin_community.html",videos=videos,reports=reports)
+
+@app.post("/admin/community/video/<int:video_id>/<action>")
+def admin_community_video(video_id, action):
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if action not in {"approve","delete","strike"}: return "Unknown action.",400
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            if action=="approve":
+                cur.execute("UPDATE social_videos SET status='approved' WHERE id=%s",(video_id,))
+            elif action=="delete":
+                cur.execute("UPDATE social_videos SET status='removed' WHERE id=%s",(video_id,))
+            else:
+                cur.execute("UPDATE social_videos SET strikes=strikes+1,status='removed' WHERE id=%s",(video_id,))
+                cur.execute("SELECT discord_id,strikes FROM social_videos WHERE id=%s",(video_id,))
+                row=cur.fetchone()
+                if row and row[1] >= 3:
+                    cur.execute("UPDATE social_videos SET status='blocked' WHERE discord_id=%s",(row[0],))
+            cur.execute("UPDATE social_reports SET status='resolved' WHERE video_id=%s",(video_id,))
+        conn.commit()
+    return redirect(url_for("admin_community"))
+
+@app.post("/admin/community/report/<int:report_id>/resolve")
+def admin_community_report(report_id):
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    with db_connect() as conn:
+        conn.execute("UPDATE social_reports SET status='resolved' WHERE id=%s",(report_id,))
+        conn.commit()
+    return redirect(url_for("admin_community"))
+
 @app.post("/admin/support/<int:ticket_id>/close")
 def admin_support_close(ticket_id):
     if not session.get("admin"): return redirect(url_for("admin_login"))
