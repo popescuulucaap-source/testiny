@@ -238,6 +238,8 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS reviews (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, rating INTEGER NOT NULL, review TEXT NOT NULL, date TEXT NOT NULL, approved BOOLEAN NOT NULL DEFAULT TRUE)")
+            cur.execute("CREATE TABLE IF NOT EXISTS support_tickets (id BIGSERIAL PRIMARY KEY, token TEXT UNIQUE NOT NULL, name TEXT NOT NULL, subject TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS support_messages (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE, sender TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
@@ -417,6 +419,153 @@ def admin_logout():
     return redirect(url_for("index"))
 
 
+
+
+
+@app.route("/support")
+def support():
+    return render_template("support.html")
+
+def _support_ticket_row(row):
+    return {
+        "id": row[0],
+        "token": row[1],
+        "name": row[2],
+        "subject": row[3],
+        "status": row[4],
+        "created_at": row[5].isoformat() if hasattr(row[5], "isoformat") else str(row[5]),
+        "updated_at": row[6].isoformat() if hasattr(row[6], "isoformat") else str(row[6]),
+    }
+
+@app.post("/api/support/tickets")
+def create_support_ticket():
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "Anonymous").strip()[:40] or "Anonymous"
+    subject = str(payload.get("subject") or "Nightfall support").strip()[:120] or "Nightfall support"
+    message = str(payload.get("message") or "").strip()[:2000]
+    if not message:
+        return jsonify({"ok": False, "error": "Write a message first."}), 400
+    token = secrets.token_urlsafe(24)
+    if not DATABASE_URL:
+        tickets = session.get("support_tickets", [])
+        ticket = {"id": len(tickets) + 1, "token": token, "name": name, "subject": subject, "status": "open", "messages": [{"from": "user", "text": message, "time": time.time()}]}
+        tickets.insert(0, ticket)
+        session["support_tickets"] = tickets[:30]
+        return jsonify({"ok": True, "ticket": {"id": ticket["id"], "token": token, "status": "open"}})
+    now = __import__("datetime").datetime.utcnow()
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO support_tickets (token, name, subject, status, created_at, updated_at) VALUES (%s,%s,%s,'open',%s,%s) RETURNING id", (token,name,subject,now,now))
+            ticket_id = cur.fetchone()[0]
+            cur.execute("INSERT INTO support_messages (ticket_id, sender, message, created_at) VALUES (%s,'user',%s,%s)", (ticket_id,message,now))
+        conn.commit()
+    return jsonify({"ok": True, "ticket": {"id": ticket_id, "token": token, "status": "open"}})
+
+@app.get("/api/support/tickets/<token>")
+def get_support_ticket(token):
+    if not DATABASE_URL:
+        ticket = next((x for x in session.get("support_tickets", []) if x.get("token") == token), None)
+        if not ticket: return jsonify({"ok": False, "error": "Support ticket not found."}), 404
+        return jsonify({"ok": True, "ticket": ticket})
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, token, name, subject, status, created_at, updated_at FROM support_tickets WHERE token=%s", (token,))
+            row=cur.fetchone()
+            if not row: return jsonify({"ok": False, "error": "Support ticket not found."}), 404
+            ticket=_support_ticket_row(row)
+            cur.execute("SELECT sender, message, created_at FROM support_messages WHERE ticket_id=%s ORDER BY id ASC", (row[0],))
+            ticket["messages"]=[{"from":r[0],"text":r[1],"time":r[2].isoformat() if hasattr(r[2],"isoformat") else str(r[2])} for r in cur.fetchall()]
+    return jsonify({"ok": True, "ticket": ticket})
+
+@app.post("/api/support/tickets/<token>/messages")
+def add_support_message(token):
+    payload=request.get_json(silent=True) or {}
+    message=str(payload.get("message") or "").strip()[:2000]
+    if not message: return jsonify({"ok":False,"error":"Write a message first."}),400
+    if not DATABASE_URL:
+        tickets=session.get("support_tickets",[])
+        ticket=next((x for x in tickets if x.get("token")==token),None)
+        if not ticket: return jsonify({"ok":False,"error":"Support ticket not found."}),404
+        ticket.setdefault("messages",[]).append({"from":"user","text":message,"time":time.time()})
+        session["support_tickets"]=tickets
+        return jsonify({"ok":True})
+    now=__import__("datetime").datetime.utcnow()
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id,status FROM support_tickets WHERE token=%s",(token,))
+            row=cur.fetchone()
+            if not row: return jsonify({"ok":False,"error":"Support ticket not found."}),404
+            if row[1] == "closed": return jsonify({"ok":False,"error":"This ticket is closed."}),400
+            cur.execute("INSERT INTO support_messages (ticket_id,sender,message,created_at) VALUES (%s,'user',%s,%s)",(row[0],message,now))
+            cur.execute("UPDATE support_tickets SET updated_at=%s,status='open' WHERE id=%s",(now,row[0]))
+        conn.commit()
+    return jsonify({"ok":True})
+
+@app.get("/admin/support")
+def admin_support():
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if DATABASE_URL:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, token, name, subject, status, created_at, updated_at FROM support_tickets ORDER BY updated_at DESC LIMIT 100")
+                tickets=[_support_ticket_row(r) for r in cur.fetchall()]
+                for t in tickets:
+                    cur.execute("SELECT sender, message, created_at FROM support_messages WHERE ticket_id=%s ORDER BY id ASC",(t["id"],))
+                    t["messages"]=[{"from":r[0],"text":r[1],"time":r[2].isoformat() if hasattr(r[2],"isoformat") else str(r[2])} for r in cur.fetchall()]
+    else:
+        tickets=session.get("support_tickets",[])
+    return render_template("admin_support.html", tickets=tickets)
+
+@app.post("/admin/support/<int:ticket_id>/reply")
+def admin_support_reply(ticket_id):
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    message=(request.form.get("message") or "").strip()[:2000]
+    if message:
+        if DATABASE_URL:
+            now=__import__("datetime").datetime.utcnow()
+            with db_connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("INSERT INTO support_messages (ticket_id,sender,message,created_at) VALUES (%s,'admin',%s,%s)",(ticket_id,message,now))
+                    cur.execute("UPDATE support_tickets SET updated_at=%s WHERE id=%s",(now,ticket_id))
+                conn.commit()
+        else:
+            for t in session.get("support_tickets",[]):
+                if int(t.get("id",0)) == ticket_id:
+                    t.setdefault("messages",[]).append({"from":"admin","text":message,"time":time.time()})
+                    break
+            session.modified=True
+    return redirect(url_for("admin_support"))
+
+@app.post("/admin/support/<int:ticket_id>/close")
+def admin_support_close(ticket_id):
+    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if DATABASE_URL:
+        with db_connect() as conn:
+            conn.execute("UPDATE support_tickets SET status='closed', updated_at=NOW() WHERE id=%s",(ticket_id,))
+            conn.commit()
+    else:
+        for t in session.get("support_tickets",[]):
+            if int(t.get("id",0)) == ticket_id: t["status"]="closed"
+        session.modified=True
+    return redirect(url_for("admin_support"))
+
+@app.post("/api/support/ai")
+def support_ai():
+    payload=request.get_json(silent=True) or {}
+    message=str(payload.get("message") or "").strip()[:2000]
+    if not message: return jsonify({"ok":False,"error":"Write a message first."}),400
+    key=os.getenv("OPENROUTER_API_KEY","").strip()
+    if not key:
+        return jsonify({"ok":True,"answer":"I’m Nightfall’s support helper. I can explain commands, setup, tickets, moderation, Premium, and website features. For account-specific or technical problems, use Talk to an Admin."})
+    model=os.getenv("OPENROUTER_TEXT_MODEL","openrouter/free")
+    try:
+        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Nightfall Support"},json={"model":model,"messages":[{"role":"system","content":"You are Nightfall Discord bot's website support assistant. Be concise, friendly, safe, and accurate. Explain Nightfall features and basic troubleshooting. Never ask for passwords, API keys, tokens, or other secrets. If a problem requires access to a server/account, tell the user to contact an admin."},{"role":"user","content":message}]},timeout=20)
+        data=r.json()
+        answer=((data.get("choices") or [{}])[0].get("message") or {}).get("content")
+        if not answer: raise ValueError("empty")
+        return jsonify({"ok":True,"answer":str(answer)[:5000]})
+    except Exception:
+        return jsonify({"ok":True,"answer":"I couldn’t reach the AI service right now. Please use Talk to an Admin and we’ll help you directly."})
 
 @app.route("/suggestions", methods=["GET","POST"])
 def suggestions():
