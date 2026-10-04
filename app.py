@@ -294,6 +294,8 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS site_xp_events (discord_id TEXT NOT NULL, action TEXT NOT NULL, last_awarded TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, action))")
             cur.execute("CREATE TABLE IF NOT EXISTS site_notifications (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS site_settings (discord_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', theme TEXT NOT NULL DEFAULT 'default', title TEXT NOT NULL DEFAULT '')")
+            cur.execute("CREATE TABLE IF NOT EXISTS site_achievements (discord_id TEXT NOT NULL, achievement TEXT NOT NULL, unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, achievement))")
         conn.commit()
 
 def load_announcements():
@@ -1142,6 +1144,85 @@ def health():
     return jsonify({"ok": True, "service": "Nightfall Dashboard"})
 
 
+
+ACHIEVEMENTS = [
+    ("first_steps", "🌱 First Steps", "Earn your first 100 XP.", 100),
+    ("night_walker", "🌙 Night Walker", "Reach level 5.", 500),
+    ("veteran", "⭐ Nightfall Veteran", "Reach 10,000 XP.", 10000),
+    ("secret_hunter", "🥚 Secret Hunter", "Discover 10 Nightfall secrets.", 0),
+    ("arcade_regular", "🎮 Arcade Regular", "Submit an Arcade score.", 0),
+]
+
+DAILY_CHALLENGES = [
+    ("arcade", "Play an Arcade game", "Play any Nightfall Arcade game today.", 50),
+    ("community", "Visit Community", "Check out the Nightfall Community feed.", 25),
+    ("secrets", "Hunt the Night", "Explore Nightfall Secrets.", 25),
+    ("leaderboard", "Check the rankings", "Visit the global leaderboard.", 15),
+]
+
+def daily_challenge():
+    import datetime as _dt
+    day = _dt.date.today().toordinal()
+    return DAILY_CHALLENGES[day % len(DAILY_CHALLENGES)]
+
+def sync_achievements():
+    user=current_site_user()
+    if not user or not DATABASE_URL: return
+    try:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT xp FROM site_profiles WHERE discord_id=%s",(user["id"],))
+                row=cur.fetchone(); xp=int(row[0]) if row else 0
+                unlocked=[]
+                if xp>=100: unlocked.append("first_steps")
+                if xp>=500: unlocked.append("night_walker")
+                if xp>=10000: unlocked.append("veteran")
+                for key in unlocked:
+                    cur.execute("INSERT INTO site_achievements (discord_id,achievement) VALUES (%s,%s) ON CONFLICT DO NOTHING",(user["id"],key))
+            conn.commit()
+    except psycopg.Error as exc:
+        app.logger.warning("Could not sync achievements: %s", type(exc).__name__)
+
+@app.get("/achievements")
+def achievements():
+    sync_achievements()
+    unlocked=set()
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT achievement FROM site_achievements WHERE discord_id=%s",(current_site_user()["id"],))
+                    unlocked={r[0] for r in cur.fetchall()}
+        except psycopg.Error: pass
+    return render_template("achievements.html", achievements=[{"key":k,"name":n,"desc":d,"unlocked":k in unlocked} for k,n,d,_ in ACHIEVEMENTS])
+
+@app.get("/daily")
+def daily():
+    key,title,desc,reward=daily_challenge()
+    return render_template("daily.html", key=key,title=title,description=desc,reward=reward)
+
+@app.post("/api/daily/claim")
+def claim_daily():
+    key,title,desc,reward=daily_challenge()
+    award_site_xp("daily_"+key, reward)
+    sync_achievements()
+    return jsonify({"ok":True,"message":f"Daily challenge tracked: +{reward} XP."})
+
+@app.post("/api/profile")
+def update_profile():
+    payload=request.get_json(silent=True) or {}
+    bio=str(payload.get("bio") or "").strip()[:160]
+    theme=str(payload.get("theme") or "default").strip()[:30]
+    title=str(payload.get("title") or "").strip()[:40]
+    allowed_themes={"default","midnight","nebula","ember"}
+    if theme not in allowed_themes: theme="default"
+    if not DATABASE_URL: return jsonify({"ok":False,"error":"Profile storage is unavailable."}),503
+    user=current_site_user()
+    with db_connect() as conn:
+        conn.execute("INSERT INTO site_settings (discord_id,bio,theme,title) VALUES (%s,%s,%s,%s) ON CONFLICT (discord_id) DO UPDATE SET bio=EXCLUDED.bio,theme=EXCLUDED.theme,title=EXCLUDED.title",(user["id"],bio,theme,title))
+        conn.commit()
+    return jsonify({"ok":True})
+
 def current_site_user():
     user = session.get("user") or {}
     uid = str(user.get("id") or "")
@@ -1192,7 +1273,14 @@ def profile():
                     cur.execute("SELECT game, MAX(score) FROM arcade_scores WHERE discord_id=%s GROUP BY game ORDER BY MAX(score) DESC LIMIT 10", (user["id"],)); scores=[{"game":r[0],"score":r[1]} for r in cur.fetchall()]
         except psycopg.Error as exc:
             app.logger.warning("Could not load profile: %s", type(exc).__name__)
-    return render_template("profile.html", user=user, xp=xp, level=site_level(xp), rank=rank, followers=followers, following=following, badges=site_badges(xp), scores=scores)
+    bio=""; theme="default"; title=""
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row=conn.execute("SELECT bio,theme,title FROM site_settings WHERE discord_id=%s",(user["id"],)).fetchone()
+                if row: bio,theme,title=row
+        except psycopg.Error: pass
+    return render_template("profile.html", user=user, xp=xp, level=site_level(xp), rank=rank, followers=followers, following=following, badges=site_badges(xp), scores=scores, bio=bio, theme=theme, title=title)
 
 @app.get("/leaderboards")
 def leaderboards():
