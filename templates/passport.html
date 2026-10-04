@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Passport{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">NIGHTFALL PASSPORT</span><h1>{{ user.username }}'s journey.</h1><p>Your complete Nightfall progression.</p></section>
+<section class="cards"><article class="card"><span class="eyebrow">LEVEL</span><h2>{{ level }}</h2><p>{{ xp }} XP</p></article><article class="card"><span class="eyebrow">STREAK</span><h2>🔥 {{ streak }}</h2><p>Daily activity streak.</p></article><article class="card"><span class="eyebrow">REPUTATION</span><h2>{{ reputation }}</h2><p>Community reputation.</p></article><article class="card"><span class="eyebrow">ACHIEVEMENTS</span><h2>{{ achievements|length }}</h2><p>Unlocked milestones.</p></article></section>
+<section class="section"><div class="section-heading"><span class="eyebrow">ARCADE</span><h2>Your best runs</h2></div><div class="cards">{% for s in scores %}<article class="card"><h3>{{ s.game }}</h3><p>{{ s.score }} points</p></article>{% else %}<article class="card"><p>No scores yet.</p></article>{% endfor %}</div></section>
+<section class="card"><a class="btn primary" href="/profile">Edit profile</a> <a class="btn" href="/achievements">View achievements</a></section>
+{% endblock %}
