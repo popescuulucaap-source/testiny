@@ -426,6 +426,10 @@ def admin_logout():
 def support():
     return render_template("support.html")
 
+@app.route("/secrets")
+def secrets_page():
+    return render_template("secrets.html")
+
 def _support_ticket_row(row):
     return {
         "id": row[0],
