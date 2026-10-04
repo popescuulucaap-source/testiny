@@ -3,6 +3,7 @@
 {% block content %}
 <section class="section suggestion-page">
   <div class="section-heading"><span class="eyebrow">NIGHTFALL • COMMUNITY FEEDBACK</span><h1>What should we build next?</h1><p>Suggest a feature, command, improvement, or something you think Nightfall should remove.</p></div>
+  <div class="suggestion-public-badge"><span>✦</span> PUBLIC COMMUNITY BOARD <span>✦</span></div>
   <div class="suggestion-form card">
     {% if submitted %}<div class="suggestion-success"><b>✓ Suggestion received.</b><span>Thanks for helping shape Nightfall.</span></div>
     {% else %}
@@ -16,6 +17,7 @@
   </div>
 </section>
 <style>
+.suggestion-public-badge{width:min(900px,88%);margin:0 auto 14px;text-align:center;color:#9fa8bd;font-size:11px;letter-spacing:.16em;font-weight:800;opacity:.85}.suggestion-public-badge span{color:#a58cff;margin:0 7px}.suggestion-form{position:relative;overflow:hidden}.suggestion-form:before{content:"";position:absolute;inset:-40%;background:radial-gradient(circle at 20% 20%,rgba(132,92,255,.13),transparent 28%),radial-gradient(circle at 85% 70%,rgba(64,214,255,.08),transparent 25%);animation:suggestion-aura 10s ease-in-out infinite alternate;pointer-events:none}.suggestion-form>*{position:relative}@keyframes suggestion-aura{to{transform:translate(5%,4%) scale(1.08)}}
 .suggestion-page{width:min(900px,88%);margin:70px auto 100px}.suggestion-page .section-heading{max-width:720px}.suggestion-page h1{font-size:clamp(42px,6vw,70px);letter-spacing:-.05em;margin:16px 0}.suggestion-form{padding:30px;margin-top:30px;background:linear-gradient(145deg,#15172aee,#0b0e16ee);animation:suggestion-form-in .7s ease both}.suggestion-form form{display:grid;gap:20px}.suggestion-form label{display:grid;gap:8px;color:#b8bfd0;font-size:12px;font-weight:700}.suggestion-form input,.suggestion-form textarea{width:100%;box-sizing:border-box;padding:14px 15px;border:1px solid #ffffff12;border-radius:12px;background:#080b12;color:#eef0fa;outline:none;font:inherit}.suggestion-form textarea{min-height:170px;resize:vertical}.suggestion-form input:focus,.suggestion-form textarea:focus{border-color:#8b5cf677;box-shadow:0 0 25px #8b5cf614}.suggestion-success{display:grid;gap:8px;text-align:center;padding:40px;color:#dce3ef}.suggestion-success b{font-size:20px;color:#72e9c0}@keyframes suggestion-form-in{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:none}}
 </style>
 {% endblock %}
