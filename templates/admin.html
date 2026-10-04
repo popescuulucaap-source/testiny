@@ -26,6 +26,7 @@
  <article class="admin-stat admin-stat-feature"><span>VERIFICATION</span><b>{{ stats.verification_servers }}</b><small>Servers with verification configured</small></article>
  <article class="admin-stat admin-stat-feature"><span>TICKETS</span><b>{{ stats.ticket_servers }}</b><small>Servers with a ticket panel or options configured</small></article>
 </section>
+<div class="card admin-list admin-suggestions-card"><div><h3>Support inbox</h3><p>Reply to community support tickets from the website.</p></div><a class="btn primary" href="/admin/support">Open support inbox →</a></div>
 <div class="card admin-list admin-suggestions-card"><div><h3>Suggestion inbox</h3><p>Read ideas submitted by your community and use them to plan Nightfall updates.</p></div><a class="btn primary" href="/suggestions/list">Open suggestions →</a></div>
 <div class="card admin-list"><h3>Connected Discord servers</h3>{% for guild in bot_guilds %}<div class="admin-row"><div><b>{{ guild.name }}</b><span> · {{ guild.member_count if guild.member_count is not none else 'Member count unavailable' }} members</span></div><code>{{ guild.id }}</code></div>{% else %}<p>No server heartbeat data has arrived yet.</p>{% endfor %}</div>
 {% if not database_enabled %}<div class="card admin-list"><h3>Persistence is not connected</h3><p>Add the <code>DATABASE_URL</code> environment variable in Render and connect a Render Postgres database. Without it, admin content uses temporary session storage.</p></div>{% endif %}
