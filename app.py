@@ -1446,6 +1446,7 @@ def arcade_score():
         conn.execute("INSERT INTO arcade_scores (discord_id,username,game,score) VALUES (%s,%s,%s,%s)", (user["id"],user["username"],game,score))
         conn.commit()
     award_site_xp("arcade_"+game, 10)
+    sync_achievements()
     return jsonify({"ok":True})
 
 COMMANDS = [
