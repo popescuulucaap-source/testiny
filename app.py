@@ -666,6 +666,9 @@ def _official_youtube_videos(limit=15):
 
 
 @app.get("/community")
+def mark_community_visit():
+    session["daily_community_visit"]=True
+
 def community():
     return render_template("community.html", social_user=_social_user())
 
@@ -1280,6 +1283,7 @@ def award_site_xp(action, amount=10):
 
 @app.get("/profile")
 def profile():
+    sync_achievements()
     user=current_site_user()
     xp=0; rank=None; followers=0; following=0; scores=[]
     if DATABASE_URL:
@@ -1320,8 +1324,25 @@ def public_profile(discord_id):
         app.logger.warning("Could not load public profile: %s", type(exc).__name__)
         return "Profile unavailable.",503
 
+@app.get("/nightfall-passport")
+def nightfall_passport():
+    user=current_site_user(); sync_achievements()
+    xp=0; streak=0; achievements=[]; scores=[]; reputation=0
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row=conn.execute("SELECT xp FROM site_profiles WHERE discord_id=%s",(user["id"],)).fetchone(); xp=int(row[0]) if row else 0
+                st=conn.execute("SELECT streak FROM site_settings WHERE discord_id=%s",(user["id"],)).fetchone(); streak=int(st[0]) if st else 0
+                achievements=[x[0] for x in conn.execute("SELECT achievement FROM site_achievements WHERE discord_id=%s ORDER BY unlocked_at",(user["id"],)).fetchall()]
+                scores=[{"game":x[0],"score":x[1]} for x in conn.execute("SELECT game,MAX(score) FROM arcade_scores WHERE discord_id=%s GROUP BY game ORDER BY MAX(score) DESC",(user["id"],)).fetchall()]
+                rep=conn.execute("SELECT score FROM site_reputation WHERE discord_id=%s",(user["id"],)).fetchone(); reputation=int(rep[0]) if rep else 0
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load passport: %s", type(exc).__name__)
+    return render_template("passport.html",user=user,xp=xp,level=site_level(xp),streak=streak,achievements=achievements,scores=scores,reputation=reputation)
+
 @app.get("/leaderboards")
 def leaderboards():
+    session["daily_leaderboard_visit"]=True
     rows=[]
     if DATABASE_URL:
         try:
