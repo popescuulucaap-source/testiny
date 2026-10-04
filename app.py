@@ -1147,7 +1147,10 @@ def current_site_user():
     uid = str(user.get("id") or "")
     if not uid:
         return None
-    return {"id": uid, "username": str(user.get("global_name") or user.get("username") or "Discord user"), "avatar_url": str(user.get("avatar_url") or "")}
+    avatar = str(user.get("avatar_url") or "")
+    if not avatar and user.get("avatar"):
+        avatar = f"https://cdn.discordapp.com/avatars/{uid}/{user['avatar']}.png?size=128"
+    return {"id": uid, "username": str(user.get("global_name") or user.get("username") or "Discord user"), "avatar_url": avatar}
 
 def site_level(xp):
     return max(1, int(xp // 100) + 1)
