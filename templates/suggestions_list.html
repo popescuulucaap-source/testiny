@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Suggestion Inbox{% endblock %}
+{% block content %}
+<section class="section suggestion-page">
+<div class="section-heading"><span class="eyebrow">ADMIN • SUGGESTIONS</span><h1>Suggestion inbox</h1></div>
+<div class="cards">{% for item in suggestions %}<article class="card home-feature-card"><span class="feature-number">{{ item.date }}</span><h3>{{ item.name }}</h3><p>{{ item.suggestion }}</p></article>{% else %}<p>No suggestions yet.</p>{% endfor %}</div>
+</section>
+{% endblock %}
