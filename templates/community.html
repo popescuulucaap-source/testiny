@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Nightfall • Community{% endblock %}
 {% block content %}
-<section class="page-head community-head"><span class="eyebrow">NIGHTFALL COMMUNITY</span><h1>Scroll the Night.</h1><p>Nightfall videos, creators and updates — with Discord identities at the center.</p></section>
+<section class="page-head community-head"><span class="eyebrow">NIGHTFALL COMMUNITY</span><h1>Scroll the Night.</h1><p>Official Nightfall uploads appear automatically, while community videos must be published by a moderator.</p></section>
 <section class="community-toolbar">
-  <div><b>Nightfall Social</b><span>Only moderator-approved Nightfall content appears here.</span></div>
+  <div><b>Nightfall Social</b><span>Official YouTube uploads are automatic. Community videos stay hidden until you publish them.</span></div>
   {% if social_user %}<button class="btn primary" id="openUpload">Post a video →</button>{% else %}<a class="btn primary" href="/login">Login with Discord to post →</a>{% endif %}
 </section>
 <section id="uploadPanel" class="social-upload" hidden>
-  <h2>Submit a Nightfall video</h2><p>Use a YouTube HTTPS link. Every submission is reviewed before it enters the feed.</p>
+  <h2>Publish a community video</h2><p>Submit a YouTube HTTPS link. It stays private from the feed until a Nightfall moderator publishes it.</p>
   <form id="uploadForm"><input name="title" maxlength="120" placeholder="Video title" required><input name="video_url" placeholder="https://youtube.com/..." required><textarea name="description" maxlength="500" placeholder="What is this Nightfall video about?"></textarea><button class="btn primary">Submit for review →</button><span id="uploadResult"></span></form>
 </section>
 <section class="social-feed" id="socialFeed"><div class="social-loading">Loading the Nightfall feed…</div></section>
