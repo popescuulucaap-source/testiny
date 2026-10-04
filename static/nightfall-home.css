@@ -395,3 +395,102 @@
   .home-page .hero h1{font-size:clamp(43px,11.8vw,66px)}
   .home-page .hero h1 span{display:inline!important}
 }
+
+/* ===== NIGHTFALL CINEMATIC BACKGROUND V4 ===== */
+.home-page{
+  background:#04050a;
+  background-image:
+    radial-gradient(circle at 50% 9%,rgba(145,111,255,.22),transparent 28%),
+    radial-gradient(circle at 8% 38%,rgba(55,210,255,.12),transparent 30%),
+    radial-gradient(circle at 92% 58%,rgba(208,72,255,.11),transparent 30%),
+    linear-gradient(180deg,#060711 0%,#070813 42%,#03040a 100%);
+}
+.home-page:before{
+  content:"";
+  position:absolute;
+  inset:-25%;
+  z-index:-2;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse 28% 11% at 18% 20%,rgba(110,88,255,.34),transparent 70%),
+    radial-gradient(ellipse 30% 10% at 78% 34%,rgba(62,222,255,.23),transparent 70%),
+    radial-gradient(ellipse 26% 9% at 38% 67%,rgba(244,75,205,.18),transparent 70%),
+    radial-gradient(ellipse 25% 8% at 72% 82%,rgba(107,92,255,.17),transparent 70%);
+  filter:blur(32px);
+  animation:nf-aurora-drift 18s ease-in-out infinite alternate;
+}
+.home-page:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:.42;
+  background-image:
+    radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.5px),
+    radial-gradient(circle,rgba(108,221,255,.55) 0 1px,transparent 1.5px),
+    radial-gradient(circle,rgba(178,132,255,.42) 0 1px,transparent 1.4px);
+  background-size:113px 127px,191px 173px,271px 229px;
+  background-position:17px 21px,71px 9px,41px 87px;
+  mask-image:linear-gradient(to bottom,transparent 0,#000 9%,#000 88%,transparent 100%);
+  animation:nf-starfield 55s linear infinite;
+}
+.home-page .hero:before{
+  content:"";
+  position:absolute;
+  width:38vw;
+  height:38vw;
+  max-width:520px;
+  max-height:520px;
+  left:43%;
+  top:5%;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,rgba(238,235,255,.22),rgba(151,112,255,.10) 28%,transparent 68%);
+  filter:blur(8px);
+  pointer-events:none;
+  z-index:-1;
+  animation:nf-moon-breathe 8s ease-in-out infinite;
+}
+@keyframes nf-aurora-drift{
+  0%{transform:translate3d(-4%,-2%,0) rotate(-1deg) scale(1)}
+  50%{transform:translate3d(3%,3%,0) rotate(1deg) scale(1.07)}
+  100%{transform:translate3d(-1%,6%,0) rotate(-2deg) scale(1.03)}
+}
+@keyframes nf-starfield{to{background-position:177px 121px,31px 119px,151px 7px}}
+@keyframes nf-moon-breathe{0%,100%{opacity:.55;scale:.94}50%{opacity:.95;scale:1.08}}
+
+/* Solid hero typography — no transparent gradient text */
+.home-page .hero h1 span{
+  display:inline-block!important;
+  background:none!important;
+  background-image:none!important;
+  -webkit-background-clip:initial!important;
+  background-clip:initial!important;
+  -webkit-text-fill-color:#cfc5ff!important;
+  color:#cfc5ff!important;
+  text-shadow:0 0 26px rgba(157,132,255,.28);
+  opacity:1!important;
+}
+.home-page ::selection{
+  background:rgba(139,92,246,.78)!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  text-shadow:none!important;
+}
+.easter-egg-panel{
+  width:min(900px,88%);
+  margin:0 auto 90px;
+  padding:32px 38px;
+  border:1px solid rgba(160,139,255,.24);
+  border-radius:24px;
+  background:linear-gradient(120deg,rgba(91,66,157,.18),rgba(20,24,40,.86));
+  box-shadow:0 25px 90px rgba(0,0,0,.35),0 0 50px rgba(120,92,255,.08);
+}
+.easter-egg-panel:not([hidden]){display:block;animation:egg-reveal .55s cubic-bezier(.2,.8,.2,1) both}
+.easter-egg-panel h2{margin:9px 0;font-size:clamp(25px,4vw,42px)}
+.easter-egg-panel p{margin:0;color:#aeb6c8}
+@keyframes egg-reveal{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .home-page:before,.home-page:after,.home-page .hero:before{animation:none!important}
+}
