@@ -4,11 +4,11 @@
 <div class="home-page">
   <section class="hero" id="hero">
     <div class="hero-copy">
-      <div class="eyebrow home-eyebrow"><span class="signal-dot"></span> NIGHTFALL • 1.0v LAUNCH</div>
+      <div class="eyebrow home-eyebrow"><span class="signal-dot"></span> NIGHTFALL • 1.0v UPDATE</div>
       <h1>Your server.<br><span>After dark.</span></h1>
       <p class="lead">🌙 Nightfall is your all-in-one Discord guardian: smooth moderation, smart server safety, tickets, invites, giveaways, games, and creative tools. Set up your server with <code>!setup</code>, then let the night run smoother. ✨</p>
       <div class="actions"><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a><a class="btn ghost" href="/commands">Explore commands <span aria-hidden="true">→</span></a></div>
-      <div class="trust-row"><span>✦ 1.0v LAUNCH</span><span>✦ Admin controls</span><span>✦ {{ command_count }} commands</span></div>
+      <div class="trust-row"><span>✦ 1.0v UPDATE</span><span>✦ Admin controls</span><span>✦ {{ command_count }} commands</span></div>
     </div>
     <div class="hero-card home-visual" aria-label="Nightfall bird emblem">
       <div class="visual-halo"></div><div class="visual-orbit visual-orbit-one"></div><div class="visual-orbit visual-orbit-two"></div>
@@ -20,7 +20,7 @@
 
   <section class="home-about" id="about">
     <div class="about-wordmark-wrap"><img src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall wordmark"><span>BUILT FOR DISCORD.</span></div>
-    <div class="about-copy"><span class="eyebrow">ABOUT • 1.0v LAUNCH</span><p>🌙 Nightfall keeps the busywork out of your way with moderation, security, tickets, invites, games, and creative tools—so your community can shine. ✨</p><div class="about-actions"><a class="about-copy-link" href="/commands">Explore all commands ↗</a></div></div>
+    <div class="about-copy"><span class="eyebrow">ABOUT • 1.0v UPDATE</span><p>🌙 Nightfall keeps the busywork out of your way with moderation, security, tickets, invites, games, and creative tools—so your community can shine. ✨</p><div class="about-actions"><a class="about-copy-link" href="/commands">Explore all commands ↗</a></div></div>
   </section>
 
   <section class="home-ribbon" aria-label="Nightfall capabilities"><span>MODERATION</span><i>✦</i><span>SECURITY</span><i>✦</i><span>COMMUNITY</span><i>✦</i><span>TICKETS</span><i>✦</i><span>GIVEAWAYS</span><i>✦</i><span>GAMES</span></section>
@@ -39,6 +39,6 @@
 
   <section class="home-command-band" id="commands"><div><span class="eyebrow">THE COMMAND LIBRARY</span><h2>Clear commands.<br>Quick answers.</h2><p>Browse {{ command_count }} tools, search by name or task, and copy a command format in one click.</p><a class="btn ghost" href="/commands">Find your command <span aria-hidden="true">↗</span></a></div><div class="command-stack" aria-hidden="true"><div class="command-line"><span>!</span> setup <i>SERVER CONFIGURATION</i></div><div class="command-line"><span>!</span> 8ball will it be a good night? <i>FUN</i></div><div class="command-line"><span>!</span> ask why is the sky blue? <i>AI STUDIO</i></div><div class="command-line"><span>!</span> ticket panel <i>COMMUNITY SUPPORT</i></div></div></section>
 
-  <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
+  <section class="suggestion-hero" id="suggestions"><div><span class="eyebrow">SHAPE THE NIGHT</span><h2>Have an idea?</h2><p>Tell us what Nightfall should add, improve, or remove.</p></div><a class="btn primary" href="/suggestions">Suggest something <span aria-hidden="true">→</span></a></section>\n\n  <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
 </div>
 {% endblock %}
