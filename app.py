@@ -1154,15 +1154,14 @@ ACHIEVEMENTS = [
     ("veteran", "⭐ Nightfall Veteran", "Reach 10,000 XP.", 10000),
     ("secret_hunter", "🥚 Secret Hunter", "Discover 10 Nightfall secrets.", 0),
     ("arcade_regular", "🎮 Arcade Regular", "Submit an Arcade score.", 0),
+    ("social", "💬 Social Night", "Leave your first Community comment.", 0),
+    ("popular", "👥 Night Circle", "Reach 5 followers.", 0),
 ]
-
 DAILY_CHALLENGES = [
-    ("arcade", "Play an Arcade game", "Play any Nightfall Arcade game today.", 50),
-    ("community", "Visit Community", "Check out the Nightfall Community feed.", 25),
-    ("secrets", "Hunt the Night", "Explore Nightfall Secrets.", 25),
-    ("leaderboard", "Check the rankings", "Visit the global leaderboard.", 15),
+    ("arcade", "Play an Arcade game", "Submit an Arcade score today.", 50),
+    ("community", "Visit Community", "Open the Community feed today.", 25),
+    ("leaderboard", "Check the rankings", "Visit the global leaderboard today.", 15),
 ]
-
 def daily_challenge():
     import datetime as _dt
     day = _dt.date.today().toordinal()
@@ -1173,15 +1172,20 @@ def sync_achievements():
     if not user or not DATABASE_URL: return
     try:
         with db_connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT xp FROM site_profiles WHERE discord_id=%s",(user["id"],))
-                row=cur.fetchone(); xp=int(row[0]) if row else 0
-                unlocked=[]
-                if xp>=100: unlocked.append("first_steps")
-                if xp>=500: unlocked.append("night_walker")
-                if xp>=10000: unlocked.append("veteran")
-                for key in unlocked:
-                    cur.execute("INSERT INTO site_achievements (discord_id,achievement) VALUES (%s,%s) ON CONFLICT DO NOTHING",(user["id"],key))
+            xp_row=conn.execute("SELECT xp FROM site_profiles WHERE discord_id=%s",(user["id"],)).fetchone()
+            xp=int(xp_row[0]) if xp_row else 0
+            scores=conn.execute("SELECT COUNT(*) FROM arcade_scores WHERE discord_id=%s",(user["id"],)).fetchone()[0]
+            comments=conn.execute("SELECT COUNT(*) FROM social_comments WHERE discord_id=%s AND status='approved'",(user["id"],)).fetchone()[0]
+            followers=conn.execute("SELECT COUNT(*) FROM social_follows WHERE following_id=%s",(user["id"],)).fetchone()[0]
+            unlocked=[]
+            if xp>=100: unlocked.append("first_steps")
+            if xp>=500: unlocked.append("night_walker")
+            if xp>=10000: unlocked.append("veteran")
+            if scores: unlocked.append("arcade_regular")
+            if comments: unlocked.append("social")
+            if followers>=5: unlocked.append("popular")
+            for key in unlocked:
+                conn.execute("INSERT INTO site_achievements(discord_id,achievement) VALUES(%s,%s) ON CONFLICT DO NOTHING",(user["id"],key))
             conn.commit()
     except psycopg.Error as exc:
         app.logger.warning("Could not sync achievements: %s", type(exc).__name__)
@@ -1206,10 +1210,23 @@ def daily():
 
 @app.post("/api/daily/claim")
 def claim_daily():
+    user=current_site_user()
     key,title,desc,reward=daily_challenge()
-    award_site_xp("daily_"+key, reward)
-    sync_achievements()
-    return jsonify({"ok":True,"message":f"Daily challenge tracked: +{reward} XP."})
+    if not DATABASE_URL: return jsonify({"ok":False,"error":"Daily storage unavailable."}),503
+    import datetime as _dt
+    today=_dt.date.today().isoformat()
+    with db_connect() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS daily_completions(discord_id TEXT NOT NULL, challenge_date DATE NOT NULL, challenge_key TEXT NOT NULL, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(discord_id,challenge_date,challenge_key))")
+        done=conn.execute("SELECT 1 FROM daily_completions WHERE discord_id=%s AND challenge_date=%s AND challenge_key=%s",(user["id"],today,key)).fetchone()
+        if done: return jsonify({"ok":True,"message":"Today's challenge is already complete."})
+        eligible=False
+        if key=="arcade": eligible=conn.execute("SELECT 1 FROM arcade_scores WHERE discord_id=%s AND created_at::date=CURRENT_DATE LIMIT 1",(user["id"],)).fetchone() is not None
+        elif key=="community": eligible=bool(session.get("daily_community_visit"))
+        elif key=="leaderboard": eligible=bool(session.get("daily_leaderboard_visit"))
+        if not eligible: return jsonify({"ok":False,"error":"Complete the challenge first."}),400
+        conn.execute("INSERT INTO daily_completions(discord_id,challenge_date,challenge_key) VALUES(%s,%s,%s)",(user["id"],today,key)); conn.commit()
+    award_site_xp("daily_"+key,reward); sync_achievements()
+    return jsonify({"ok":True,"message":f"Challenge complete: +{reward} XP."})
 
 @app.post("/api/profile")
 def update_profile():
