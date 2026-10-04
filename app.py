@@ -240,6 +240,9 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS reviews (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, rating INTEGER NOT NULL, review TEXT NOT NULL, date TEXT NOT NULL, approved BOOLEAN NOT NULL DEFAULT TRUE)")
             cur.execute("CREATE TABLE IF NOT EXISTS support_tickets (id BIGSERIAL PRIMARY KEY, token TEXT UNIQUE NOT NULL, name TEXT NOT NULL, subject TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS support_messages (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE, sender TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS social_videos (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, avatar_url TEXT NOT NULL, video_url TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'pending', strikes INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS social_follows (follower_id TEXT NOT NULL, following_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (follower_id, following_id))")
+            cur.execute("CREATE TABLE IF NOT EXISTS social_reports (id BIGSERIAL PRIMARY KEY, video_id BIGINT NOT NULL REFERENCES social_videos(id) ON DELETE CASCADE, reporter_id TEXT NOT NULL, reason TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
@@ -560,16 +563,16 @@ def support_ai():
     if not message: return jsonify({"ok":False,"error":"Write a message first."}),400
     key=os.getenv("OPENROUTER_API_KEY","").strip()
     if not key:
-        return jsonify({"ok":True,"answer":"I’m Nightfall’s support helper. I can explain commands, setup, tickets, moderation, Premium, and website features. For account-specific or technical problems, use Talk to an Admin."})
+        return jsonify({"ok":True,"answer":"AI is not connected yet. You can still open Talk to an Admin and send a real support ticket."})
     model=os.getenv("OPENROUTER_TEXT_MODEL","openrouter/free")
     try:
-        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Nightfall Support"},json={"model":model,"messages":[{"role":"system","content":"You are Nightfall Discord bot's website support assistant. Be concise, friendly, safe, and accurate. Explain Nightfall features and basic troubleshooting. Never ask for passwords, API keys, tokens, or other secrets. If a problem requires access to a server/account, tell the user to contact an admin."},{"role":"user","content":message}]},timeout=20)
+        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Nightfall Support"},json={"model":model,"messages":[{"role":"system","content":"You are Nightfall's website support assistant. Answer the user's actual question instead of giving a generic fallback. Help with Nightfall Discord commands, setup, moderation, tickets, Premium, website features, and troubleshooting. Be concise and honest. Never request passwords, tokens, API keys, or private credentials. If the issue requires admin access, explain that the user can open a human support ticket on the same Support page."},{"role":"user","content":message}]},timeout=20)
         data=r.json()
         answer=((data.get("choices") or [{}])[0].get("message") or {}).get("content")
         if not answer: raise ValueError("empty")
         return jsonify({"ok":True,"answer":str(answer)[:5000]})
     except Exception:
-        return jsonify({"ok":True,"answer":"I couldn’t reach the AI service right now. Please use Talk to an Admin and we’ll help you directly."})
+        return jsonify({"ok":True,"answer":"The AI service could not answer that right now. Open Talk to an Admin on this page and send the problem as a support ticket."})
 
 @app.route("/suggestions", methods=["GET","POST"])
 def suggestions():
