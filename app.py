@@ -296,6 +296,9 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS site_settings (discord_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', theme TEXT NOT NULL DEFAULT 'default', title TEXT NOT NULL DEFAULT '')")
             cur.execute("CREATE TABLE IF NOT EXISTS site_achievements (discord_id TEXT NOT NULL, achievement TEXT NOT NULL, unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, achievement))")
+            cur.execute("CREATE TABLE IF NOT EXISTS site_reputation (discord_id TEXT PRIMARY KEY, score INTEGER NOT NULL DEFAULT 0)")
+            cur.execute("CREATE TABLE IF NOT EXISTS social_likes (video_id BIGINT NOT NULL REFERENCES social_videos(id) ON DELETE CASCADE, discord_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (video_id, discord_id))")
+            cur.execute("CREATE TABLE IF NOT EXISTS social_comments (id BIGSERIAL PRIMARY KEY, video_id BIGINT NOT NULL REFERENCES social_videos(id) ON DELETE CASCADE, discord_id TEXT NOT NULL, username TEXT NOT NULL, avatar_url TEXT NOT NULL DEFAULT '', body TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'approved', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
@@ -1312,6 +1315,44 @@ def leaderboards():
         except psycopg.Error as exc:
             app.logger.warning("Could not load XP leaderboard: %s", type(exc).__name__)
     return render_template("leaderboards.html", rows=rows)
+
+@app.get("/api/social/video/<int:video_id>/likes")
+def social_likes(video_id):
+    if not DATABASE_URL: return jsonify({"ok":True,"likes":0,"liked":False})
+    user=current_site_user()
+    with db_connect() as conn:
+        likes=conn.execute("SELECT COUNT(*) FROM social_likes WHERE video_id=%s",(video_id,)).fetchone()[0]
+        liked=conn.execute("SELECT 1 FROM social_likes WHERE video_id=%s AND discord_id=%s",(video_id,user["id"])).fetchone() is not None
+    return jsonify({"ok":True,"likes":int(likes),"liked":liked})
+
+@app.post("/api/social/like/<int:video_id>")
+def social_like(video_id):
+    if not DATABASE_URL: return jsonify({"ok":False,"error":"Storage unavailable."}),503
+    user=current_site_user()
+    with db_connect() as conn:
+        exists=conn.execute("SELECT 1 FROM social_likes WHERE video_id=%s AND discord_id=%s",(video_id,user["id"])).fetchone()
+        if exists: conn.execute("DELETE FROM social_likes WHERE video_id=%s AND discord_id=%s",(video_id,user["id"]))
+        else: conn.execute("INSERT INTO social_likes(video_id,discord_id) VALUES(%s,%s)",(video_id,user["id"]))
+        conn.commit()
+        count=conn.execute("SELECT COUNT(*) FROM social_likes WHERE video_id=%s",(video_id,)).fetchone()[0]
+    return jsonify({"ok":True,"likes":int(count),"liked":not bool(exists)})
+
+@app.get("/api/social/video/<int:video_id>/comments")
+def social_comments(video_id):
+    if not DATABASE_URL: return jsonify({"ok":True,"comments":[]})
+    with db_connect() as conn:
+        rows=conn.execute("SELECT username,avatar_url,body,created_at FROM social_comments WHERE video_id=%s AND status='approved' ORDER BY id DESC LIMIT 50",(video_id,)).fetchall()
+    return jsonify({"ok":True,"comments":[{"username":x[0],"avatar_url":x[1],"body":x[2],"created_at":str(x[3])} for x in rows]})
+
+@app.post("/api/social/comment/<int:video_id>")
+def social_comment(video_id):
+    user=current_site_user(); payload=request.get_json(silent=True) or {}; body=str(payload.get("body") or "").strip()[:500]
+    if not body: return jsonify({"ok":False,"error":"Comment cannot be empty."}),400
+    if not DATABASE_URL: return jsonify({"ok":False,"error":"Storage unavailable."}),503
+    with db_connect() as conn:
+        conn.execute("INSERT INTO social_comments(video_id,discord_id,username,avatar_url,body) VALUES(%s,%s,%s,%s,%s)",(video_id,user["id"],user["username"],user["avatar_url"],body)); conn.commit()
+    award_site_xp("comment",5)
+    return jsonify({"ok":True})
 
 @app.get("/notifications")
 def notifications():
