@@ -31,11 +31,7 @@
         <button class="btn ghost bot-action" data-action="toggle_jail" type="button">🔒 Toggle jail system</button>
         <button class="btn ghost bot-action" data-action="sync_setup" type="button">↻ Refresh Discord setup panel</button>
       </div><p id="actionResult" class="notice" aria-live="polite">Choose a bot action to queue it.</p></div>
-      <div class="premium-dashboard-card">
-  <div><span class="eyebrow">NIGHTFALL PREMIUM</span><h3>{% if premium and premium.active %}🌙 {{ premium.plan }} is active{% else %}Unlock Premium for this server{% endif %}</h3>
-  <p>{% if premium and premium.active %}Premium is active{% if premium.expires_at %} until {{ premium.expires_at.strftime('%b %d, %Y') }}{% endif %}.{% else %}Premium is server-wide and can unlock future premium-only Nightfall features.{% endif %}</p></div>
-  <a class="btn {% if premium and premium.active %}ghost{% else %}primary{% endif %}" href="/premium">{% if premium and premium.active %}Manage Premium{% else %}Get Premium{% endif %} →</a>
-</div>\n      <div class="dashboard-highlights">
+      <div class="dashboard-highlights">
         <article class="card"><span class="card-icon">🛡️</span><h3>Protect</h3><p>Manage anti raid, anti nuke, anti link, and verification.</p></article>
         <article class="card"><span class="card-icon">🎫</span><h3>Support</h3><p>Set ticket categories, questions, appeal links, and panels.</p></article>
         <article class="card"><span class="card-icon">🌙</span><h3>Welcome</h3><p>Choose channels and roles for your community flows.</p></article>
