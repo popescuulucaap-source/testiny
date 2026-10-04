@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Community{% endblock %}
+{% block content %}
+<section class="page-head community-head"><span class="eyebrow">NIGHTFALL COMMUNITY</span><h1>Scroll the Night.</h1><p>Nightfall videos, creators and updates — with Discord identities at the center.</p></section>
+<section class="community-toolbar">
+  <div><b>Nightfall Social</b><span>Only moderator-approved Nightfall content appears here.</span></div>
+  {% if social_user %}<button class="btn primary" id="openUpload">Post a video →</button>{% else %}<a class="btn primary" href="/login">Login with Discord to post →</a>{% endif %}
+</section>
+<section id="uploadPanel" class="social-upload" hidden>
+  <h2>Submit a Nightfall video</h2><p>Use a YouTube HTTPS link. Every submission is reviewed before it enters the feed.</p>
+  <form id="uploadForm"><input name="title" maxlength="120" placeholder="Video title" required><input name="video_url" placeholder="https://youtube.com/..." required><textarea name="description" maxlength="500" placeholder="What is this Nightfall video about?"></textarea><button class="btn primary">Submit for review →</button><span id="uploadResult"></span></form>
+</section>
+<section class="social-feed" id="socialFeed"><div class="social-loading">Loading the Nightfall feed…</div></section>
+{% if not social_user %}<section class="social-login-note"><b>Your profile is your Discord account.</b><span>Login with Discord to follow creators, submit videos and report content.</span></section>{% endif %}
+<script>
+const SOCIAL_LOGGED={{ 'true' if social_user else 'false' }};
+const ytId=url=>{try{const u=new URL(url);if(u.hostname.includes('youtu.be'))return u.pathname.slice(1).split('/')[0];return u.searchParams.get('v')||u.pathname.match(/\/shorts\/([^/]+)/)?.[1]||u.pathname.match(/\/embed\/([^/]+)/)?.[1]||''}catch(e){return ''}};
+async function loadFeed(){const box=document.querySelector('#socialFeed');try{const r=await fetch('/api/social/feed');const d=await r.json();if(!d.ok||!d.videos?.length){box.innerHTML='<div class="social-empty"><b>No approved videos yet.</b><span>Be the first Nightfall creator.</span></div>';return}box.innerHTML=d.videos.map(v=>{const id=ytId(v.video_url);return '<article class="social-video-card" data-video="'+v.id+'"><div class="social-author"><img src="'+v.avatar_url+'" alt=""><div><b>'+esc(v.username)+'</b><small>Discord creator</small></div>'+ (SOCIAL_LOGGED&&v.discord_id!=='{{ social_user.id if social_user else "" }}'?'<button class="follow-btn" data-follow="'+v.discord_id+'">'+(v.following?'Following':'Follow')+'</button>':'')+'</div><div class="social-player">'+(id?'<iframe src="https://www.youtube.com/embed/'+id+'" title="'+esc(v.title)+'" loading="lazy" allowfullscreen></iframe>':'<a href="'+v.video_url+'" target="_blank" rel="noopener">Open video</a>')+'</div><div class="social-video-meta"><h2>'+esc(v.title)+'</h2><p>'+esc(v.description||'')+'</p><button class="report-btn" data-report="'+v.id+'">Report / copyright claim</button></div></article>'}).join('');box.querySelectorAll('[data-follow]').forEach(b=>b.onclick=async()=>{const r=await fetch('/api/social/follow/'+b.dataset.follow,{method:'POST'});const d=await r.json();if(d.ok)b.textContent=d.following?'Following':'Follow'});box.querySelectorAll('[data-report]').forEach(b=>b.onclick=async()=>{const reason=prompt('Why are you reporting this video?');if(!reason)return;const r=await fetch('/api/social/report/'+b.dataset.report,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();alert(d.message||d.error||'Report sent.')})}catch(e){box.innerHTML='<div class="social-empty">Could not load the feed.</div>'}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.addEventListener('DOMContentLoaded',()=>{const o=document.querySelector('#openUpload');if(o)o.onclick=()=>{const p=document.querySelector('#uploadPanel');p.hidden=!p.hidden};const f=document.querySelector('#uploadForm');if(f)f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));const r=await fetch('/api/social/videos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});const x=await r.json();document.querySelector('#uploadResult').textContent=x.ok?'Submitted. An admin must approve it before it appears.':(x.error||'Could not submit.');if(x.ok)f.reset()};loadFeed()});
+</script>
+{% endblock %}
