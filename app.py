@@ -58,13 +58,6 @@ INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
-# Robux-powered Nightfall Premium.
-# Product IDs are configured in Render; leave them blank until the Roblox products exist.
-PREMIUM_30D_PRODUCT_ID = os.getenv("PREMIUM_30D_PRODUCT_ID", "").strip()
-PREMIUM_90D_PRODUCT_ID = os.getenv("PREMIUM_90D_PRODUCT_ID", "").strip()
-ROBLOX_PREMIUM_SECRET = os.getenv("ROBLOX_PREMIUM_SECRET", "").strip()
-PREMIUM_CLAIM_MINUTES = 20
-
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
 ADMINISTRATOR = 0x8
@@ -244,9 +237,6 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
-            cur.execute("CREATE TABLE IF NOT EXISTS premium_servers (guild_id TEXT PRIMARY KEY, plan TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL, discord_user_id TEXT, roblox_user_id TEXT, purchase_id TEXT UNIQUE, source TEXT NOT NULL DEFAULT 'robux', updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
-            cur.execute("CREATE TABLE IF NOT EXISTS premium_claims (code TEXT PRIMARY KEY, guild_id TEXT NOT NULL, discord_user_id TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL, used_at TIMESTAMPTZ)")
-            cur.execute("CREATE TABLE IF NOT EXISTS premium_transactions (purchase_id TEXT PRIMARY KEY, product_id TEXT NOT NULL, roblox_user_id TEXT NOT NULL, guild_id TEXT NOT NULL, plan TEXT NOT NULL, days INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
         conn.commit()
 
 def load_announcements():
@@ -385,7 +375,6 @@ def admin():
         "jail_servers": jail_servers,
         "verification_servers": verification_servers,
         "ticket_servers": ticket_servers,
-        "premium_servers": sum(1 for g in guilds if guild_has_premium(g.get("id"))),
     }
     return render_template("admin.html", announcements=announcements, custom_commands=custom_commands, database_enabled=bool(DATABASE_URL), stats=stats, bot_guilds=guilds)
 
@@ -460,152 +449,6 @@ def suggestion_list():
     else:
         items = session.get("suggestions", [])
     return render_template("suggestions_list.html", suggestions=items)
-
-def premium_product(product_id):
-    product_id = str(product_id or "").strip()
-    if product_id and PREMIUM_30D_PRODUCT_ID and product_id == PREMIUM_30D_PRODUCT_ID:
-        return ("Premium", 30)
-    if product_id and PREMIUM_90D_PRODUCT_ID and product_id == PREMIUM_90D_PRODUCT_ID:
-        return ("Premium+", 90)
-    return None
-
-
-def premium_status(guild_id):
-    if not DATABASE_URL:
-        return None
-    try:
-        with db_connect() as conn:
-            row = conn.execute(
-                "SELECT plan, expires_at, discord_user_id, roblox_user_id FROM premium_servers WHERE guild_id = %s",
-                (str(guild_id),),
-            ).fetchone()
-        if not row:
-            return None
-        expires = row[1]
-        active = expires and expires.timestamp() > time.time()
-        return {"active": bool(active), "plan": row[0], "expires_at": expires, "discord_user_id": row[2], "roblox_user_id": row[3]}
-    except psycopg.Error as exc:
-        app.logger.warning("Could not read premium status: %s", type(exc).__name__)
-        return None
-
-
-def create_premium_claim(guild_id):
-    if not DATABASE_URL:
-        return None
-    if not user_can_manage_guild(guild_id):
-        return None
-    code = "NF-" + secrets.token_hex(4).upper()
-    expires_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc) + __import__("datetime").timedelta(minutes=PREMIUM_CLAIM_MINUTES)
-    with db_connect() as conn:
-        conn.execute(
-            "INSERT INTO premium_claims (code, guild_id, discord_user_id, expires_at) VALUES (%s, %s, %s, %s)",
-            (code, str(guild_id), str(session["user"]["id"]), expires_at),
-        )
-        conn.commit()
-    return code
-
-
-@app.get("/premium")
-def premium():
-    managed = []
-    if session.get("access_token"):
-        try:
-            r = requests.get(f"{DISCORD_API}/users/@me/guilds", headers=discord_headers(), timeout=12)
-            if r.status_code == 200:
-                managed = [
-                    g for g in r.json()
-                    if ((int(g.get("permissions", "0")) & MANAGE_GUILD) == MANAGE_GUILD or (int(g.get("permissions", "0")) & ADMINISTRATOR) == ADMINISTRATOR)
-                ]
-                for guild in managed:
-                    guild["premium"] = premium_status(guild["id"])
-        except (requests.RequestException, ValueError, TypeError):
-            managed = []
-    return render_template(
-        "premium.html",
-        managed_guilds=managed,
-        robux_ready=bool(PREMIUM_30D_PRODUCT_ID or PREMIUM_90D_PRODUCT_ID),
-        database_ready=bool(DATABASE_URL),
-    )
-
-
-@app.post("/premium/claim/<guild_id>")
-@login_required
-def premium_claim(guild_id):
-    code = create_premium_claim(guild_id)
-    if not code:
-        return jsonify({"ok": False, "error": "Premium claiming needs a connected database and Manage Server permission."}), 400
-    return jsonify({"ok": True, "code": code, "expires_in": PREMIUM_CLAIM_MINUTES * 60})
-
-
-@app.post("/api/roblox/premium-receipt")
-def roblox_premium_receipt():
-    supplied = request.headers.get("X-Nightfall-Roblox-Key", "")
-    if not ROBLOX_PREMIUM_SECRET or not compare_digest(supplied, ROBLOX_PREMIUM_SECRET):
-        return jsonify({"ok": False, "error": "Unauthorized"}), 401
-
-    payload = request.get_json(silent=True) or {}
-    purchase_id = str(payload.get("purchase_id") or "").strip()
-    product_id = str(payload.get("product_id") or "").strip()
-    roblox_user_id = str(payload.get("roblox_user_id") or "").strip()
-    claim_code = str(payload.get("claim_code") or "").strip().upper()
-
-    if not all((purchase_id, product_id, roblox_user_id, claim_code)):
-        return jsonify({"ok": False, "error": "purchase_id, product_id, roblox_user_id and claim_code are required."}), 400
-    product = premium_product(product_id)
-    if not product:
-        return jsonify({"ok": False, "error": "Unknown Premium product."}), 400
-    if not DATABASE_URL:
-        return jsonify({"ok": False, "error": "Premium database is not configured."}), 503
-
-    plan, days = product
-    now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
-    with db_connect() as conn:
-        existing = conn.execute(
-            "SELECT guild_id, plan FROM premium_transactions WHERE purchase_id = %s",
-            (purchase_id,),
-        ).fetchone()
-        if existing:
-            return jsonify({"ok": True, "already_processed": True, "guild_id": existing[0], "plan": existing[1]})
-
-        claim = conn.execute(
-            "SELECT guild_id, discord_user_id, expires_at, used_at FROM premium_claims WHERE code = %s FOR UPDATE",
-            (claim_code,),
-        ).fetchone()
-        if not claim:
-            return jsonify({"ok": False, "error": "Invalid Premium claim code."}), 400
-        if claim[3] is not None:
-            return jsonify({"ok": False, "error": "That claim code has already been used."}), 400
-        if claim[2] <= now:
-            return jsonify({"ok": False, "error": "That claim code has expired. Generate a new one from the Nightfall dashboard."}), 400
-
-        guild_id = str(claim[0])
-        old = conn.execute(
-            "SELECT expires_at FROM premium_servers WHERE guild_id = %s FOR UPDATE",
-            (guild_id,),
-        ).fetchone()
-        base = old[0] if old and old[0] and old[0] > now else now
-        expires_at = base + __import__("datetime").timedelta(days=days)
-
-        conn.execute(
-            "INSERT INTO premium_servers (guild_id, plan, expires_at, discord_user_id, roblox_user_id, purchase_id, source, updated_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, 'robux', NOW()) "
-            "ON CONFLICT (guild_id) DO UPDATE SET plan = EXCLUDED.plan, expires_at = EXCLUDED.expires_at, discord_user_id = EXCLUDED.discord_user_id, roblox_user_id = EXCLUDED.roblox_user_id, purchase_id = EXCLUDED.purchase_id, source = 'robux', updated_at = NOW()",
-            (guild_id, plan, expires_at, claim[1], roblox_user_id, purchase_id),
-        )
-        conn.execute(
-            "INSERT INTO premium_transactions (purchase_id, product_id, roblox_user_id, guild_id, plan, days) VALUES (%s, %s, %s, %s, %s, %s)",
-            (purchase_id, product_id, roblox_user_id, guild_id, plan, days),
-        )
-        conn.execute("UPDATE premium_claims SET used_at = NOW() WHERE code = %s", (claim_code,))
-        conn.commit()
-
-    return jsonify({"ok": True, "granted": True, "guild_id": guild_id, "plan": plan, "expires_at": expires_at.isoformat()})
-
-
-def guild_has_premium(guild_id):
-    status = premium_status(guild_id)
-    return bool(status and status.get("active"))
-
 
 @app.get("/commands")
 def commands():
@@ -722,7 +565,6 @@ def dashboard(guild_id):
     guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild_id}/{guild_icon_hash}.png?size=128" if guild_icon_hash else ""
     bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), None)
     settings = bot_guild.get("settings", {}) if bot_guild else {}
-    premium = premium_status(guild_id)
     bot_error = None if bot_online() and bot_guild else "Nightfall is offline or is not connected to this server."
     return render_template(
         "dashboard.html",
@@ -730,7 +572,6 @@ def dashboard(guild_id):
         settings=settings,
         bot_error=bot_error,
         setting_groups=SETTING_GROUPS,
-        premium=premium,
     )
 
 
