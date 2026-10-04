@@ -38,18 +38,50 @@ document.addEventListener("DOMContentLoaded", () => {
   let found = new Set();
   try { found = new Set(JSON.parse(localStorage.getItem(foundKey) || "[]").filter(n => Number.isInteger(n) && n >= 0 && n < 100)); } catch (_) {}
   const save = () => localStorage.setItem(foundKey, JSON.stringify([...found]));
+  const selectedKey = "nightfall-selected-discounts-v1";
+  let selected = new Set();
+  try { selected = new Set(JSON.parse(localStorage.getItem(selectedKey) || "[]").filter(n => Number.isInteger(n) && n >= 0 && n < 100)); } catch (_) {}
+  const saveSelected = () => localStorage.setItem(selectedKey, JSON.stringify([...selected]));
+
+  const ensureDiscountBar = () => {
+    let bar = document.getElementById("nightfallDiscountBar");
+    if (bar) return bar;
+    bar = document.createElement("div");
+    bar.id = "nightfallDiscountBar";
+    bar.className = "nightfall-discount-bar";
+    bar.innerHTML = '<div><b>✦ DISCOUNT WALLET</b><span id="nightfallDiscountText">0% available</span></div><a href="/secrets">Manage discounts →</a>';
+    document.body.appendChild(bar);
+    return bar;
+  };
+
+  const updateDiscountBar = () => {
+    const bar = ensureDiscountBar();
+    const text = bar.querySelector("#nightfallDiscountText");
+    const total = found.size;
+    const chosen = [...selected].filter(n => found.has(n)).length;
+    if (text) text.textContent = total + "% available • " + chosen + "% selected";
+    bar.classList.toggle("has-discounts", total > 0);
+  };
+
   const count = document.getElementById("secretCount");
-  const update = () => { if (count) count.textContent = found.size + " / 100 FOUND"; };
+  const update = () => {
+    if (count) count.textContent = found.size + " / 100 FOUND";
+    updateDiscountBar();
+  };
   update();
 
   const reveal = (n, title = "SECRET EGG") => {
     if (n < 0 || n >= 100 || found.has(n)) return;
-    found.add(n); save(); update();
+    found.add(n);
+    selected.add(n);
+    save();
+    saveSelected();
+    update();
     say(title + " " + String(n + 1).padStart(2, "0"), "Code: " + codes[n] + " • Reward: " + rewards[n]);
     const panel = document.querySelector(".easter-egg-panel");
     if (panel) {
       panel.hidden = false;
-      panel.innerHTML = '<span class="eyebrow">SECRET SIGNAL • ' + String(n + 1).padStart(2, "0") + '</span><h2>You found a Nightfall secret.</h2><p>Code <code>' + codes[n] + '</code> • ' + rewards[n] + '</p>';
+      panel.innerHTML = '<span class="eyebrow">SECRET SIGNAL • ' + String(n + 1).padStart(2, "0") + '</span><h2>You found a Nightfall discount.</h2><p>Code <code>' + codes[n] + '</code> • <b>1% off Premium</b></p>';
     }
   };
   const next = (title) => { for (let i = 0; i < 100; i++) if (!found.has(i)) { reveal(i, title); return; } };
