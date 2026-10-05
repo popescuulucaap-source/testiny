@@ -48,7 +48,7 @@
     <a href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">YouTube</a>
     {% if session.get('user') %}<a href="/profile">Profile</a><a href="/notifications">🔔</a><a class="nav-pill" href="/servers">Dashboard</a>{% if session.get('admin') %}<a class="nav-pill admin-nav" href="/admin/panel">Admin</a>{% endif %}<a class="nav-pill" href="/logout">Log out</a>{% else %}<a class="nav-pill" href="/login">Login with Discord</a>{% endif %}
   </div>
-</nav>
+</nav>\n<div class="owner-card" aria-label="Nightfall owner">\n  <div class="owner-avatar" aria-hidden="true">N</div>\n  <div class="owner-copy">\n    <span class="owner-label">OWNER</span>\n    <strong>Nightfall Owner</strong>\n    <small>Discord ID: 1418291387668893699</small>\n  </div>\n  <a class="owner-profile" href="https://discord.com/users/1418291387668893699" target="_blank" rel="noopener" aria-label="Open the owner's Discord profile">Profile</a>\n</div>
 <main>{% block content %}{% endblock %}</main>
 <footer><div><b>Nightfall</b><span> • 1.2v UPDATE · Discord tools, built for your server.</span></div><div><a href="/guidelines">Rules & Guidelines</a><span> · </span><a href="/announcements">Updates</a><span> · </span><a href="/suggestions">Suggestions</a><span> · </span><a href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">YouTube</a></div><small class="space-credit">Space visuals: NASA/ESA/STScI and ESO/M. Kornmesser • the Sun uses a real NASA image; R136a1 remains an astronomical size-comparison illustration.</small></footer>
 <script src="{{ url_for('static', filename='app.js') }}?v=20261006"></script>
