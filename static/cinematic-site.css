@@ -459,3 +459,23 @@ main:before{
   .dashboard-metrics{grid-template-columns:1fr;padding:0 18px}
   .checklist-grid{grid-template-columns:1fr}
 }
+
+
+/* NIGHTFALL V4 — realistic Sun photo + clearly visible moving worlds on every tab */
+.space-sun{width:clamp(300px,34vw,560px)!important;height:clamp(300px,34vw,560px)!important;min-width:0!important;min-height:0!important;right:-10vw!important;top:8vh!important;border:0!important;border-radius:50%!important;background-image:url("https://images-assets.nasa.gov/image/PIA26681/PIA26681~orig.jpg")!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;box-shadow:0 0 22px 6px rgba(255,214,120,.95),0 0 65px 25px rgba(255,157,45,.68),0 0 145px 55px rgba(255,102,20,.42),0 0 300px 110px rgba(255,65,5,.20)!important;filter:saturate(1.12) contrast(1.08) brightness(1.04)!important;animation:nf-real-sun-travel 52s cubic-bezier(.45,0,.35,1) infinite alternate!important;will-change:transform!important}
+.space-sun:after{content:""!important;position:absolute!important;inset:-9%!important;border-radius:50%!important;background:radial-gradient(circle,transparent 55%,rgba(255,211,130,.24) 63%,transparent 71%),radial-gradient(circle,transparent 67%,rgba(255,123,30,.20) 73%,transparent 81%)!important;filter:blur(7px)!important;mix-blend-mode:screen!important;animation:nf-sun-corona 18s linear infinite!important}
+.space-sun:before{content:"THE SUN  •  REAL NASA IMAGE"!important;left:8%!important;bottom:-34px!important;color:rgba(255,226,165,.88)!important;text-shadow:0 0 18px rgba(255,145,50,.72)!important;font:600 10px/1.2 system-ui,sans-serif!important;letter-spacing:.17em!important;white-space:nowrap!important}
+@keyframes nf-real-sun-travel{0%{transform:translate3d(0,0,0) scale(.98) rotate(-2deg)}20%{transform:translate3d(-8vw,5vh,0) scale(1.01) rotate(1deg)}45%{transform:translate3d(-20vw,-3vh,0) scale(1.045) rotate(3deg)}70%{transform:translate3d(-31vw,7vh,0) scale(1.02) rotate(-2deg)}100%{transform:translate3d(-43vw,-4vh,0) scale(1.06) rotate(2deg)}}
+@keyframes nf-sun-corona{to{transform:rotate(360deg) scale(1.035)}}
+.page-commands .planet-orange,.page-guidelines .planet-red,.page-rules .planet-red,.page-announcements .planet-purple,.page-updates .planet-purple,.page-suggestions .planet-ice,.page-suggestion .planet-ice,.page-redeem .planet-gold,.page-support .planet-green,.page-login .planet-ringed,.page-auth .planet-ringed,.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange,.page-secrets .planet-ringed{display:block!important;opacity:.94!important;visibility:visible!important;z-index:1!important}
+.page-commands .planet-orange{left:-6vw!important;top:17vh!important;animation:nf-tab-orbit-a 70s linear infinite alternate!important}
+.page-guidelines .planet-red,.page-rules .planet-red{right:-5vw!important;top:14vh!important;animation:nf-tab-orbit-b 76s linear infinite alternate!important}
+.page-announcements .planet-purple,.page-updates .planet-purple{left:-5vw!important;bottom:9vh!important;animation:nf-tab-orbit-a 82s linear infinite alternate-reverse!important}
+.page-suggestions .planet-ice,.page-suggestion .planet-ice{right:-5vw!important;top:19vh!important;animation:nf-tab-orbit-b 74s linear infinite alternate!important}
+.page-redeem .planet-gold{left:-6vw!important;top:13vh!important;animation:nf-tab-orbit-a 78s linear infinite alternate!important}
+.page-support .planet-green{right:-5vw!important;bottom:8vh!important;animation:nf-tab-orbit-b 72s linear infinite alternate-reverse!important}
+.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{right:-5vw!important;top:15vh!important;animation:nf-tab-orbit-b 84s linear infinite alternate!important}
+.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{left:-5vw!important;top:18vh!important;animation:nf-tab-orbit-a 80s linear infinite alternate!important}
+@keyframes nf-tab-orbit-a{0%{transform:translate3d(0,7vh,0) rotate(0deg) scale(.96)}50%{transform:translate3d(35vw,-5vh,0) rotate(180deg) scale(1.02)}100%{transform:translate3d(78vw,8vh,0) rotate(360deg) scale(1)}}
+@keyframes nf-tab-orbit-b{0%{transform:translate3d(0,-5vh,0) rotate(0deg) scale(1)}50%{transform:translate3d(-35vw,7vh,0) rotate(-180deg) scale(.97)}100%{transform:translate3d(-78vw,-4vh,0) rotate(-360deg) scale(1.03)}}
+@media(max-width:700px){.space-sun{width:76vw!important;height:76vw!important;right:-24vw!important;top:12vh!important}.space-sun:before{font-size:8px!important;bottom:-26px!important}}
