@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Premium Vault • Nightfall{% endblock %}
+{% block content %}
+<section class="section-shell premium-vault-page">
+  <div class="section-heading">
+    <span class="eyebrow">PREMIUM VAULT</span>
+    <h1>Nightfall command control.</h1>
+    <p>Link your Roblox account, verify Premium, choose a Discord server, and send real Nightfall commands to that server.</p>
+  </div>
+
+  <div class="vault-status card">
+    <div>
+      <span class="eyebrow">ENTITLEMENT</span>
+      <h2 id="premiumStatus">{{ "Premium active" if premium_active else "Premium required" }}</h2>
+      <p id="premiumDetails">
+        {% if link and link.roblox_user_id %}
+          Roblox account linked: {{ link.roblox_user_id }}.
+        {% else %}
+          Your Roblox account is not linked yet.
+        {% endif %}
+      </p>
+    </div>
+    <div class="vault-lock" id="vaultLock">{{ "UNLOCKED" if premium_active else "LOCKED" }}</div>
+  </div>
+
+  {% if not link or not link.roblox_user_id %}
+  <div class="card vault-link-card">
+    <span class="eyebrow">CONNECT ROBLOX</span>
+    <h2>Link your Roblox account</h2>
+    <p>Generate a short code here, then enter it in the Nightfall Roblox game. The game server will securely confirm the link.</p>
+    <button class="btn primary" id="generateLink" type="button">Generate link code</button>
+    <div class="vault-code" id="linkCode" hidden></div>
+    <p class="notice" id="linkHelp" hidden>Enter this code in the Nightfall Roblox game's account-link panel. This code expires after 15 minutes.</p>
+  </div>
+  {% endif %}
+
+  <div class="card vault-console" id="vaultConsole" {% if not premium_active %}hidden{% endif %}>
+    <div class="vault-console-head">
+      <div>
+        <span class="eyebrow">SERVER VAULT</span>
+        <h2>Control a selected server</h2>
+      </div>
+      <select id="serverSelect" class="vault-select">
+        <option value="">Loading servers…</option>
+      </select>
+    </div>
+
+    <div class="vault-command-grid">
+      <label class="vault-field vault-wide">
+        <span>Command</span>
+        <select id="commandSelect">
+          <option value="ping">ping</option>
+          <option value="membercount">membercount</option>
+          <option value="roleinfo">roleinfo</option>
+          <option value="channelinfo">channelinfo</option>
+          <option value="ban">ban</option>
+          <option value="kick">kick</option>
+          <option value="warn">warn</option>
+          <option value="warnings">warnings</option>
+          <option value="clearwarnings">clearwarnings</option>
+          <option value="purge">purge</option>
+          <option value="announce">announce</option>
+          <option value="poll">poll</option>
+          <option value="timeout">timeout</option>
+          <option value="lock">lock</option>
+          <option value="unlock">unlock</option>
+          <option value="slowmode">slowmode</option>
+          <option value="afk">afk</option>
+          <option value="jail">jail</option>
+          <option value="unjail">unjail</option>
+          <option value="setup">setup</option>
+          <option value="ticket">ticket</option>
+          <option value="ticket_panel">ticket_panel</option>
+          <option value="ticket_questions">ticket_questions</option>
+          <option value="appeal_server">appeal_server</option>
+          <option value="appeal_group">appeal_group</option>
+          <option value="autoreaction">autoreaction</option>
+          <option value="role_give">role_give</option>
+          <option value="role_make">role_make</option>
+          <option value="reset_invites">reset_invites</option>
+          <option value="invites">invites</option>
+          <option value="invited">invited</option>
+          <option value="inviter">inviter</option>
+          <option value="ask">ask</option>
+          <option value="story">story</option>
+          <option value="roast">roast</option>
+          <option value="compliment">compliment</option>
+          <option value="riddle">riddle</option>
+          <option value="poem">poem</option>
+          <option value="joke">joke</option>
+          <option value="caption">caption</option>
+          <option value="namegen">namegen</option>
+          <option value="quiz">quiz</option>
+          <option value="aiimage">aiimage</option>
+        </select>
+      </label>
+
+      <label class="vault-field"><span>Member ID</span><input id="memberId" inputmode="numeric" placeholder="Optional"></label>
+      <label class="vault-field"><span>Channel ID</span><input id="channelId" inputmode="numeric" placeholder="Optional"></label>
+      <label class="vault-field"><span>Target channel ID</span><input id="targetChannelId" inputmode="numeric" placeholder="Optional"></label>
+      <label class="vault-field"><span>Role ID</span><input id="roleId" inputmode="numeric" placeholder="Optional"></label>
+      <label class="vault-field"><span>Amount / seconds</span><input id="amount" inputmode="numeric" placeholder="10"></label>
+      <label class="vault-field"><span>Duration</span><input id="duration" placeholder="5m"></label>
+      <label class="vault-field"><span>Emoji</span><input id="emoji" maxlength="50" placeholder="⭐"></label>
+      <label class="vault-field"><span>Role name</span><input id="roleName" maxlength="100" placeholder="Nightfall Member"></label>
+      <label class="vault-field"><span>Role color</span><input id="roleColor" maxlength="7" placeholder="#ffffff"></label>
+      <label class="vault-field vault-wide"><span>Reason</span><input id="reason" maxlength="500" placeholder="Vault action"></label>
+      <label class="vault-field vault-wide"><span>Message / prompt</span><textarea id="message" rows="4" maxlength="4000" placeholder="Enter the command text here"></textarea></label>
+      <label class="vault-field"><span>Ticket type</span><input id="ticketType" maxlength="40" placeholder="support"></label>
+      <label class="vault-field"><span>Target</span><input id="target" maxlength="100" placeholder="clean"></label>
+      <label class="vault-field vault-wide"><span>Ticket questions</span><textarea id="questions" rows="3" maxlength="1500" placeholder="Question 1 | Question 2"></textarea></label>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="runCommand" type="button">Run command</button>
+      <span class="notice" id="vaultResult" aria-live="polite">Choose a server and command.</span>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const generate = document.getElementById('generateLink');
+  const code = document.getElementById('linkCode');
+  const help = document.getElementById('linkHelp');
+  generate?.addEventListener('click', async () => {
+    generate.disabled = true;
+    generate.textContent = 'Generating…';
+    try {
+      const r = await fetch('/api/premium/link/start', {method:'POST'});
+      const data = await r.json();
+      if (!data.ok) throw new Error(data.error || 'Could not create a link code.');
+      code.hidden = false;
+      code.textContent = data.code;
+      help.hidden = false;
+      generate.textContent = 'Generate new code';
+    } catch (e) {
+      generate.textContent = e.message || 'Failed';
+    } finally {
+      generate.disabled = false;
+    }
+  });
+
+  const consoleEl = document.getElementById('vaultConsole');
+  if (!consoleEl) return;
+  const serverSelect = document.getElementById('serverSelect');
+  const result = document.getElementById('vaultResult');
+  const commandSelect = document.getElementById('commandSelect');
+
+  const loadServers = async () => {
+    try {
+      const r = await fetch('/servers');
+      if (!r.ok) throw new Error();
+      const html = await r.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const cards = [...doc.querySelectorAll('[data-guild-id]')];
+      serverSelect.innerHTML = '';
+      cards.forEach(card => {
+        const id = card.dataset.guildId;
+        const name = card.dataset.guildName || id;
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = name;
+        serverSelect.appendChild(option);
+      });
+      if (!cards.length) serverSelect.innerHTML = '<option value="">No manageable servers found</option>';
+    } catch {
+      serverSelect.innerHTML = '<option value="">Open Dashboard to select a server</option>';
+    }
+  };
+
+  const val = id => document.getElementById(id)?.value.trim() || '';
+  document.getElementById('runCommand')?.addEventListener('click', async () => {
+    const guildId = serverSelect.value;
+    const command = commandSelect.value;
+    if (!guildId) { result.textContent = 'Select a Discord server first.'; return; }
+
+    const args = {
+      member_id: val('memberId'),
+      channel_id: val('channelId'),
+      target_channel_id: val('targetChannelId'),
+      role_id: val('roleId'),
+      amount: val('amount') || 10,
+      seconds: val('amount') || 0,
+      duration: val('duration') || '5m',
+      emoji: val('emoji'),
+      name: val('roleName'),
+      color: val('roleColor') || '#ffffff',
+      reason: val('reason') || 'Vault action',
+      message: val('message'),
+      prompt: val('message'),
+      question: val('message'),
+      idea: val('message'),
+      topic: val('message'),
+      theme: val('message'),
+      ticket_type: val('ticketType') || 'support',
+      questions: val('questions'),
+      target: val('target') || 'clean'
+    };
+
+    result.textContent = 'Sending to Nightfall…';
+    try {
+      const r = await fetch('/api/premium/vault/' + encodeURIComponent(guildId) + '/command', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({command,args})
+      });
+      const data = await r.json();
+      result.textContent = data.ok ? 'Command queued for Nightfall.' : (data.error || 'Command failed.');
+    } catch {
+      result.textContent = 'Vault connection failed.';
+    }
+  });
+
+  loadServers();
+})();
+</script>
+{% endblock %}
