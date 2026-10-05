@@ -64,6 +64,7 @@ INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID", "").strip()
+ROBLOX_BRIDGE_SECRET = os.getenv("ROBLOX_BRIDGE_SECRET", "").strip()
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
@@ -338,6 +339,35 @@ def site_context():
 def db_connect():
     return psycopg.connect(DATABASE_URL) if DATABASE_URL else None
 
+def current_discord_user_id():
+    user = session.get("user") or {}
+    value = user.get("id")
+    return str(value) if value else ""
+
+def get_roblox_link(discord_id):
+    if not DATABASE_URL or not discord_id:
+        return None
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT discord_id, roblox_user_id, link_token, premium, premium_source, premium_expires_at, updated_at FROM roblox_links WHERE discord_id=%s",
+            (str(discord_id),),
+        ).fetchone()
+    if not row:
+        return None
+    return {
+        "discord_id": row[0], "roblox_user_id": row[1], "link_token": row[2],
+        "premium": bool(row[3]), "premium_source": row[4],
+        "premium_expires_at": float(row[5] or 0), "updated_at": row[6],
+    }
+
+def roblox_premium_active(link):
+    if not link:
+        return False
+    if link["premium"]:
+        return True
+    return float(link.get("premium_expires_at") or 0) > time.time()
+
+
 
 REPO_SYNC_LOCK = threading.Lock()
 REPO_SYNC_LAST_CHECK = 0.0
@@ -465,6 +495,7 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_challenges (discord_id TEXT PRIMARY KEY, started_at DOUBLE PRECISION NOT NULL, hits INTEGER NOT NULL DEFAULT 0, completed BOOLEAN NOT NULL DEFAULT FALSE)")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS roblox_links (discord_id TEXT PRIMARY KEY, roblox_user_id TEXT UNIQUE, link_token TEXT UNIQUE NOT NULL, token_created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), premium BOOLEAN NOT NULL DEFAULT FALSE, premium_source TEXT NOT NULL DEFAULT 'none', premium_expires_at DOUBLE PRECISION NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             # Safe, backwards-compatible migration. Older installs used code_hash.
             # Keep that legacy column nullable instead of dropping it during startup;
             # this avoids breaking existing rows/constraints while allowing new rows
@@ -1364,6 +1395,122 @@ def dashboard_action(guild_id):
     job_id = queue_bot_job(guild_id, "action", payload)
     return jsonify({"ok": True, "queued": True, "job_id": job_id})
 
+
+@app.get("/premium")
+@login_required
+def premium_vault():
+    link = get_roblox_link(current_discord_user_id())
+    return render_template("premium.html", link=link, premium_active=roblox_premium_active(link))
+
+@app.post("/api/premium/link/start")
+@login_required
+def premium_link_start():
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Premium linking requires the shared database."}), 503
+    discord_id = current_discord_user_id()
+    token = secrets.token_hex(4).upper()
+    with db_connect() as conn:
+        conn.execute(
+            "INSERT INTO roblox_links(discord_id,link_token) VALUES(%s,%s) "
+            "ON CONFLICT(discord_id) DO UPDATE SET link_token=EXCLUDED.link_token, token_created_at=NOW(), updated_at=NOW()",
+            (discord_id, token),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "code": token, "expires_minutes": 15})
+
+@app.post("/api/roblox/link/claim")
+def roblox_link_claim():
+    if not ROBLOX_BRIDGE_SECRET:
+        return jsonify({"ok": False, "error": "Roblox bridge is not configured."}), 503
+    supplied = request.headers.get("X-Roblox-Bridge-Key", "")
+    if not compare_digest(supplied, ROBLOX_BRIDGE_SECRET):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    payload = request.get_json(silent=True) or {}
+    token = str(payload.get("code") or "").strip().upper()
+    roblox_user_id = str(payload.get("roblox_user_id") or "").strip()
+    if not token or not roblox_user_id.isdigit():
+        return jsonify({"ok": False, "error": "Invalid linking data."}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Shared database unavailable."}), 503
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT discord_id FROM roblox_links WHERE link_token=%s AND token_created_at > NOW() - INTERVAL '15 minutes'",
+            (token,),
+        ).fetchone()
+        if not row:
+            return jsonify({"ok": False, "error": "That link code is invalid or expired."}), 404
+        discord_id = str(row[0])
+        conn.execute(
+            "UPDATE roblox_links SET roblox_user_id=%s, link_token=%s, updated_at=NOW() WHERE discord_id=%s",
+            (roblox_user_id, "LINKED", discord_id),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "discord_id": discord_id})
+
+@app.post("/api/roblox/premium-sync")
+def roblox_premium_sync():
+    if not ROBLOX_BRIDGE_SECRET:
+        return jsonify({"ok": False, "error": "Roblox bridge is not configured."}), 503
+    supplied = request.headers.get("X-Roblox-Bridge-Key", "")
+    if not compare_digest(supplied, ROBLOX_BRIDGE_SECRET):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    payload = request.get_json(silent=True) or {}
+    roblox_user_id = str(payload.get("roblox_user_id") or "").strip()
+    if not roblox_user_id.isdigit():
+        return jsonify({"ok": False, "error": "Invalid Roblox user ID."}), 400
+    premium = bool(payload.get("premium"))
+    source = str(payload.get("source") or "none")[:30]
+    expires_at = float(payload.get("expires_at") or 0)
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Shared database unavailable."}), 503
+    with db_connect() as conn:
+        row = conn.execute("SELECT discord_id FROM roblox_links WHERE roblox_user_id=%s", (roblox_user_id,)).fetchone()
+        if not row:
+            return jsonify({"ok": False, "error": "Roblox account is not linked to a Nightfall Discord account."}), 404
+        conn.execute(
+            "UPDATE roblox_links SET premium=%s, premium_source=%s, premium_expires_at=%s, updated_at=NOW() WHERE roblox_user_id=%s",
+            (premium, source, expires_at, roblox_user_id),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "premium": premium, "source": source, "expires_at": expires_at})
+
+@app.get("/api/premium/status")
+@login_required
+def premium_status():
+    link = get_roblox_link(current_discord_user_id())
+    return jsonify({"ok": True, "linked": bool(link and link.get("roblox_user_id")), "premium": roblox_premium_active(link), "source": (link or {}).get("premium_source", "none"), "expires_at": (link or {}).get("premium_expires_at", 0)})
+
+@app.get("/api/premium/vault/<guild_id>")
+@login_required
+def premium_vault_data(guild_id):
+    link = get_roblox_link(current_discord_user_id())
+    if not roblox_premium_active(link):
+        return jsonify({"ok": False, "error": "Premium is required to open the Vault."}), 403
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
+        return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
+    snapshot = next(item for item in bot_guild_snapshot() if item["id"] == str(guild_id))
+    return jsonify({"ok": True, "guild": {"id": str(guild_id), "name": snapshot.get("name", ""), "settings": snapshot.get("settings", {})}})
+
+@app.post("/api/premium/vault/<guild_id>/command")
+@login_required
+def premium_vault_command(guild_id):
+    link = get_roblox_link(current_discord_user_id())
+    if not roblox_premium_active(link):
+        return jsonify({"ok": False, "error": "Premium is required to use the Vault."}), 403
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
+        return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
+    payload = request.get_json(silent=True) or {}
+    command = str(payload.get("command") or "").strip().lower()
+    allowed = {"ping","membercount","ban","kick","warn","purge","warnings","clearwarnings","announce","poll","timeout","lock","unlock","slowmode","afk","jail","unjail","setup","ticket","ticket_panel","ticket_questions","appeal_server","appeal_group","autoreaction","role_give","role_make","reset_invites","invites","invited","inviter","ai_ask","ai_story","ai_roast","ai_compliment","ai_riddle","ai_poem","ai_joke","ai_caption","ai_namegen","ai_quiz","aiimage","roleinfo","channelinfo"}
+    if command not in allowed:
+        return jsonify({"ok": False, "error": "That command is not available through the Vault."}), 400
+    args = payload.get("args") if isinstance(payload.get("args"), dict) else {}
+    job_id = queue_bot_job(guild_id, "vault_command", {"command": command, "args": args, "discord_id": current_discord_user_id()})
+    return jsonify({"ok": True, "queued": True, "job_id": job_id})
 
 @app.get("/health")
 def health():
