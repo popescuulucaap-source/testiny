@@ -171,22 +171,89 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(audioOn)note(740,.05,'sine',.012);
   },{passive:true}));
 
-  // ===== NIGHTFALL 100-SECRET CODE HUNT =====
-  // Discovery/redeem UI only. Actual Premium activation will be added later.
-  const secretCodes=[{"code":"STARR10","reward":"10% off Premium","type":"discount","value":10},{"code":"NF002UME7YRJ","reward":"10% off Premium","type":"discount","value":10},{"code":"NF00392TLD6X","reward":"15% off Premium","type":"discount","value":15},{"code":"NF004NF8ZSKC","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0053UME7YR","reward":"10% off Premium","type":"discount","value":10},{"code":"NF006G92TLD6","reward":"15% off Premium","type":"discount","value":15},{"code":"NF007VNF8ZSK","reward":"5% off Premium","type":"discount","value":5},{"code":"NF008A3UME7Y","reward":"10% off Premium","type":"discount","value":10},{"code":"NF009PG92TLD","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0104VNF8ZS","reward":"1 day of Premium","type":"free","value":1},{"code":"NF011HA3UME7","reward":"10% off Premium","type":"discount","value":10},{"code":"NF012WPG92TL","reward":"15% off Premium","type":"discount","value":15},{"code":"NF013B4VNF8Z","reward":"5% off Premium","type":"discount","value":5},{"code":"NF014QHA3UME","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0155WPG92T","reward":"15% off Premium","type":"discount","value":15},{"code":"NF016JB4VNF8","reward":"5% off Premium","type":"discount","value":5},{"code":"NF017XQHA3UM","reward":"10% off Premium","type":"discount","value":10},{"code":"NF018C5WPG92","reward":"15% off Premium","type":"discount","value":15},{"code":"NF019RJB4VNF","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0206XQHA3U","reward":"2 days of Premium","type":"free","value":2},{"code":"NF021KC5WPG9","reward":"15% off Premium","type":"discount","value":15},{"code":"NF022YRJB4VN","reward":"5% off Premium","type":"discount","value":5},{"code":"NF023D6XQHA3","reward":"10% off Premium","type":"discount","value":10},{"code":"NF024SKC5WPG","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0257YRJB4V","reward":"5% off Premium","type":"discount","value":5},{"code":"NF026LD6XQHA","reward":"10% off Premium","type":"discount","value":10},{"code":"NF027ZSKC5WP","reward":"15% off Premium","type":"discount","value":15},{"code":"NF028E7YRJB4","reward":"5% off Premium","type":"discount","value":5},{"code":"NF029TLD6XQH","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0308ZSKC5W","reward":"3 days of Premium","type":"free","value":3},{"code":"NF031ME7YRJB","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0322TLD6XQ","reward":"10% off Premium","type":"discount","value":10},{"code":"NF033F8ZSKC5","reward":"15% off Premium","type":"discount","value":15},{"code":"NF034UME7YRJ","reward":"5% off Premium","type":"discount","value":5},{"code":"NF03592TLD6X","reward":"10% off Premium","type":"discount","value":10},{"code":"NF036NF8ZSKC","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0373UME7YR","reward":"5% off Premium","type":"discount","value":5},{"code":"NF038G92TLD6","reward":"10% off Premium","type":"discount","value":10},{"code":"NF039VNF8ZSK","reward":"15% off Premium","type":"discount","value":15},{"code":"NF040A3UME7Y","reward":"1 day of Premium","type":"free","value":1},{"code":"NF041PG92TLD","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0424VNF8ZS","reward":"15% off Premium","type":"discount","value":15},{"code":"NF043HA3UME7","reward":"5% off Premium","type":"discount","value":5},{"code":"NF044WPG92TL","reward":"10% off Premium","type":"discount","value":10},{"code":"NF045B4VNF8Z","reward":"15% off Premium","type":"discount","value":15},{"code":"NF046QHA3UME","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0475WPG92T","reward":"10% off Premium","type":"discount","value":10},{"code":"NF048JB4VNF8","reward":"15% off Premium","type":"discount","value":15},{"code":"NF049XQHA3UM","reward":"5% off Premium","type":"discount","value":5},{"code":"NF050C5WPG92","reward":"2 days of Premium","type":"free","value":2},{"code":"NF051RJB4VNF","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0526XQHA3U","reward":"5% off Premium","type":"discount","value":5},{"code":"NF053KC5WPG9","reward":"10% off Premium","type":"discount","value":10},{"code":"NF054YRJB4VN","reward":"15% off Premium","type":"discount","value":15},{"code":"NF055D6XQHA3","reward":"5% off Premium","type":"discount","value":5},{"code":"NF056SKC5WPG","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0577YRJB4V","reward":"15% off Premium","type":"discount","value":15},{"code":"NF058LD6XQHA","reward":"5% off Premium","type":"discount","value":5},{"code":"NF059ZSKC5WP","reward":"10% off Premium","type":"discount","value":10},{"code":"NF060E7YRJB4","reward":"3 days of Premium","type":"free","value":3},{"code":"NF061TLD6XQH","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0628ZSKC5W","reward":"10% off Premium","type":"discount","value":10},{"code":"NF063ME7YRJB","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0642TLD6XQ","reward":"5% off Premium","type":"discount","value":5},{"code":"NF065F8ZSKC5","reward":"10% off Premium","type":"discount","value":10},{"code":"NF066UME7YRJ","reward":"15% off Premium","type":"discount","value":15},{"code":"NF06792TLD6X","reward":"5% off Premium","type":"discount","value":5},{"code":"NF068NF8ZSKC","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0693UME7YR","reward":"15% off Premium","type":"discount","value":15},{"code":"NF070G92TLD6","reward":"1 day of Premium","type":"free","value":1},{"code":"NF071VNF8ZSK","reward":"10% off Premium","type":"discount","value":10},{"code":"NF072A3UME7Y","reward":"15% off Premium","type":"discount","value":15},{"code":"NF073PG92TLD","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0744VNF8ZS","reward":"10% off Premium","type":"discount","value":10},{"code":"NF075HA3UME7","reward":"15% off Premium","type":"discount","value":15},{"code":"NF076WPG92TL","reward":"5% off Premium","type":"discount","value":5},{"code":"NF077B4VNF8Z","reward":"10% off Premium","type":"discount","value":10},{"code":"NF078QHA3UME","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0795WPG92T","reward":"5% off Premium","type":"discount","value":5},{"code":"NF080JB4VNF8","reward":"2 days of Premium","type":"free","value":2},{"code":"NF081XQHA3UM","reward":"15% off Premium","type":"discount","value":15},{"code":"NF082C5WPG92","reward":"5% off Premium","type":"discount","value":5},{"code":"NF083RJB4VNF","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0846XQHA3U","reward":"15% off Premium","type":"discount","value":15},{"code":"NF085KC5WPG9","reward":"5% off Premium","type":"discount","value":5},{"code":"NF086YRJB4VN","reward":"10% off Premium","type":"discount","value":10},{"code":"NF087D6XQHA3","reward":"15% off Premium","type":"discount","value":15},{"code":"NF088SKC5WPG","reward":"5% off Premium","type":"discount","value":5},{"code":"NF0897YRJB4V","reward":"10% off Premium","type":"discount","value":10},{"code":"NF090LD6XQHA","reward":"3 days of Premium","type":"free","value":3},{"code":"NF091ZSKC5WP","reward":"5% off Premium","type":"discount","value":5},{"code":"NF092E7YRJB4","reward":"10% off Premium","type":"discount","value":10},{"code":"NF093TLD6XQH","reward":"15% off Premium","type":"discount","value":15},{"code":"NF0948ZSKC5W","reward":"5% off Premium","type":"discount","value":5},{"code":"NF095ME7YRJB","reward":"10% off Premium","type":"discount","value":10},{"code":"NF0962TLD6XQ","reward":"15% off Premium","type":"discount","value":15},{"code":"NF097F8ZSKC5","reward":"5% off Premium","type":"discount","value":5},{"code":"NF098UME7YRJ","reward":"10% off Premium","type":"discount","value":10},{"code":"NF09992TLD6X","reward":"15% off Premium","type":"discount","value":15},{"code":"NF100NF8ZSKC","reward":"1 day of Premium","type":"free","value":1}];
-  const foundKey='nightfall-found-secrets-v1';
-  let foundSecrets=[];try{foundSecrets=JSON.parse(localStorage.getItem(foundKey)||'[]').filter(n=>Number.isInteger(n)&&n>=0&&n<100);}catch(_){}
-  const foundSet=new Set(foundSecrets);
-  const countEl=document.getElementById('secretCount'),codeForm=document.getElementById('nightfallCodeForm'),codeInput=document.getElementById('nightfallCodeInput'),codeResult=document.getElementById('nightfallCodeResult');
-  const updateFoundCount=()=>{if(countEl)countEl.textContent=`${foundSet.size} / 100 FOUND`};const saveFound=()=>localStorage.setItem(foundKey,JSON.stringify([...foundSet]));updateFoundCount();
-  const revealSecret=(index,title='SECRET SIGNAL')=>{if(index<0||index>=100||foundSet.has(index))return;foundSet.add(index);saveFound();updateFoundCount();showSecret(`${title} ${String(index+1).padStart(2,'0')}`,`You found a hidden code: ${secretCodes[index].code}. ✦`)};
-  const discoverNext=()=>{for(let i=0;i<100;i++)if(!foundSet.has(i)){revealSecret(i);return true}return false};
-  if(codeForm)codeForm.addEventListener('submit',event=>{event.preventDefault();const entered=(codeInput?.value||'').trim().toUpperCase(),index=secretCodes.findIndex(item=>item.code===entered);if(index<0){codeResult.textContent='✕ That code does not exist.';return}if(!foundSet.has(index)){codeResult.textContent='✕ You have not found this secret yet. Keep hunting.';return}codeResult.textContent=`✓ ${secretCodes[index].code}: ${secretCodes[index].reward}. Premium rewards are coming soon.`;codeInput.value='';if(audioOn){ensureAudio();note(659.25,.13,'sine',.028);note(880,.18,'sine',.022,.08)}});
-  // Starr is intentionally hidden: the visible SECRET button is gone. Find it by clicking the logo 7 times.
-  const secretLogo=document.querySelector('.home-mark');if(secretLogo){let clicks=0,last=0;secretLogo.addEventListener('click',()=>{const now=Date.now();clicks=now-last<1500?clicks+1:1;last=now;if(clicks>=7){clicks=0;revealSecret(0,'STARR EASTER EGG')}})}
-  document.querySelectorAll('.visual-star').forEach((star,i)=>star.addEventListener('click',event=>{event.preventDefault();revealSecret([1,2,3][i],'STAR SIGNAL');star.classList.add('secret-star-hit');setTimeout(()=>star.classList.remove('secret-star-hit'),900)}));
-  document.querySelectorAll('.home-feature-card').forEach((card,i)=>card.addEventListener('dblclick',()=>revealSecret(4+i,'HIDDEN FEATURE')));
-  document.querySelectorAll('.command-line').forEach((line,i)=>line.addEventListener('dblclick',()=>revealSecret(10+i,'COMMAND SIGNAL')));
-  let huntClicks=0,huntTimer=null;document.addEventListener('click',event=>{if(event.target.closest('a,button,input,textarea,select,.home-mark,.visual-star,.nightfall-audio-toggle'))return;huntClicks++;clearTimeout(huntTimer);huntTimer=setTimeout(()=>huntClicks=0,2600);if(huntClicks>=9){huntClicks=0;discoverNext()}},{passive:true});
+  // ===== SINGLE HIDDEN SECRET =====
+  // Only the marked secret star can unlock the mini-game. Ten clicks are required.
+  const secretStar=document.querySelector('[data-secret-star]');
+  const duckGame=document.getElementById('duckGame');
+  const duckField=document.getElementById('duckField');
+  const duckStart=document.getElementById('duckStart');
+  const duckStartBtn=document.getElementById('duckStartBtn');
+  const duckClose=document.getElementById('duckClose');
+  const duckHitsEl=document.getElementById('duckHits');
+  const duckTimeEl=document.getElementById('duckTime');
+  const duckResult=document.getElementById('duckResult');
+  let starClicks=0, starLast=0, duckTimer=null, duckTime=30, duckHits=0, duckRunning=false;
+
+  const closeDuckGame=()=>{
+    if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
+    duckRunning=false;
+    if(duckGame){duckGame.hidden=true;document.body.classList.remove('duck-game-open');}
+  };
+  const finishDuckGame=(won)=>{
+    if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
+    duckRunning=false;
+    if(won){
+      localStorage.setItem('nightfall-duck-discount','50');
+      duckResult.innerHTML='<strong>50% DISCOUNT UNLOCKED.</strong><span>You beat the secret challenge. Your reward is saved on this browser for the upcoming Nightfall Premium launch.</span>';
+    }else{
+      duckResult.innerHTML='<strong>Challenge over.</strong><span>You can try the secret again later.</span>';
+    }
+  };
+  const moveDuck=()=>{
+    if(!duckField)return;
+    const old=duckField.querySelector('.duck-target'); if(old)old.remove();
+    const duck=document.createElement('button');
+    duck.type='button';duck.className='duck-target';duck.setAttribute('aria-label','Duck target');
+    duck.textContent='🦆';
+    duck.style.left=(8+Math.random()*82)+'%';
+    duck.style.top=(12+Math.random()*68)+'%';
+    duck.addEventListener('click',()=>{
+      if(!duckRunning)return;
+      duckHits++;
+      duckHitsEl.textContent=duckHits;
+      duck.classList.add('duck-hit');
+      setTimeout(()=>duck.remove(),90);
+      if(duckHits>=10){finishDuckGame(true);return;}
+      setTimeout(moveDuck,120);
+    });
+    duckField.appendChild(duck);
+  };
+  const startDuckGame=()=>{
+    if(!duckGame)return;
+    duckRunning=true;duckHits=0;duckTime=30;
+    duckHitsEl.textContent='0';duckTimeEl.textContent='30';duckResult.textContent='';
+    if(duckStart)duckStart.hidden=true;
+    moveDuck();
+    duckTimer=setInterval(()=>{
+      duckTime--;duckTimeEl.textContent=duckTime;
+      if(duckTime<=0)finishDuckGame(false);
+    },1000);
+  };
+  const openDuckGame=()=>{
+    if(!duckGame)return;
+    duckGame.hidden=false;document.body.classList.add('duck-game-open');
+    location.hash='duck-hunt';
+    duckResult.innerHTML='<strong>Secret unlocked.</strong><span>Complete the arcade challenge to unlock 50% off Premium.</span>';
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+  if(secretStar){
+    secretStar.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();
+      const now=Date.now();
+      starClicks=now-starLast<1800?starClicks+1:1;starLast=now;
+      secretStar.classList.add('secret-star-hit');
+      setTimeout(()=>secretStar.classList.remove('secret-star-hit'),500);
+      if(starClicks>=10){starClicks=0;openDuckGame();}
+    });
+  }
+  duckStartBtn?.addEventListener('click',startDuckGame);
+  duckClose?.addEventListener('click',closeDuckGame);
+  duckGame?.addEventListener('click',event=>{if(event.target===duckGame)closeDuckGame();});
+  if(localStorage.getItem('nightfall-duck-discount')==='50'){
+    const badge=document.createElement('div');
+    badge.className='duck-discount-badge';
+    badge.textContent='✦ 50% Premium discount unlocked';
+    document.body.appendChild(badge);
+  }
 
 });
