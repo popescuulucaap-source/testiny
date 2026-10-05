@@ -184,14 +184,22 @@ document.addEventListener('DOMContentLoaded',()=>{
     duckRunning=false;
     if(duckGame){duckGame.hidden=true;document.body.classList.remove('duck-game-open');}
   };
-  const finishDuckGame=(won)=>{
+  const finishDuckGame=async(won)=>{
     if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
     duckRunning=false;
-    if(won){
-      localStorage.setItem('nightfall-duck-discount','50');
-      duckResult.innerHTML='<strong>50% DISCOUNT UNLOCKED.</strong><span>You beat the secret challenge. Your reward is saved on this browser for the upcoming Nightfall Premium launch.</span>';
-    }else{
-      duckResult.innerHTML='<strong>Challenge over.</strong><span>You can try the secret again later.</span>';
+    if(!won){
+      duckResult.innerHTML='<strong>Challenge over.</strong><span>You did not finish in time. Your account can still try the challenge again, but it can only ever earn one arcade reward.</span>';
+      return;
+    }
+    try{
+      const response=await fetch('/api/arcade/finish',{method:'POST',headers:{'Content-Type':'application/json'}});
+      const data=await response.json();
+      if(!response.ok||!data.ok) throw new Error(data.error||'Could not create your code.');
+      duckResult.innerHTML='<strong>50% OFF CODE UNLOCKED.</strong><span>Your unique one-time code is:</span><code class="duck-reward-code"></code><span>Save it now. It is tied to this Discord account and can only be redeemed once.</span><a class="btn primary duck-redeem-link" href="/redeem">Redeem code</a>';
+      duckResult.querySelector('.duck-reward-code').textContent=data.code;
+      localStorage.removeItem('nightfall-duck-discount');
+    }catch(error){
+      duckResult.innerHTML='<strong>Reward error.</strong><span>'+String(error.message||'Please try again.')+'</span>';
     }
   };
   const moveDuck=()=>{
@@ -202,20 +210,35 @@ document.addEventListener('DOMContentLoaded',()=>{
     duck.innerHTML='<span class="duck-body"></span><span class="duck-head"><i class="duck-eye"></i></span><span class="duck-wing"></span>';
     duck.style.left=(8+Math.random()*82)+'%';
     duck.style.top=(12+Math.random()*68)+'%';
-    duck.addEventListener('click',()=>{
+    duck.addEventListener('click',async()=>{
       if(!duckRunning)return;
-      duckHits++;
-      duckHitsEl.textContent=duckHits;
-      duck.classList.add('duck-hit');
-      setTimeout(()=>duck.remove(),90);
-      if(duckHits>=10){finishDuckGame(true);return;}
-      setTimeout(moveDuck,120);
+      duckRunning=false;
+      try{
+        const response=await fetch('/api/arcade/hit',{method:'POST',headers:{'Content-Type':'application/json'}});
+        const data=await response.json();
+        if(!response.ok||!data.ok) throw new Error(data.error||'Hit could not be recorded.');
+        duckHits=data.hits;
+        duckHitsEl.textContent=duckHits;
+        duck.classList.add('duck-hit');
+        setTimeout(()=>duck.remove(),90);
+        if(duckHits>=10){await finishDuckGame(true);return;}
+        duckRunning=true;
+        setTimeout(moveDuck,120);
+      }catch(error){
+        duckRunning=false;
+        duckResult.innerHTML='<strong>Challenge stopped.</strong><span>'+String(error.message||'Could not record the hit.')+'</span>';
+      }
     });
     duckField.appendChild(duck);
   };
-  const startDuckGame=()=>{
+  const startDuckGame=async()=>{
     if(!duckGame)return;
     if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
+    try{
+      const response=await fetch('/api/arcade/start',{method:'POST',headers:{'Content-Type':'application/json'}});
+      const data=await response.json();
+      if(!response.ok||!data.ok){duckResult.innerHTML='<strong>Already claimed.</strong><span>'+String(data.error||'You cannot earn another arcade code.')+'</span>';return;}
+    }catch(error){duckResult.innerHTML='<strong>Challenge unavailable.</strong><span>Could not connect to the reward system.</span>';return;}
     duckRunning=true;duckHits=0;duckTime=30;duckDeadline=Date.now()+30000;
     duckHitsEl.textContent='0';duckTimeEl.textContent='30';duckResult.textContent='';
     if(duckStart)duckStart.hidden=true;
@@ -248,11 +271,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   duckStartBtn?.addEventListener('click',startDuckGame);
   duckClose?.addEventListener('click',closeDuckGame);
   duckGame?.addEventListener('click',event=>{if(event.target===duckGame)closeDuckGame();});
-  if(localStorage.getItem('nightfall-duck-discount')==='50'){
-    const badge=document.createElement('div');
-    badge.className='duck-discount-badge';
-    badge.textContent='✦ 50% Premium discount unlocked';
-    document.body.appendChild(badge);
-  }
+  // Rewards are now stored server-side and tied to the logged-in Discord account.
 
 });
