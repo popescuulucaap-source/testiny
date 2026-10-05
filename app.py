@@ -359,8 +359,8 @@ def index():
         ("🛡️","Moderation","Ban, kick, warn, timeout, lock, slowmode and jail."),
         ("🔐","Security","Anti-raid, anti-nuke, anti-link and verification."),
         ("🎫","Tickets","Interactive panels, questions, claims, proof and appeals."),
-        ("👋","Community","Welcome, leave, invites, vouches, feedback and boosters."),
-        ("🎮","Games","High-Low, Coinflip, Blackjack, Roulette and daily coins."),
+        ("👋","Server Tools","Welcome, leave, invites, vouches, feedback and boosters."),
+        ("⚙️","Dashboard","Manage Nightfall settings, security, tickets and server tools from the web."),
         ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
         ("🎨","AI studio","Ask questions, create stories, jokes, poems, riddles, captions, names and quizzes with Nightfall AI."),
     ]
