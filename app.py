@@ -488,6 +488,17 @@ def init_db():
                         "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
                         (title, body, date, "bot"),
                     )
+            premium_release = (
+                "Nightfall Premium • LIVE",
+                "Nightfall Premium is now live. Premium includes customization, AI features, 8 Ball, premium rewards, and Premium Vault access. The full-price pass is 179 Robux, and the special 70 Robux arcade offer unlocks after the arcade reward is redeemed.",
+                "2026-10-05",
+            )
+            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", (premium_release[0],))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
+                    (*premium_release, "bot"),
+                )
             cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, suggestion TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
