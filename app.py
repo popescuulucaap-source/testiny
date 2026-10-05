@@ -1,7 +1,6 @@
 import os
 import json
 import secrets
-import hashlib
 import threading
 import time
 from datetime import timedelta
@@ -296,7 +295,7 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS site_notifications (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_challenges (discord_id TEXT PRIMARY KEY, started_at DOUBLE PRECISION NOT NULL, hits INTEGER NOT NULL DEFAULT 0, completed BOOLEAN NOT NULL DEFAULT FALSE)")
-            cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code_hash TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS site_settings (discord_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', theme TEXT NOT NULL DEFAULT 'default', title TEXT NOT NULL DEFAULT '')")
             cur.execute("CREATE TABLE IF NOT EXISTS site_achievements (discord_id TEXT NOT NULL, achievement TEXT NOT NULL, unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, achievement))")
             cur.execute("CREATE TABLE IF NOT EXISTS site_reputation (discord_id TEXT PRIMARY KEY, score INTEGER NOT NULL DEFAULT 0)")
@@ -1433,12 +1432,9 @@ def api_award_xp():
     award_site_xp(action, 10)
     return jsonify({"ok":True})
 
-def _arcade_code_hash(code):
-    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+def arcade_reward_code():
+    return "ducky-squad"
 
-def _new_arcade_code():
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    return "NF50-" + "".join(secrets.choice(alphabet) for _ in range(4)) + "-" + "".join(secrets.choice(alphabet) for _ in range(4))
 
 @app.get("/redeem")
 @login_required
@@ -1534,8 +1530,8 @@ def arcade_finish():
         code = _new_arcade_code()
         code_hash = _arcade_code_hash(code)
         conn.execute(
-            "INSERT INTO arcade_rewards(discord_id,code_hash) VALUES(%s,%s)",
-            (user["id"], code_hash),
+            "INSERT INTO arcade_rewards(discord_id,code) VALUES(%s,%s)",
+            (user["id"], arcade_reward_code()),
         )
         conn.execute(
             "UPDATE arcade_challenges SET completed=TRUE WHERE discord_id=%s",
@@ -1557,14 +1553,13 @@ def arcade_redeem():
     if not DATABASE_URL:
         return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
     payload = request.get_json(silent=True) or {}
-    code = str(payload.get("code") or "").strip().upper()
-    if not code:
-        return jsonify({"ok": False, "error": "Enter your arcade code."}), 400
-    code_hash = _arcade_code_hash(code)
+    code = str(payload.get("code") or "").strip().lower()
+    if code != arcade_reward_code():
+        return jsonify({"ok": False, "error": "Invalid arcade code."}), 404
     with db_connect() as conn:
         reward = conn.execute(
-            "SELECT discord_id,redeemed_at FROM arcade_rewards WHERE code_hash=%s FOR UPDATE",
-            (code_hash,),
+            "SELECT discord_id,redeemed_at FROM arcade_rewards WHERE code=%s FOR UPDATE",
+            (code,),
         ).fetchone()
         if not reward:
             return jsonify({"ok": False, "error": "Invalid arcade code."}), 404
@@ -1573,7 +1568,7 @@ def arcade_redeem():
         if reward[1]:
             return jsonify({"ok": False, "error": "This arcade code has already been redeemed."}), 409
         conn.execute(
-            "UPDATE arcade_rewards SET redeemed_at=NOW(),redeemed_by=%s WHERE code_hash=%s",
+            "UPDATE arcade_rewards SET redeemed_at=NOW(),redeemed_by=%s WHERE code=%s",
             (user["id"], code_hash),
         )
         conn.commit()
