@@ -77,32 +77,32 @@ document.addEventListener('DOMContentLoaded',()=>{
     },{passive:true});
   }
 
-  // Nightfall audio: an original cinematic night-sky soundtrack + subtle UI tones.
-  // Browsers require a user gesture before sound can begin.
-  let audioCtx=null,master=null,ambientGain=null,ambientTimer=null,audioOn=localStorage.getItem('nightfall-audio')!=='off';
+  // Nightfall audio — cinematic sci-fi ambience generated locally with Web Audio.
+  // No external track is required, so the site stays self-contained and copyright-safe.
+  let audioCtx=null,master=null,ambientGain=null,ambientTimer=null,noiseNode=null,audioOn=localStorage.getItem('nightfall-audio')!=='off';
   const audioButton=document.createElement('button');
   audioButton.className='nightfall-audio-toggle';
   audioButton.type='button';
-  audioButton.setAttribute('aria-label','Toggle Nightfall ambient audio');
-  audioButton.innerHTML='<span>◉</span><b>Night Sky</b><small>ON</small>';
+  audioButton.setAttribute('aria-label','Toggle Nightfall space ambience');
+  audioButton.innerHTML='<span>◉</span><b>Deep Space</b><small>ON</small>';
   document.body.appendChild(audioButton);
 
   const ensureAudio=()=>{
     if(!audioCtx){
       audioCtx=new (window.AudioContext||window.webkitAudioContext)();
       master=audioCtx.createGain();
-      master.gain.value=.22;
+      master.gain.value=.20;
       master.connect(audioCtx.destination);
     }
     if(audioCtx.state==='suspended')audioCtx.resume();
   };
-  const note=(freq,dur,type='sine',gain=.035,when=0)=>{
+  const note=(freq,dur,type='sine',gain=.025,when=0)=>{
     ensureAudio();
     const t=audioCtx.currentTime+when,o=audioCtx.createOscillator(),g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();
     o.type=type;o.frequency.setValueAtTime(freq,t);
-    f.type='lowpass';f.frequency.value=1800;
+    f.type='lowpass';f.frequency.setValueAtTime(1400,t);
     g.gain.setValueAtTime(.0001,t);
-    g.gain.exponentialRampToValueAtTime(gain,t+.08);
+    g.gain.exponentialRampToValueAtTime(Math.max(.0002,gain),t+.12);
     g.gain.exponentialRampToValueAtTime(.0001,t+dur);
     o.connect(f);f.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05);
   };
@@ -111,54 +111,63 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(ambientTimer)return;
     if(!ambientGain){
       ambientGain=audioCtx.createGain();
-      ambientGain.gain.value=.72;
+      ambientGain.gain.value=.55;
       ambientGain.connect(master);
+    }
+    // Very quiet filtered noise creates the "air" of a cinematic spacecraft.
+    if(!noiseNode){
+      const buffer=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate);
+      const data=buffer.getChannelData(0);
+      for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.18;
+      noiseNode=audioCtx.createBufferSource();
+      const filter=audioCtx.createBiquadFilter(),ng=audioCtx.createGain();
+      noiseNode.buffer=buffer;noiseNode.loop=true;
+      filter.type='lowpass';filter.frequency.value=420;
+      ng.gain.value=.012;
+      noiseNode.connect(filter);filter.connect(ng);ng.connect(ambientGain);noiseNode.start();
     }
     const play=()=>{
       if(!audioOn)return;
       const now=audioCtx.currentTime;
-      const songs=[
-        [110,164.81,220,329.63,493.88,659.25],
-        [98,146.83,196,293.66,440,587.33],
-        [123.47,164.81,246.94,369.99,493.88,739.99],
-        [92.5,138.59,184.99,277.18,415.3,622.25]
+      const chords=[
+        [55,82.41,110,164.81,246.94],
+        [49,73.42,98,146.83,220],
+        [61.74,92.50,123.47,185,277.18]
       ];
-      const scale=songs[Math.floor(Date.now()/12000)%songs.length];
-      // Warm pad
-      scale.slice(0,3).forEach((f,i)=>{
+      const chord=chords[Math.floor(Date.now()/18000)%chords.length];
+      chord.slice(0,3).forEach((f,i)=>{
         const o=audioCtx.createOscillator(),g=audioCtx.createGain(),filter=audioCtx.createBiquadFilter();
         o.type=i===0?'triangle':'sine';o.frequency.value=f;
-        filter.type='lowpass';filter.frequency.value=1200;
+        filter.type='lowpass';filter.frequency.value=700+i*220;
         g.gain.setValueAtTime(.0001,now);
-        g.gain.exponentialRampToValueAtTime(.06,now+.9);
-        g.gain.exponentialRampToValueAtTime(.0001,now+10.8);
-        o.connect(filter);filter.connect(g);g.connect(ambientGain);o.start(now);o.stop(now+11.1);
+        g.gain.exponentialRampToValueAtTime(.045/(i+1),now+1.4);
+        g.gain.exponentialRampToValueAtTime(.0001,now+16.2);
+        o.connect(filter);filter.connect(g);g.connect(ambientGain);o.start(now);o.stop(now+16.6);
       });
-      // Slow arpeggio
-      [scale[3],scale[4],scale[5],scale[4],scale[3],scale[5]].forEach((f,i)=>{
-        const t=i*1.45;
-        note(f,1.15,'sine',.024,t);
-        note(f/2,1.5,'triangle',.012,t);
+      [chord[3],chord[4],chord[3]*2,chord[4]*.5].forEach((f,i)=>{
+        note(f,2.2,'sine',.012,i*3.6);
       });
-      ambientTimer=setTimeout(()=>{ambientTimer=null;play();},9200);
+      // Distant "signal" sweep.
+      const sweep=audioCtx.createOscillator(),sg=audioCtx.createGain();
+      sweep.type='sine';sweep.frequency.setValueAtTime(180,now+2);sweep.frequency.exponentialRampToValueAtTime(520,now+8);
+      sg.gain.setValueAtTime(.0001,now+2);sg.gain.exponentialRampToValueAtTime(.012,now+4);sg.gain.exponentialRampToValueAtTime(.0001,now+9);
+      sweep.connect(sg);sg.connect(ambientGain);sweep.start(now+2);sweep.stop(now+9.2);
+      ambientTimer=setTimeout(()=>{ambientTimer=null;play();},15000);
     };
     play();
   };
   const stopAmbient=()=>{
     if(ambientTimer){clearTimeout(ambientTimer);ambientTimer=null;}
-    if(ambientGain&&audioCtx){
-      ambientGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      ambientGain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.18);
-    }
+    if(ambientGain&&audioCtx)ambientGain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.22);
   };
   const setAudio=on=>{
     audioOn=on;localStorage.setItem('nightfall-audio',on?'on':'off');
     audioButton.classList.toggle('on',on);
     audioButton.querySelector('small').textContent=on?'ON':'OFF';
     if(on){
-      if(ambientGain&&audioCtx)ambientGain.gain.setTargetAtTime(.72,audioCtx.currentTime,.25);
+      if(ambientGain&&audioCtx)ambientGain.gain.setTargetAtTime(.55,audioCtx.currentTime,.3);
       startAmbient();
-      note(659.25,.16,'sine',.045);note(783.99,.22,'sine',.032,.07);note(987.77,.28,'sine',.022,.14);
+      note(523.25,.18,'sine',.032);note(659.25,.24,'sine',.022,.08);note(987.77,.36,'sine',.015,.16);
     }else stopAmbient();
   };
   audioButton.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();setAudio(!audioOn);});
@@ -168,10 +177,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(audioOn){ensureAudio();startAmbient();}
   },{capture:true,passive:true});
   document.querySelectorAll('a.btn,.nav-links a,button:not(.nightfall-audio-toggle)').forEach(el=>el.addEventListener('click',()=>{
-    if(audioOn){ensureAudio();startAmbient();note(659.25,.08,'sine',.022);note(880,.12,'sine',.016,.045);}
+    if(audioOn){ensureAudio();startAmbient();note(659.25,.08,'sine',.018);note(880,.12,'sine',.012,.045);}
   },{passive:true}));
   document.querySelectorAll('.home-feature-card,.command-line,.home-cta,.card').forEach(el=>el.addEventListener('mouseenter',()=>{
-    if(audioOn)note(740,.05,'sine',.012);
+    if(audioOn)note(740,.05,'sine',.010);
   },{passive:true}));
 
   // ===== SINGLE HIDDEN SECRET =====
