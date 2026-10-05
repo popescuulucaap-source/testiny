@@ -288,6 +288,17 @@ def init_db():
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL)")
+            # Seed the public v1.2 release announcement once, without duplicating it.
+            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Nightfall v1.2 • The next chapter",))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO announcements (title, body, date) VALUES (%s, %s, %s)",
+                    (
+                        "Nightfall v1.2 • The next chapter",
+                        "Nightfall v1.2 is here. This update brings a richer cinematic website, the new Planetary Archive with worlds beyond Earth, a more detailed R136a1 centerpiece, and a stronger server dashboard with live metrics and guided setup. We also expanded the Discord command experience with slash-command support for the new hybrid commands while keeping the familiar ! prefix. More server controls, support tools and improvements are on the way.",
+                        "2026-10-05",
+                    ),
+                )
             cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, suggestion TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
