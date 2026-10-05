@@ -195,8 +195,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const response=await fetch('/api/arcade/finish',{method:'POST',headers:{'Content-Type':'application/json'}});
       const data=await response.json();
       if(!response.ok||!data.ok) throw new Error(data.error||'Could not create your code.');
-      duckResult.innerHTML='<strong>50% OFF CODE UNLOCKED.</strong><span>Your unique one-time code is:</span><code class="duck-reward-code"></code><span>Save it now. It is tied to this Discord account and can only be redeemed once.</span><a class="btn primary duck-redeem-link" href="/redeem">Redeem code</a>';
-      duckResult.querySelector('.duck-reward-code').textContent=data.code;
+      duckResult.innerHTML='<strong>50% OFF CODE UNLOCKED.</strong><span>Your one-time code is:</span><code class="duck-reward-code">ducky-squad</code><span>Save it now. It is tied to this Discord account and can only be redeemed once.</span><a class="btn primary duck-redeem-link" href="/redeem">Redeem code</a>';
       localStorage.removeItem('nightfall-duck-discount');
     }catch(error){
       duckResult.innerHTML='<strong>Reward error.</strong><span>'+String(error.message||'Please try again.')+'</span>';
