@@ -188,14 +188,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
     duckRunning=false;
     if(!won){
-      duckResult.innerHTML='<strong>Challenge over.</strong><span>You did not finish in time. Your account can still try the challenge again, but it can only ever earn one arcade reward.</span>';
+      stopCarnivalMusic(); playArcadeSound('lose'); duckResult.innerHTML='<strong>Challenge over.</strong><span>You did not finish in time. Your account can still try the challenge again, but it can only ever earn one arcade reward.</span>';
       return;
     }
     try{
       const response=await fetch('/api/arcade/finish',{method:'POST',headers:{'Content-Type':'application/json'}});
       const data=await response.json();
       if(!response.ok||!data.ok) throw new Error(data.error||'Could not create your code.');
-      duckResult.innerHTML='<strong>50% OFF CODE UNLOCKED.</strong><span>Your one-time code is:</span><code class="duck-reward-code">ducky-squad</code><span>Save it now. It is tied to this Discord account and can only be redeemed once.</span><a class="btn primary duck-redeem-link" href="/redeem">Redeem code</a>';
+      stopCarnivalMusic(); playArcadeSound('win'); duckResult.innerHTML='<strong>50% OFF CODE UNLOCKED.</strong><span>Your one-time code is:</span><code class="duck-reward-code">ducky-squad</code><span>Save it now. It is tied to this Discord account and can only be redeemed once.</span><a class="btn primary duck-redeem-link" href="/redeem">Redeem code</a>';
       localStorage.removeItem('nightfall-duck-discount');
     }catch(error){
       duckResult.innerHTML='<strong>Reward error.</strong><span>'+String(error.message||'Please try again.')+'</span>';
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         const response=await fetch('/api/arcade/hit',{method:'POST',headers:{'Content-Type':'application/json'}});
         const data=await response.json();
         if(!response.ok||!data.ok) throw new Error(data.error||'Hit could not be recorded.');
-        duckHits=data.hits;
+        duckHits=data.hits; playArcadeSound('hit');
         duckHitsEl.textContent=duckHits;
         duck.classList.add('duck-hit');
         setTimeout(()=>duck.remove(),90);
@@ -230,6 +230,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
     duckField.appendChild(duck);
   };
+
+  let carnivalAudio=null;
+  const playArcadeSound=(type)=>{
+    try{
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const osc=ctx.createOscillator(), gain=ctx.createGain();
+      osc.type=type==='hit'?'square':'triangle';
+      osc.frequency.value=type==='hit'?520:260;
+      gain.gain.setValueAtTime(.06,ctx.currentTime); gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.12);
+      osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.12);
+    }catch(e){}
+  };
+  const startCarnivalMusic=()=>{
+    try{
+      carnivalAudio=new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_9a4e8c6f0b.mp3');
+      carnivalAudio.loop=true;carnivalAudio.volume=.22;carnivalAudio.play().catch(()=>{});
+    }catch(e){}
+  };
+  const stopCarnivalMusic=()=>{if(carnivalAudio){carnivalAudio.pause();carnivalAudio.currentTime=0;carnivalAudio=null;}};
   const startDuckGame=async()=>{
     if(!duckGame)return;
     if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
@@ -238,7 +257,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const data=await response.json();
       if(!response.ok||!data.ok){duckResult.innerHTML='<strong>Already claimed.</strong><span>'+String(data.error||'You cannot earn another arcade code.')+'</span>';return;}
     }catch(error){duckResult.innerHTML='<strong>Challenge unavailable.</strong><span>Could not connect to the reward system.</span>';return;}
-    duckRunning=true;duckHits=0;duckTime=30;duckDeadline=Date.now()+30000;
+    duckRunning=true;duckHits=0;duckTime=30; startCarnivalMusic(); playArcadeSound('start');duckDeadline=Date.now()+30000;
     duckHitsEl.textContent='0';duckTimeEl.textContent='30';duckResult.textContent='';
     if(duckStart)duckStart.hidden=true;
     moveDuck();
@@ -251,7 +270,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   const openDuckGame=()=>{
     if(!duckGame)return;
-    duckGame.hidden=false;document.body.classList.add('duck-game-open');
+    duckGame.hidden=false; duckGame.classList.remove("is-running");document.body.classList.add('duck-game-open');
     location.hash='duck-hunt';
     duckResult.innerHTML='<strong>Secret unlocked.</strong><span>Complete the arcade challenge to unlock 50% off Premium.</span>';
     window.scrollTo({top:0,behavior:'smooth'});
