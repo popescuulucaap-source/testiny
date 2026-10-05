@@ -193,7 +193,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
     try{
       const response=await fetch('/api/arcade/finish',{method:'POST',headers:{'Content-Type':'application/json'}});
-      const data=await response.json();
+      const raw=await response.text();
+      let data={};
+      try{data=JSON.parse(raw);}catch(e){
+        throw new Error(response.ok?'The reward system returned an invalid response.':'The reward server failed while creating your code. Please try again.');
+      }
       if(!response.ok||!data.ok) throw new Error(data.error||'Could not create your code.');
       stopCarnivalMusic(); playArcadeSound('win'); duckResult.innerHTML='<strong>50% OFF CODE UNLOCKED.</strong><span>Your one-time code is:</span><code class="duck-reward-code">ducky-squad</code><span>Save it now. It is tied to this Discord account and can only be redeemed once.</span><a class="btn primary duck-redeem-link" href="/redeem">Redeem code</a>';
       localStorage.removeItem('nightfall-duck-discount');
@@ -251,32 +255,33 @@ document.addEventListener('DOMContentLoaded',()=>{
       gain.gain.value=.08;
       gain.connect(master);
       carnivalAudio={gain,stops:[]};
-      const melody=[659.25,783.99,880,783.99,659.25,523.25,587.33,659.25,783.99,987.77,880,783.99];
-      const bass=[164.81,164.81,196,196,220,220,196,196];
+      // Can-Can (Jacques Offenbach) — public-domain melody, arranged for a tiny arcade loop.
+      const melody=[392,392,440,494,523.25,494,440,392,330,392,440,494,523.25,587.33,523.25,494];
+      const bass=[196,196,220,220,262,262,247,247];
       const playBar=()=>{
         if(!carnivalAudio)return;
         const now=ctx.currentTime;
         melody.forEach((freq,i)=>{
-          const t=now+i*.28;
+          const t=now+i*.20;
           const o=ctx.createOscillator(),g=ctx.createGain();
           o.type='square';o.frequency.value=freq;
           g.gain.setValueAtTime(.0001,t);
-          g.gain.exponentialRampToValueAtTime(.16,t+.025);
-          g.gain.exponentialRampToValueAtTime(.0001,t+.22);
-          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.24);
+          g.gain.exponentialRampToValueAtTime(.13,t+.018);
+          g.gain.exponentialRampToValueAtTime(.0001,t+.15);
+          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.17);
           carnivalAudio.stops.push(o);
         });
         bass.forEach((freq,i)=>{
-          const t=now+i*.42;
+          const t=now+i*.40;
           const o=ctx.createOscillator(),g=ctx.createGain();
           o.type='triangle';o.frequency.value=freq;
           g.gain.setValueAtTime(.0001,t);
-          g.gain.exponentialRampToValueAtTime(.09,t+.04);
-          g.gain.exponentialRampToValueAtTime(.0001,t+.34);
-          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.36);
+          g.gain.exponentialRampToValueAtTime(.075,t+.03);
+          g.gain.exponentialRampToValueAtTime(.0001,t+.28);
+          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.30);
           carnivalAudio.stops.push(o);
         });
-        carnivalAudio.timer=setTimeout(playBar,3300);
+        carnivalAudio.timer=setTimeout(playBar,3200);
       };
       playBar();
     }catch(e){}
