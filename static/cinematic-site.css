@@ -27,3 +27,124 @@ body:before,body:after,.bg-grid{display:none!important}
 /* Unique planet per page */
 .page-index .planet-blue{display:block!important}
 
+
+
+/* ===== NIGHTFALL PLANETARY TABS =====
+   NASA SVS star-map backdrop + one slow-moving world per page.
+*/
+html,body{background:#000!important}
+.space-scene{background:#000!important}
+.space-scene:before{background:#000!important}
+.space-scene:after{display:none!important}
+.space-stars-photo{
+  position:absolute;inset:-8%;
+  background:#000 url("https://svs.gsfc.nasa.gov/vis/a000000/a004800/a004856/starmap_random_2020_4k_print.jpg") center/cover no-repeat;
+  opacity:.72;
+  filter:brightness(.72) contrast(1.12);
+  animation:nf-real-stars 180s linear infinite alternate;
+}
+.space-stars-photo:after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at center,transparent 35%,#000 100%);
+}
+.space-planet{
+  display:none!important;
+  position:absolute!important;
+  pointer-events:none!important;
+  border-radius:50%!important;
+  will-change:transform;
+  transform-origin:center;
+  box-shadow:inset -35px -30px 55px #000b,0 0 45px #ffffff1c!important;
+}
+.space-planet:before,.space-planet:after{content:"";position:absolute;pointer-events:none}
+.page-index .planet-r136,
+.page-commands .planet-earth,
+.page-guidelines .planet-mars,
+.page-announcements .planet-jupiter,
+.page-suggestions .planet-saturn,
+.page-redeem .planet-uranus,
+.page-support .planet-neptune,
+.page-community .planet-pluto,
+.page-servers .planet-kepler16b,
+.page-profile .planet-k218b,
+.page-notifications .planet-kepler186f,
+.page-login .planet-earth,
+.page-oauth-callback .planet-earth,
+.page-admin .planet-r136,
+.page-admin-panel .planet-r136{display:block!important}
+
+/* R136a1 — main/home: an ultra-massive blue star, shown as the dominant object. */
+.planet-r136{
+  width:230px!important;height:230px!important;
+  right:9%;top:22%;
+  background:radial-gradient(circle at 42% 38%,#fff 0 7%,#dff7ff 15%,#82dfff 32%,#4a9dff 51%,#193c8c 72%,#050814 100%)!important;
+  box-shadow:0 0 35px #bdeeffaa,0 0 95px #4fa7ff66,0 0 180px #3c73ff35,inset -35px -28px 55px #06102dcc!important;
+  animation:nf-r136-drift 150s ease-in-out infinite alternate;
+}
+.planet-r136:before{inset:-38px;border-radius:50%;background:radial-gradient(circle,#8fdfff20,transparent 64%);filter:blur(7px)}
+.planet-r136:after{inset:-8px;border:1px solid #bdefff55;border-radius:50%;animation:nf-r136-ring 34s linear infinite}
+
+/* Earth */
+.planet-earth{width:190px!important;height:190px!important;left:7%;top:18%;background:radial-gradient(circle at 34% 28%,#dffaff 0 5%,#59c8ef 19%,#176cae 45%,#0b315d 72%,#020913 100%)!important;animation:nf-planet-a 170s ease-in-out infinite alternate}
+.planet-earth:before{inset:10% 5%;border-radius:50%;background:radial-gradient(ellipse at 35% 30%,#9ee28d 0 8%,transparent 9%),radial-gradient(ellipse at 57% 47%,#77c875 0 11%,transparent 12%),radial-gradient(ellipse at 27% 67%,#c9df91 0 7%,transparent 8%);opacity:.75;filter:blur(1px)}
+
+/* Mars */
+.planet-mars{width:160px!important;height:160px!important;right:10%;top:62%;background:radial-gradient(circle at 34% 27%,#ffd5c1 0 5%,#d66b4c 22%,#943f35 47%,#4a1c24 74%,#090307 100%)!important;animation:nf-planet-b 185s ease-in-out infinite alternate}
+.planet-mars:before{inset:12%;border-radius:50%;background:radial-gradient(circle at 45% 40%,transparent 0 17%,#6f2c2b22 18% 25%,transparent 26%),radial-gradient(circle at 66% 67%,#2a111722 0 5%,transparent 6%);}
+
+/* Jupiter */
+.planet-jupiter{width:260px!important;height:260px!important;left:5%;top:58%;background:repeating-linear-gradient(7deg,#d8b78a 0 12px,#8b6a52 13px 22px,#ead5aa 23px 34px,#9a7659 35px 44px,#d7b886 45px 58px)!important;animation:nf-planet-c 205s ease-in-out infinite alternate}
+.planet-jupiter:before{inset:0;border-radius:50%;background:radial-gradient(ellipse at 66% 58%,#a94f3b 0 7%,#713329 8% 10%,transparent 11%),linear-gradient(90deg,transparent,#fff2 45%,transparent 67%);mix-blend-mode:screen;opacity:.7}
+
+/* Saturn */
+.planet-saturn{width:205px!important;height:205px!important;right:8%;top:16%;background:radial-gradient(circle at 34% 28%,#fff0c8 0 6%,#d8b66d 22%,#9a7548 46%,#57412e 73%,#0a0705 100%)!important;animation:nf-planet-d 220s ease-in-out infinite alternate}
+.planet-saturn:after{width:340px;height:92px;left:-68px;top:57px;border:10px solid #d9c18a88;border-radius:50%;transform:rotate(-17deg);box-shadow:0 0 10px #f3d99e33}
+
+/* Uranus */
+.planet-uranus{width:185px!important;height:185px!important;left:10%;top:25%;background:radial-gradient(circle at 34% 27%,#efffff 0 6%,#9de5ea 24%,#5eabb7 49%,#2b6473 73%,#061218 100%)!important;animation:nf-planet-e 235s ease-in-out infinite alternate}
+.planet-uranus:before{inset:8%;border-radius:50%;background:repeating-linear-gradient(0deg,transparent 0 17px,#ffffff12 18px 20px)}
+
+/* Neptune */
+.planet-neptune{width:205px!important;height:205px!important;right:12%;top:46%;background:radial-gradient(circle at 34% 27%,#d8f4ff 0 5%,#4c9fe2 22%,#18559e 49%,#0a285e 73%,#020817 100%)!important;animation:nf-planet-f 250s ease-in-out infinite alternate}
+.planet-neptune:before{inset:8%;border-radius:50%;background:linear-gradient(8deg,transparent 0 35%,#fff1 36% 40%,transparent 41% 66%,#001b5525 67% 72%,transparent 73%)}
+
+/* Pluto */
+.planet-pluto{width:135px!important;height:135px!important;left:8%;top:67%;background:radial-gradient(circle at 35% 28%,#fff0dc 0 5%,#c7ad94 23%,#806f68 48%,#463f42 74%,#09090c 100%)!important;animation:nf-planet-g 270s ease-in-out infinite alternate}
+.planet-pluto:before{inset:15%;border-radius:50%;background:radial-gradient(circle at 63% 43%,#e9ddd31f 0 16%,transparent 17%),radial-gradient(circle at 38% 65%,#201a1b33 0 10%,transparent 11%)}
+
+/* Exoplanets — artistic representations, because no direct photographs exist. */
+.planet-kepler16b{width:220px!important;height:220px!important;left:8%;top:40%;background:radial-gradient(circle at 35% 28%,#e9d8ff 0 5%,#9f78b8 22%,#65486e 46%,#33283d 72%,#07050a 100%)!important;animation:nf-planet-h 290s ease-in-out infinite alternate}
+.planet-kepler16b:before{inset:0;border-radius:50%;background:repeating-linear-gradient(5deg,transparent 0 18px,#ffffff10 19px 23px)}
+
+.planet-k218b{width:175px!important;height:175px!important;right:7%;top:27%;background:radial-gradient(circle at 35% 27%,#f0fff7 0 6%,#80d8bd 23%,#3b8c77 48%,#1b4c49 72%,#04110f 100%)!important;animation:nf-planet-i 310s ease-in-out infinite alternate}
+.planet-k218b:before{inset:0;border-radius:50%;background:radial-gradient(ellipse at 58% 48%,#dfffe31f 0 14%,transparent 15%),repeating-linear-gradient(-8deg,transparent 0 23px,#ffffff0d 24px 27px)}
+
+.planet-kepler186f{width:165px!important;height:165px!important;left:12%;top:53%;background:radial-gradient(circle at 34% 27%,#ffe9c8 0 5%,#c98d67 23%,#7c544d 47%,#3b3035 72%,#08070b 100%)!important;animation:nf-planet-j 330s ease-in-out infinite alternate}
+.planet-kepler186f:before{inset:10%;border-radius:50%;background:radial-gradient(circle at 58% 45%,#eac9a41d 0 18%,transparent 19%),radial-gradient(circle at 36% 67%,#22151a33 0 9%,transparent 10%)}
+
+@keyframes nf-real-stars{from{transform:scale(1.04) translate3d(-1.5%,-1%,0)}to{transform:scale(1.1) translate3d(1.5%,1%,0)}}
+@keyframes nf-r136-drift{0%{transform:translate3d(0,0,0) scale(.94)}35%{transform:translate3d(-70px,42px,0) scale(1)}70%{transform:translate3d(44px,-58px,0) scale(1.05)}100%{transform:translate3d(-25px,65px,0) scale(.97)}}
+@keyframes nf-r136-ring{to{transform:rotate(360deg)}}
+@keyframes nf-planet-a{0%{transform:translate3d(-2vw,0,0) rotate(0)}50%{transform:translate3d(5vw,4vh,0) rotate(5deg)}100%{transform:translate3d(-3vw,8vh,0) rotate(-4deg)}}
+@keyframes nf-planet-b{0%{transform:translate3d(2vw,-2vh,0)}50%{transform:translate3d(-6vw,4vh,0)}100%{transform:translate3d(4vw,-7vh,0)}}
+@keyframes nf-planet-c{0%{transform:translate3d(-4vw,2vh,0) rotate(0)}50%{transform:translate3d(6vw,-4vh,0) rotate(4deg)}100%{transform:translate3d(-5vw,7vh,0) rotate(-3deg)}}
+@keyframes nf-planet-d{0%{transform:translate3d(3vw,1vh,0)}50%{transform:translate3d(-5vw,6vh,0)}100%{transform:translate3d(5vw,-4vh,0)}}
+@keyframes nf-planet-e{0%{transform:translate3d(-3vw,3vh,0)}50%{transform:translate3d(6vw,-5vh,0)}100%{transform:translate3d(-2vw,7vh,0)}}
+@keyframes nf-planet-f{0%{transform:translate3d(2vw,-3vh,0)}50%{transform:translate3d(-6vw,4vh,0)}100%{transform:translate3d(3vw,7vh,0)}}
+@keyframes nf-planet-g{0%{transform:translate3d(-4vw,0,0)}50%{transform:translate3d(5vw,-6vh,0)}100%{transform:translate3d(-5vw,4vh,0)}}
+@keyframes nf-planet-h{0%{transform:translate3d(3vw,3vh,0)}50%{transform:translate3d(-5vw,-4vh,0)}100%{transform:translate3d(4vw,6vh,0)}}
+@keyframes nf-planet-i{0%{transform:translate3d(-2vw,-2vh,0)}50%{transform:translate3d(5vw,5vh,0)}100%{transform:translate3d(-4vw,-5vh,0)}}
+@keyframes nf-planet-j{0%{transform:translate3d(2vw,2vh,0)}50%{transform:translate3d(-5vw,-5vh,0)}100%{transform:translate3d(3vw,6vh,0)}}
+
+@media(max-width:700px){
+  .space-stars-photo{opacity:.58}
+  .planet-r136{width:155px!important;height:155px!important;right:3%;top:16%}
+  .planet-earth,.planet-mars,.planet-uranus,.planet-neptune,.planet-k218b,.planet-kepler186f{transform:scale(.78)}
+  .planet-jupiter{width:180px!important;height:180px!important}
+  .planet-saturn{width:150px!important;height:150px!important}
+  .planet-saturn:after{width:250px;height:65px;left:-50px;top:43px}
+  .planet-pluto{width:105px!important;height:105px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .space-stars-photo,.space-planet,.planet-r136:after{animation:none!important}
+}
