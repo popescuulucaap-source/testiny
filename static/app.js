@@ -246,52 +246,48 @@ document.addEventListener('DOMContentLoaded',()=>{
       osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.12);
     }catch(e){}
   };
+  // Secret-game music: one short loop, one AudioContext, and a hard stop.
+  // This intentionally replaces the old layered carnival loop that could overlap.
+  let carnivalAudio=null;
   const startCarnivalMusic=()=>{
+    if(carnivalAudio || !audioCtx) return;
     try{
       ensureAudio();
-      if(carnivalAudio)return;
       const ctx=audioCtx;
       const gain=ctx.createGain();
-      gain.gain.value=.08;
+      gain.gain.value=.045;
       gain.connect(master);
-      carnivalAudio={gain,stops:[]};
-      // Can-Can (Jacques Offenbach) — public-domain melody, arranged for a tiny arcade loop.
-      const melody=[392,392,440,494,523.25,494,440,392,330,392,440,494,523.25,587.33,523.25,494];
-      const bass=[196,196,220,220,262,262,247,247];
-      const playBar=()=>{
+      carnivalAudio={gain,timer:null,oscillators:[]};
+      const notes=[261.63,329.63,392,523.25,392,329.63,293.66,349.23];
+      let step=0;
+      const play=()=>{
         if(!carnivalAudio)return;
         const now=ctx.currentTime;
-        melody.forEach((freq,i)=>{
-          const t=now+i*.20;
-          const o=ctx.createOscillator(),g=ctx.createGain();
-          o.type='square';o.frequency.value=freq;
-          g.gain.setValueAtTime(.0001,t);
-          g.gain.exponentialRampToValueAtTime(.13,t+.018);
-          g.gain.exponentialRampToValueAtTime(.0001,t+.15);
-          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.17);
-          carnivalAudio.stops.push(o);
-        });
-        bass.forEach((freq,i)=>{
-          const t=now+i*.40;
-          const o=ctx.createOscillator(),g=ctx.createGain();
-          o.type='triangle';o.frequency.value=freq;
-          g.gain.setValueAtTime(.0001,t);
-          g.gain.exponentialRampToValueAtTime(.075,t+.03);
-          g.gain.exponentialRampToValueAtTime(.0001,t+.28);
-          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.30);
-          carnivalAudio.stops.push(o);
-        });
-        carnivalAudio.timer=setTimeout(playBar,3200);
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.type='sine';o.frequency.value=notes[step%notes.length];
+        g.gain.setValueAtTime(.0001,now);
+        g.gain.exponentialRampToValueAtTime(.12,now+.02);
+        g.gain.exponentialRampToValueAtTime(.0001,now+.22);
+        o.connect(g);g.connect(gain);o.start(now);o.stop(now+.24);
+        carnivalAudio.oscillators.push(o);
+        step++;
+        carnivalAudio.timer=setTimeout(play,260);
       };
-      playBar();
-    }catch(e){}
+      play();
+    }catch(e){ carnivalAudio=null; }
   };
   const stopCarnivalMusic=()=>{
-    if(carnivalAudio){
-      if(carnivalAudio.timer)clearTimeout(carnivalAudio.timer);
-      if(carnivalAudio.gain&&audioCtx)carnivalAudio.gain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.08);
-      carnivalAudio=null;
-    }
+    const music=carnivalAudio;
+    carnivalAudio=null;
+    if(!music)return;
+    if(music.timer)clearTimeout(music.timer);
+    try{
+      music.oscillators.forEach(o=>{try{o.stop();}catch(e){}});
+      if(music.gain&&audioCtx){
+        music.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+        music.gain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.03);
+      }
+    }catch(e){}
   };
   const startDuckGame=async()=>{
     if(!duckGame)return;
@@ -328,7 +324,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     starLast=now;
     secretStar.classList.add('secret-star-hit');
     setTimeout(()=>secretStar.classList.remove('secret-star-hit'),500);
-    if(starClicks>=10){starClicks=0;openDuckGame();}
+    if(starClicks>=1){starClicks=0;openDuckGame();}
   });
   }
   duckStartBtn?.addEventListener('click',startDuckGame);
