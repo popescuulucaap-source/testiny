@@ -56,8 +56,12 @@
         <button class="duck-close" id="duckClose" type="button" aria-label="Close game">×</button>
       </div>
       <div class="duck-game-stats"><span>HITS <b id="duckHits">0</b>/10</span><span>TIME <b id="duckTime">30</b>s</span></div>
-      <div class="duck-field" id="duckField"><div class="duck-start" id="duckStart"><b>SECRET UNLOCKED</b><span>Press start when you're ready.</span><button class="btn primary" id="duckStartBtn" type="button">Start challenge</button></div></div>
-      <div class="duck-result" id="duckResult" role="status" aria-live="polite"></div>
+      <div class="duck-field" id="duckField">
+  <div class="duck-stand-backdrop" aria-hidden="true"><div class="duck-booth-sign">NIGHTFALL DUCK RANGE</div><div class="duck-booth-lights">● ● ● ● ● ● ●</div></div>
+  <div class="toy-blaster" aria-hidden="true"><div class="blaster-grip"></div><div class="blaster-body"></div><div class="blaster-barrel"></div></div>
+  <div class="duck-start" id="duckStart"><b>SECRET UNLOCKED</b><span>Hit 10 cardboard duck targets before time runs out.</span><button class="btn primary" id="duckStartBtn" type="button">Start challenge</button></div>
+</div>
+<div class="duck-result" id="duckResult" role="status" aria-live="polite"></div>
     </div>
   </section>
 
