@@ -1,9 +1,4 @@
 document.addEventListener('DOMContentLoaded',()=>{
-  // Account progression: meaningful sections award a small, server-side XP bonus once per hour.
-  const xpActions={"/":"profile","/community":"community","/suggestions":"suggestion","/secrets":"secrets"};
-  const xpAction=xpActions[location.pathname];
-  if(xpAction) fetch('/api/xp/award',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:xpAction})}).catch(()=>{});
-
   const loader=document.getElementById('nightfall-loader');
   if(loader){
     const key='nightfall-home-intro-seen-v2';
@@ -182,7 +177,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const duckHitsEl=document.getElementById('duckHits');
   const duckTimeEl=document.getElementById('duckTime');
   const duckResult=document.getElementById('duckResult');
-  let starClicks=0, starLast=0, duckTimer=null, duckTime=30, duckHits=0, duckRunning=false;
+  let starClicks=0, starLast=0, duckTimer=null, duckTime=30, duckHits=0, duckRunning=false, duckDeadline=0;
 
   const closeDuckGame=()=>{
     if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
@@ -204,7 +199,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const old=duckField.querySelector('.duck-target'); if(old)old.remove();
     const duck=document.createElement('button');
     duck.type='button';duck.className='duck-target';duck.setAttribute('aria-label','Duck target');
-    duck.textContent='🦆';
+    duck.innerHTML='<span class="duck-body"></span><span class="duck-head"><i class="duck-eye"></i></span><span class="duck-wing"></span>';
     duck.style.left=(8+Math.random()*82)+'%';
     duck.style.top=(12+Math.random()*68)+'%';
     duck.addEventListener('click',()=>{
@@ -220,14 +215,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   const startDuckGame=()=>{
     if(!duckGame)return;
-    duckRunning=true;duckHits=0;duckTime=30;
+    if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
+    duckRunning=true;duckHits=0;duckTime=30;duckDeadline=Date.now()+30000;
     duckHitsEl.textContent='0';duckTimeEl.textContent='30';duckResult.textContent='';
     if(duckStart)duckStart.hidden=true;
     moveDuck();
     duckTimer=setInterval(()=>{
-      duckTime--;duckTimeEl.textContent=duckTime;
-      if(duckTime<=0)finishDuckGame(false);
-    },1000);
+      const remaining=Math.max(0,duckDeadline-Date.now());
+      duckTime=Math.ceil(remaining/1000);
+      duckTimeEl.textContent=duckTime;
+      if(remaining<=0)finishDuckGame(false);
+    },100);
   };
   const openDuckGame=()=>{
     if(!duckGame)return;
