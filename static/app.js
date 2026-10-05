@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   }
 
+  document.querySelectorAll('.dashboard-jump').forEach(link=>link.addEventListener('click',event=>{
+    event.preventDefault();
+    const target=link.dataset.tabJump;
+    const tab=document.querySelector(`.tab[data-tab="${target}"]`);
+    if(tab) tab.click();
+  }));
+
   document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(item=>item.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(panel=>panel.classList.remove('active'));
