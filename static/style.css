@@ -89,3 +89,28 @@ main{width:100%;overflow:hidden}
   input,textarea,select{font-size:16px}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+
+/* ===== REALISTIC SPACE BACKDROP — ALL PAGES ===== */
+body{background:#02030a!important;}
+body:before{z-index:0!important;background:
+ radial-gradient(circle at 78% 16%,rgba(125,94,255,.18),transparent 20%),
+ radial-gradient(circle at 18% 72%,rgba(34,80,150,.14),transparent 25%),
+ radial-gradient(circle at 50% 45%,rgba(255,255,255,.025),transparent 45%),
+ linear-gradient(180deg,#02030a 0%,#050617 52%,#010207 100%)!important;}
+.bg-grid{opacity:.08!important;z-index:0!important;}
+.night-stars{z-index:0!important;opacity:.9!important;background-image:radial-gradient(#fff 1px,transparent 1.4px),radial-gradient(#b9d7ff 1px,transparent 1.3px),radial-gradient(#fff 2px,transparent 2.4px)!important;background-size:137px 137px,211px 211px,367px 367px!important;}
+.night-moon{z-index:0!important;}
+body:after{z-index:0!important;box-shadow:inset 0 0 180px rgba(0,0,0,.7)!important;}
+.nav,main,footer{position:relative;z-index:2!important;}
+main:before{z-index:0!important;opacity:.45;background:radial-gradient(ellipse at 65% 8%,rgba(100,82,190,.13),transparent 32%),linear-gradient(180deg,rgba(2,3,10,.04),rgba(2,3,10,.2))!important;}
+main>*{position:relative;z-index:1;}
+/* distant planets / nebulae, built with CSS so every page works without external assets */
+body:global{} 
+main:after{content:"";position:fixed;width:clamp(90px,12vw,190px);height:clamp(90px,12vw,190px);right:clamp(2%,8vw,12%);bottom:12%;border-radius:50%;pointer-events:none;z-index:0;background:radial-gradient(circle at 35% 30%,#f6e5c7 0 5%,#c98252 20%,#743b55 48%,#17132d 76%,transparent 78%);box-shadow:0 0 30px rgba(214,140,105,.22),inset -24px -18px 40px rgba(0,0,0,.55);opacity:.65;filter:saturate(.8);}
+@media(max-width:700px){main:after{width:85px;height:85px;right:5%;bottom:9%;opacity:.42}}
+
+/* ===== MOBILE SECRET STAR ===== */
+.secret-star-visible{display:grid!important;place-items:center;position:absolute;z-index:50!important;pointer-events:auto!important;touch-action:manipulation;cursor:pointer;width:44px;height:44px;padding:0;margin:-8px;border:0;background:transparent;color:inherit;-webkit-tap-highlight-color:transparent;}
+.secret-star-visible:focus-visible{outline:2px solid #c7b9ff;outline-offset:3px;border-radius:50%;}
+@media(max-width:700px){.secret-star-visible{width:52px;height:52px;z-index:100!important;transform:translateZ(0);}}
