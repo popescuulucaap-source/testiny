@@ -13,7 +13,16 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='duck-game.css') }}?v=1">
 </head>
 <body>
-{% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div></div>{% endif %}
+{% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div><script>
+(function(){
+  var l=document.getElementById('nightfall-loader');
+  if(!l)return;
+  setTimeout(function(){
+    l.classList.add('hidden');
+    setTimeout(function(){if(l&&l.parentNode)l.parentNode.removeChild(l);},700);
+  },2500);
+})();
+</script></div>{% endif %}
 <div class="bg-grid"></div>
 <nav class="nav">
   <a class="brand" href="/" aria-label="Nightfall home"><img class="brand-wordmark" src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall"></a>
@@ -25,6 +34,6 @@
 </nav>
 <main>{% block content %}{% endblock %}</main>
 <footer><div><b>Nightfall</b><span> • 1.0v UPDATE · Discord tools, built for your server.</span></div><div><a href="/guidelines">Rules & Guidelines</a><span> · </span><a href="/announcements">Updates</a><span> · </span><a href="/suggestions">Suggestions</a><span> · </span><a href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">YouTube</a></div></footer>
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}?v=20261005"></script>
 </body>
 </html>
