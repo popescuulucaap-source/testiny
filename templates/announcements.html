@@ -2,6 +2,6 @@
 {% block title %}Nightfall • Updates{% endblock %}
 {% block content %}
 <section class="page-head"><span class="eyebrow">OFFICIAL UPDATES</span><h1>What's new in Nightfall.</h1><p>New commands, features, fixes and announcements.</p></section>
-<div class="updates">{% for a in announcements %}<article class="update"><span>{{ a.date }}</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No announcements yet.</h3><p>Use the admin panel to publish the first Nightfall update.</p></article>{% endfor %}</div>
+<div class="updates">{% for a in announcements %}<article class="update"><span>{{ a.date }} · {{ "BOT UPDATE" if a.kind == "bot" else "WEBSITE UPDATE" }}</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No announcements yet.</h3><p>Use the admin panel to publish the first Nightfall update.</p></article>{% endfor %}</div>
 {% endblock %}
 
