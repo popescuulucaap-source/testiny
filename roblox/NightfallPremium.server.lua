@@ -291,7 +291,7 @@ statusFunction.OnServerInvoke = function(player)
         premium = premium,
         source = source,
         expiresAt = expiresAt,
-        arcadeOfferUnlocked = premium,
+        arcadeOfferUnlocked = false,
     }
 end
 
