@@ -1,44 +1,121 @@
 {% extends "base.html" %}
-{% block title %}Premium Vault • Nightfall{% endblock %}
+{% block title %}Premium • Nightfall{% endblock %}
 {% block content %}
-<section class="section-shell premium-vault-page">
+<section class="section-shell premium-page">
   <div class="section-heading">
-    <span class="eyebrow">PREMIUM VAULT</span>
-    <h1>Nightfall command control.</h1>
-    <p>Link your Roblox account, verify Premium, choose a Discord server, and send real Nightfall commands to that server.</p>
+    <span class="eyebrow">NIGHTFALL PREMIUM</span>
+    <h1>Unlock the full Nightfall experience.</h1>
+    <p>Premium is purchased through the Nightfall website. Roblox handles the secure Robux transaction, and Nightfall verifies the entitlement before unlocking Premium and the Vault.</p>
   </div>
 
-  <div class="vault-status card">
+  <div class="premium-store-grid">
+    <article class="card premium-plan premium-plan-main">
+      <span class="eyebrow">FULL ACCESS</span>
+      <h2>Premium</h2>
+      <div class="premium-price"><strong>{{ premium_full_price }}</strong><span>Robux</span></div>
+      <p>One-time purchase. Unlocks Premium permanently while you own the Roblox Premium pass.</p>
+      <ul class="premium-list">
+        <li>Premium customization</li>
+        <li>Premium AI features</li>
+        <li>8 Ball</li>
+        <li>Premium themes and visual effects</li>
+        <li>Premium badge, titles and name effects</li>
+        <li>Premium rewards and extra arcade features</li>
+        <li>Premium Vault access</li>
+      </ul>
+      <a class="btn primary premium-buy" href="{{ premium_full_url }}" target="_blank" rel="noopener">Buy Premium • {{ premium_full_price }} Robux</a>
+      <p class="notice">The button opens Roblox's official purchase page. The website never asks for your Roblox password.</p>
+    </article>
+
+    <article class="card premium-plan premium-plan-offer">
+      <span class="eyebrow">ARCADE OFFER</span>
+      <h2>Special Premium offer</h2>
+      {% if arcade_unlocked %}
+        <div class="premium-price"><strong>{{ premium_arcade_price }}</strong><span>Robux</span></div>
+        <p>Your arcade reward has been redeemed. The special {{ premium_arcade_price }} Robux Premium pass is now unlocked for this Discord account.</p>
+        <ul class="premium-list">
+          <li>Same Premium access</li>
+          <li>Customization</li>
+          <li>AI features</li>
+          <li>8 Ball</li>
+          <li>Premium Vault</li>
+        </ul>
+        <a class="btn primary premium-buy" href="{{ premium_arcade_url }}" target="_blank" rel="noopener">Buy arcade offer • {{ premium_arcade_price }} Robux</a>
+      {% else %}
+        <div class="premium-price premium-hidden-price"><strong>LOCKED</strong></div>
+        <p>Complete the Nightfall arcade and redeem the reward code first. This offer stays hidden until the arcade reward is actually redeemed.</p>
+        <a class="btn secondary" href="{{ url_for('index') }}#arcade">Play the arcade</a>
+      {% endif %}
+    </article>
+  </div>
+
+  <div class="card premium-code-card">
     <div>
-      <span class="eyebrow">ENTITLEMENT</span>
-      <h2 id="premiumStatus">{{ "Premium active" if premium_active else "Premium required" }}</h2>
+      <span class="eyebrow">STARTED</span>
+      <h2>3 months of Premium</h2>
+      <p>Redeem <strong>started</strong> once per account for 90 days of Premium. You must link your Roblox account first so the entitlement can be used by the game.</p>
+    </div>
+    <div class="premium-code-form">
+      <input id="startedCode" type="text" maxlength="40" autocomplete="off" placeholder="Enter code">
+      <button class="btn primary" id="redeemStarted" type="button">Redeem</button>
+      <span class="notice" id="startedResult" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div class="card premium-link-card">
+    <div>
+      <span class="eyebrow">ACCOUNT LINK</span>
+      <h2>Connect Roblox to Nightfall</h2>
+      <p>Linking lets Nightfall associate your Roblox Premium entitlement with your Discord account and protect the Vault from client-side fake unlocks.</p>
+    </div>
+    {% if link and link.roblox_user_id %}
+      <div class="premium-linked">
+        <strong>Roblox linked</strong>
+        <span>User ID {{ link.roblox_user_id }}</span>
+      </div>
+    {% else %}
+      <button class="btn secondary" id="generateLink" type="button">Generate Roblox link code</button>
+      <div class="vault-code" id="linkCode" hidden></div>
+      <p class="notice" id="linkHelp" hidden>Enter this code in the Nightfall Roblox account-link panel. It expires after 15 minutes.</p>
+    {% endif %}
+  </div>
+
+  <div class="card premium-status-card">
+    <div>
+      <span class="eyebrow">YOUR STATUS</span>
+      <h2 id="premiumStatus">{{ "Premium active" if premium_active else "Premium not active" }}</h2>
       <p id="premiumDetails">
-        {% if link and link.roblox_user_id %}
-          Roblox account linked: {{ link.roblox_user_id }}.
+        {% if premium_active and link and link.premium_source == "started" %}
+          Your temporary Premium access is active until {{ link.premium_expires_at|datetimeformat }}.
+        {% elif premium_active %}
+          Your Roblox Premium pass is active.
         {% else %}
-          Your Roblox account is not linked yet.
+          Buy a Premium pass or redeem started to unlock Premium.
         {% endif %}
       </p>
     </div>
     <div class="vault-lock" id="vaultLock">{{ "UNLOCKED" if premium_active else "LOCKED" }}</div>
   </div>
 
-  {% if not link or not link.roblox_user_id %}
-  <div class="card vault-link-card">
-    <span class="eyebrow">CONNECT ROBLOX</span>
-    <h2>Link your Roblox account</h2>
-    <p>Generate a short code here, then enter it in the Nightfall Roblox game. The game server will securely confirm the link.</p>
-    <button class="btn primary" id="generateLink" type="button">Generate link code</button>
-    <div class="vault-code" id="linkCode" hidden></div>
-    <p class="notice" id="linkHelp" hidden>Enter this code in the Nightfall Roblox game's account-link panel. This code expires after 15 minutes.</p>
+  <div class="card premium-features">
+    <span class="eyebrow">WHAT YOU GET</span>
+    <h2>Premium features</h2>
+    <div class="premium-feature-grid">
+      <div><strong>Customization</strong><span>Premium themes, profile effects, UI colors and name effects.</span></div>
+      <div><strong>AI Studio</strong><span>Premium access to Nightfall's AI-powered tools.</span></div>
+      <div><strong>8 Ball</strong><span>Unlock the Premium 8 Ball feature.</span></div>
+      <div><strong>Rewards</strong><span>Premium daily rewards, exclusive rewards and extra arcade benefits.</span></div>
+      <div><strong>Vault</strong><span>Use the protected website control center for servers you manage.</span></div>
+      <div><strong>Early Access</strong><span>Premium features and selected Nightfall updates can arrive early.</span></div>
+    </div>
   </div>
-  {% endif %}
 
   <div class="card vault-console" id="vaultConsole" {% if not premium_active %}hidden{% endif %}>
     <div class="vault-console-head">
       <div>
-        <span class="eyebrow">SERVER VAULT</span>
+        <span class="eyebrow">PREMIUM VAULT</span>
         <h2>Control a selected server</h2>
+        <p>Only users with verified Premium and Discord server-management permission can use these controls.</p>
       </div>
       <select id="serverSelect" class="vault-select">
         <option value="">Loading servers…</option>
@@ -46,71 +123,30 @@
     </div>
 
     <div class="vault-command-grid">
-      <label class="vault-field vault-wide">
-        <span>Command</span>
-        <select id="commandSelect">
-          <option value="ping">ping</option>
-          <option value="membercount">membercount</option>
-          <option value="roleinfo">roleinfo</option>
-          <option value="channelinfo">channelinfo</option>
-          <option value="ban">ban</option>
-          <option value="kick">kick</option>
-          <option value="warn">warn</option>
-          <option value="warnings">warnings</option>
-          <option value="clearwarnings">clearwarnings</option>
-          <option value="purge">purge</option>
-          <option value="announce">announce</option>
-          <option value="poll">poll</option>
-          <option value="timeout">timeout</option>
-          <option value="lock">lock</option>
-          <option value="unlock">unlock</option>
-          <option value="slowmode">slowmode</option>
-          <option value="afk">afk</option>
-          <option value="jail">jail</option>
-          <option value="unjail">unjail</option>
-          <option value="setup">setup</option>
-          <option value="ticket">ticket</option>
-          <option value="ticket_panel">ticket_panel</option>
-          <option value="ticket_questions">ticket_questions</option>
-          <option value="appeal_server">appeal_server</option>
-          <option value="appeal_group">appeal_group</option>
-          <option value="autoreaction">autoreaction</option>
-          <option value="role_give">role_give</option>
-          <option value="role_make">role_make</option>
-          <option value="reset_invites">reset_invites</option>
-          <option value="invites">invites</option>
-          <option value="invited">invited</option>
-          <option value="inviter">inviter</option>
-          <option value="ask">ask</option>
-          <option value="story">story</option>
-          <option value="roast">roast</option>
-          <option value="compliment">compliment</option>
-          <option value="riddle">riddle</option>
-          <option value="poem">poem</option>
-          <option value="joke">joke</option>
-          <option value="caption">caption</option>
-          <option value="namegen">namegen</option>
-          <option value="quiz">quiz</option>
-          <option value="aiimage">aiimage</option>
-        </select>
-      </label>
-
+      <label class="vault-field vault-wide"><span>Command</span><select id="commandSelect">
+        <option value="ping">ping</option><option value="membercount">membercount</option><option value="roleinfo">roleinfo</option><option value="channelinfo">channelinfo</option>
+        <option value="ban">ban</option><option value="kick">kick</option><option value="warn">warn</option><option value="warnings">warnings</option><option value="clearwarnings">clearwarnings</option><option value="purge">purge</option>
+        <option value="announce">announce</option><option value="poll">poll</option><option value="timeout">timeout</option><option value="lock">lock</option><option value="unlock">unlock</option><option value="slowmode">slowmode</option><option value="afk">afk</option>
+        <option value="jail">jail</option><option value="unjail">unjail</option><option value="setup">setup</option><option value="ticket">ticket</option><option value="ticket_panel">ticket_panel</option><option value="ticket_questions">ticket_questions</option>
+        <option value="appeal_server">appeal_server</option><option value="appeal_group">appeal_group</option><option value="autoreaction">autoreaction</option><option value="role_give">role_give</option><option value="role_make">role_make</option>
+        <option value="reset_invites">reset_invites</option><option value="invites">invites</option><option value="invited">invited</option><option value="inviter">inviter</option>
+        <option value="ai_ask">AI ask</option><option value="ai_story">AI story</option><option value="ai_roast">AI roast</option><option value="ai_compliment">AI compliment</option><option value="ai_riddle">AI riddle</option><option value="ai_poem">AI poem</option><option value="ai_joke">AI joke</option><option value="ai_caption">AI caption</option><option value="ai_namegen">AI namegen</option><option value="ai_quiz">AI quiz</option><option value="aiimage">AI image</option>
+      </select></label>
       <label class="vault-field"><span>Member ID</span><input id="memberId" inputmode="numeric" placeholder="Optional"></label>
       <label class="vault-field"><span>Channel ID</span><input id="channelId" inputmode="numeric" placeholder="Optional"></label>
       <label class="vault-field"><span>Target channel ID</span><input id="targetChannelId" inputmode="numeric" placeholder="Optional"></label>
       <label class="vault-field"><span>Role ID</span><input id="roleId" inputmode="numeric" placeholder="Optional"></label>
       <label class="vault-field"><span>Amount / seconds</span><input id="amount" inputmode="numeric" placeholder="10"></label>
       <label class="vault-field"><span>Duration</span><input id="duration" placeholder="5m"></label>
-      <label class="vault-field"><span>Emoji</span><input id="emoji" maxlength="50" placeholder="⭐"></label>
+      <label class="vault-field"><span>Emoji</span><input id="emoji" maxlength="50" placeholder="Optional"></label>
       <label class="vault-field"><span>Role name</span><input id="roleName" maxlength="100" placeholder="Nightfall Member"></label>
       <label class="vault-field"><span>Role color</span><input id="roleColor" maxlength="7" placeholder="#ffffff"></label>
       <label class="vault-field vault-wide"><span>Reason</span><input id="reason" maxlength="500" placeholder="Vault action"></label>
-      <label class="vault-field vault-wide"><span>Message / prompt</span><textarea id="message" rows="4" maxlength="4000" placeholder="Enter the command text here"></textarea></label>
+      <label class="vault-field vault-wide"><span>Message / prompt</span><textarea id="message" rows="4" maxlength="4000" placeholder="Enter command text"></textarea></label>
       <label class="vault-field"><span>Ticket type</span><input id="ticketType" maxlength="40" placeholder="support"></label>
       <label class="vault-field"><span>Target</span><input id="target" maxlength="100" placeholder="clean"></label>
       <label class="vault-field vault-wide"><span>Ticket questions</span><textarea id="questions" rows="3" maxlength="1500" placeholder="Question 1 | Question 2"></textarea></label>
     </div>
-
     <div class="actions">
       <button class="btn primary" id="runCommand" type="button">Run command</button>
       <span class="notice" id="vaultResult" aria-live="polite">Choose a server and command.</span>
@@ -141,11 +177,35 @@
     }
   });
 
+  const redeem = document.getElementById('redeemStarted');
+  const startedInput = document.getElementById('startedCode');
+  const startedResult = document.getElementById('startedResult');
+  redeem?.addEventListener('click', async () => {
+    redeem.disabled = true;
+    startedResult.textContent = 'Checking code…';
+    try {
+      const r = await fetch('/api/premium/redeem-started', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code: startedInput.value})
+      });
+      const data = await r.json();
+      if (!data.ok) throw new Error(data.error || 'Could not redeem code.');
+      startedResult.textContent = 'Premium activated for 3 months.';
+      setTimeout(() => location.reload(), 700);
+    } catch (e) {
+      startedResult.textContent = e.message || 'Redemption failed.';
+    } finally {
+      redeem.disabled = false;
+    }
+  });
+
   const consoleEl = document.getElementById('vaultConsole');
-  if (!consoleEl) return;
+  if (!consoleEl || consoleEl.hidden) return;
   const serverSelect = document.getElementById('serverSelect');
   const result = document.getElementById('vaultResult');
   const commandSelect = document.getElementById('commandSelect');
+  const val = id => document.getElementById(id)?.value.trim() || '';
 
   const loadServers = async () => {
     try {
@@ -161,45 +221,26 @@
       });
       if (!data.servers?.length) serverSelect.innerHTML = '<option value="">No manageable Nightfall servers found</option>';
     } catch (e) {
-      serverSelect.innerHTML = '<option value="">' + (e.message || 'Could not load servers.') + '</option>';
+      serverSelect.innerHTML = '<option value="">Could not load servers</option>';
+      result.textContent = e.message || 'Could not load servers.';
     }
   };
 
-  const val = id => document.getElementById(id)?.value.trim() || '';
   document.getElementById('runCommand')?.addEventListener('click', async () => {
     const guildId = serverSelect.value;
     const command = commandSelect.value;
     if (!guildId) { result.textContent = 'Select a Discord server first.'; return; }
-
     const args = {
-      member_id: val('memberId'),
-      channel_id: val('channelId'),
-      target_channel_id: val('targetChannelId'),
-      role_id: val('roleId'),
-      amount: val('amount') || 10,
-      seconds: val('amount') || 0,
-      duration: val('duration') || '5m',
-      emoji: val('emoji'),
-      name: val('roleName'),
-      color: val('roleColor') || '#ffffff',
-      reason: val('reason') || 'Vault action',
-      message: val('message'),
-      prompt: val('message'),
-      question: val('message'),
-      idea: val('message'),
-      topic: val('message'),
-      theme: val('message'),
-      ticket_type: val('ticketType') || 'support',
-      questions: val('questions'),
-      target: val('target') || 'clean'
+      member_id: val('memberId'), channel_id: val('channelId'), target_channel_id: val('targetChannelId'), role_id: val('roleId'),
+      amount: val('amount') || 10, seconds: val('amount') || 0, duration: val('duration') || '5m', emoji: val('emoji'),
+      name: val('roleName'), color: val('roleColor') || '#ffffff', reason: val('reason') || 'Vault action',
+      message: val('message'), prompt: val('message'), question: val('message'), idea: val('message'), topic: val('message'), theme: val('message'),
+      ticket_type: val('ticketType') || 'support', questions: val('questions'), target: val('target') || 'clean'
     };
-
     result.textContent = 'Sending to Nightfall…';
     try {
       const r = await fetch('/api/premium/vault/' + encodeURIComponent(guildId) + '/command', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({command,args})
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({command,args})
       });
       const data = await r.json();
       result.textContent = data.ok ? 'Command queued for Nightfall.' : (data.error || 'Command failed.');
@@ -207,7 +248,6 @@
       result.textContent = 'Vault connection failed.';
     }
   });
-
   loadServers();
 })();
 </script>
