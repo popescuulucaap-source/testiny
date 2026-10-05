@@ -1,5 +1,5 @@
 :root{--nf-lilac:#b4a0ff;--nf-cyan:#60e8ff;--nf-glass:rgba(15,18,39,.72)}
-body{background-image:radial-gradient(ellipse at 18% 8%,#5e46a52b,transparent 34%),radial-gradient(ellipse at 86% 27%,#13b9d41c,transparent 30%)}
+
 .nav{box-shadow:0 10px 50px #03040c40}
 .brand-logo{filter:drop-shadow(0 0 12px #9a7dff70);transition:transform .35s ease,filter .35s ease}
 .brand:hover .brand-logo{transform:rotate(-8deg) scale(1.1);filter:drop-shadow(0 0 18px #67eaffaa)}
