@@ -493,3 +493,152 @@ body.nightfall-space-page.page-notifications .planet-kepler186f{animation:nf-pla
 @media(prefers-reduced-motion:reduce){
   body.nightfall-space-page .space-planet{animation:none!important}
 }
+
+
+/* ===== NIGHTFALL HOME MOON / DEEP-BLACK SPACE PASS =====
+   The home object is intentionally extremely close and luminous.
+   The glow represents intense reflected/emitted light visually, not a literal
+   depiction of invisible radiation. The Moon itself reflects sunlight, while
+   the real Moon has essentially no atmosphere. */
+body.nightfall-space-page{
+  background:#000!important;
+}
+body.nightfall-space-page .space-scene{
+  background:#000!important;
+}
+body.nightfall-space-page .space-stars-photo{
+  background:#000!important;
+  opacity:.34!important;
+  filter:brightness(.42) contrast(1.18)!important;
+}
+body.nightfall-space-page .space-stars-photo:after{
+  display:none!important;
+}
+body.nightfall-space-page .space-scene:before{
+  background:#000!important;
+  animation:none!important;
+}
+body.nightfall-space-page .space-scene:after{
+  display:block!important;
+  opacity:.5!important;
+  background-image:
+    radial-gradient(circle at 9% 17%,rgba(255,255,255,.9) 0 1px,transparent 1.8px),
+    radial-gradient(circle at 21% 71%,rgba(210,230,255,.8) 0 1px,transparent 1.7px),
+    radial-gradient(circle at 35% 29%,rgba(255,255,255,.75) 0 1px,transparent 1.7px),
+    radial-gradient(circle at 49% 83%,rgba(200,220,255,.8) 0 1px,transparent 1.8px),
+    radial-gradient(circle at 63% 14%,rgba(255,255,255,.85) 0 1px,transparent 1.7px),
+    radial-gradient(circle at 77% 66%,rgba(220,235,255,.8) 0 1px,transparent 1.7px),
+    radial-gradient(circle at 91% 31%,rgba(255,255,255,.9) 0 1px,transparent 1.8px),
+    radial-gradient(circle at 57% 48%,rgba(255,255,255,.65) 0 1px,transparent 1.7px)!important;
+  animation:nf-sparse-stars 38s linear infinite alternate!important;
+}
+body.nightfall-space-page .space-nebula,
+body.nightfall-space-page .space-nebula-a,
+body.nightfall-space-page .space-nebula-b{
+  display:none!important;
+}
+
+/* Home: make the object feel like the camera is extremely close to it. */
+body.nightfall-space-page.page-index .planet-r136{
+  width:680px!important;
+  height:680px!important;
+  right:-105px!important;
+  top:-35px!important;
+  background-size:245%!important;
+  background-position:center!important;
+  box-shadow:
+    0 0 25px rgba(210,245,255,.95),
+    0 0 65px rgba(117,207,255,.82),
+    0 0 135px rgba(73,154,255,.62),
+    0 0 250px rgba(54,116,255,.38),
+    0 0 390px rgba(33,72,180,.20)!important;
+  animation:nf-r136-close 85s ease-in-out infinite alternate!important;
+}
+
+/* A layered luminous halo around the home object. */
+body.nightfall-space-page.page-index .planet-r136:before{
+  display:block!important;
+  content:""!important;
+  position:absolute!important;
+  inset:-120px!important;
+  border-radius:50%!important;
+  background:
+    radial-gradient(circle,
+      rgba(255,255,255,.82) 0 8%,
+      rgba(174,235,255,.42) 20%,
+      rgba(93,184,255,.22) 38%,
+      rgba(54,117,255,.10) 56%,
+      transparent 72%)!important;
+  filter:blur(18px)!important;
+  opacity:.9!important;
+  z-index:-1!important;
+}
+
+/* Thin rays / energetic light streaks around the close object. */
+body.nightfall-space-page.page-index .planet-r136:after{
+  display:block!important;
+  content:""!important;
+  position:absolute!important;
+  inset:-190px!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:
+    conic-gradient(from 12deg,
+      transparent 0deg 8deg,
+      rgba(150,225,255,.16) 9deg 10deg,
+      transparent 11deg 28deg,
+      rgba(190,240,255,.12) 29deg 30deg,
+      transparent 31deg 58deg,
+      rgba(112,195,255,.13) 59deg 60deg,
+      transparent 61deg 108deg,
+      rgba(175,230,255,.14) 109deg 110deg,
+      transparent 111deg 166deg,
+      rgba(112,190,255,.10) 167deg 168deg,
+      transparent 169deg 228deg,
+      rgba(190,240,255,.12) 229deg 230deg,
+      transparent 231deg 302deg,
+      rgba(112,195,255,.12) 303deg 304deg,
+      transparent 305deg 360deg);
+  filter:blur(7px);
+  opacity:.8;
+  z-index:-2;
+  animation:nf-r136-rays 22s linear infinite!important;
+}
+
+@keyframes nf-r136-close{
+  0%{transform:translate3d(0,0,0) scale(.98) rotate(0deg)}
+  25%{transform:translate3d(-65px,34px,0) scale(1.025) rotate(.6deg)}
+  50%{transform:translate3d(42px,-52px,0) scale(1.055) rotate(-.5deg)}
+  75%{transform:translate3d(-38px,58px,0) scale(1.02) rotate(.4deg)}
+  100%{transform:translate3d(70px,-30px,0) scale(1.045) rotate(-.7deg)}
+}
+@keyframes nf-r136-rays{
+  to{transform:rotate(360deg) scale(1.04)}
+}
+@keyframes nf-sparse-stars{
+  from{opacity:.34;transform:scale(1)}
+  to{opacity:.58;transform:scale(1.015)}
+}
+
+/* Speed up every world while keeping the motion smooth and subtle. */
+body.nightfall-space-page.page-commands .planet-earth{animation-duration:105s!important}
+body.nightfall-space-page.page-guidelines .planet-mars{animation-duration:115s!important}
+body.nightfall-space-page.page-announcements .planet-jupiter{animation-duration:125s!important}
+body.nightfall-space-page.page-suggestions .planet-saturn{animation-duration:135s!important}
+body.nightfall-space-page.page-redeem .planet-uranus{animation-duration:145s!important}
+body.nightfall-space-page.page-support .planet-neptune{animation-duration:155s!important}
+body.nightfall-space-page.page-community .planet-pluto{animation-duration:165s!important}
+body.nightfall-space-page.page-servers .planet-kepler16b{animation-duration:175s!important}
+body.nightfall-space-page.page-profile .planet-k218b{animation-duration:185s!important}
+body.nightfall-space-page.page-notifications .planet-kepler186f{animation-duration:195s!important}
+
+@media(max-width:700px){
+  body.nightfall-space-page.page-index .planet-r136{
+    width:430px!important;
+    height:430px!important;
+    right:-95px!important;
+    top:0!important;
+  }
+  body.nightfall-space-page.page-index .planet-r136:before{inset:-80px!important}
+  body.nightfall-space-page.page-index .planet-r136:after{inset:-120px!important}
+}
