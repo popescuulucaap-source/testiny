@@ -505,6 +505,7 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_challenges (discord_id TEXT PRIMARY KEY, started_at DOUBLE PRECISION NOT NULL, hits INTEGER NOT NULL DEFAULT 0, completed BOOLEAN NOT NULL DEFAULT FALSE)")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS roblox_links (discord_id TEXT PRIMARY KEY, roblox_user_id TEXT UNIQUE, link_token TEXT UNIQUE NOT NULL, token_created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), premium BOOLEAN NOT NULL DEFAULT FALSE, premium_source TEXT NOT NULL DEFAULT 'none', premium_expires_at DOUBLE PRECISION NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS premium_guilds (guild_id TEXT PRIMARY KEY, discord_id TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'purchase', expires_at DOUBLE PRECISION NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("ALTER TABLE roblox_links ADD COLUMN IF NOT EXISTS started_redeemed BOOLEAN NOT NULL DEFAULT FALSE")
             # Safe, backwards-compatible migration. Older installs used code_hash.
             # Keep that legacy column nullable instead of dropping it during startup;
@@ -1526,12 +1527,63 @@ def roblox_premium_sync():
         conn.commit()
     return jsonify({"ok": True, "premium": premium, "source": source, "expires_at": expires_at})
 
+@app.post("/api/premium/activate-guild")
+@login_required
+def premium_activate_guild():
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Premium storage is unavailable."}), 503
+    discord_id = current_discord_user_id()
+    link = get_roblox_link(discord_id)
+    if not roblox_premium_active(link):
+        return jsonify({"ok": False, "error": "Active Premium is required."}), 403
+    payload = request.get_json(silent=True) or {}
+    guild_id = str(payload.get("guild_id") or "").strip()
+    if not guild_id.isdigit():
+        return jsonify({"ok": False, "error": "Invalid Discord server ID."}), 400
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not bot_online() or not any(item["id"] == guild_id for item in bot_guild_snapshot()):
+        return jsonify({"ok": False, "error": "Nightfall is not connected to this server."}), 503
+    expires_at = float(link.get("premium_expires_at") or 0)
+    source = str(link.get("premium_source") or "purchase")
+    with db_connect() as conn:
+        conn.execute(
+            "INSERT INTO premium_guilds (guild_id, discord_id, source, expires_at, updated_at) VALUES (%s,%s,%s,%s,NOW()) "
+            "ON CONFLICT (guild_id) DO UPDATE SET discord_id=EXCLUDED.discord_id, source=EXCLUDED.source, expires_at=EXCLUDED.expires_at, updated_at=NOW()",
+            (guild_id, discord_id, source, expires_at),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "guild_id": guild_id, "expires_at": expires_at, "source": source})
+
+
+@app.get("/api/bot/premium-guild/<guild_id>")
+def bot_premium_guild(guild_id):
+    if not BOT_BRIDGE_SECRET:
+        return jsonify({"ok": False, "error": "Bridge is not configured."}), 503
+    supplied = request.headers.get("X-Nightfall-Bridge-Key", "")
+    if not compare_digest(supplied, BOT_BRIDGE_SECRET):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    if not DATABASE_URL:
+        return jsonify({"ok": True, "premium": False, "expires_at": 0}), 200
+    with db_connect() as conn:
+        row = conn.execute("SELECT source, expires_at FROM premium_guilds WHERE guild_id=%s", (str(guild_id),)).fetchone()
+    if not row:
+        return jsonify({"ok": True, "premium": False, "expires_at": 0, "source": "none"})
+    source, expires_at = str(row[0] or "none"), float(row[1] or 0)
+    active = source != "started" or expires_at > time.time()
+    return jsonify({"ok": True, "premium": active, "expires_at": expires_at, "source": source})
+
+
 @app.get("/api/premium/servers")
 @login_required
 def premium_servers():
     link = get_roblox_link(current_discord_user_id())
     if not roblox_premium_active(link):
         return jsonify({"ok": False, "error": "Premium is required to open the Vault."}), 403
+    with db_connect() as conn:
+        row = conn.execute("SELECT source, expires_at FROM premium_guilds WHERE guild_id=%s", (str(guild_id),)).fetchone()
+    if not row or (str(row[0]) == "started" and float(row[1] or 0) <= time.time()):
+        return jsonify({"ok": False, "error": "Activate Premium for this server first."}), 403
     try:
         response = requests.get(f"{DISCORD_API}/users/@me/guilds", headers=discord_headers(), timeout=12)
         if response.status_code != 200:
@@ -1543,7 +1595,12 @@ def premium_servers():
                 continue
             gid = str(guild.get("id"))
             if any(item["id"] == gid for item in bot_guild_snapshot()):
-                manageable.append({"id": gid, "name": guild.get("name", "Unknown server")})
+                active = False
+                with db_connect() as conn:
+                    row = conn.execute("SELECT source, expires_at FROM premium_guilds WHERE guild_id=%s", (gid,)).fetchone()
+                if row:
+                    active = str(row[0]) != "started" or float(row[1] or 0) > time.time()
+                manageable.append({"id": gid, "name": guild.get("name", "Unknown server"), "premium_active": active})
         return jsonify({"ok": True, "servers": manageable})
     except (requests.RequestException, ValueError, TypeError):
         return jsonify({"ok": False, "error": "Could not read your Discord servers."}), 502
@@ -1573,6 +1630,10 @@ def premium_vault_command(guild_id):
     link = get_roblox_link(current_discord_user_id())
     if not roblox_premium_active(link):
         return jsonify({"ok": False, "error": "Premium is required to use the Vault."}), 403
+    with db_connect() as conn:
+        row = conn.execute("SELECT source, expires_at FROM premium_guilds WHERE guild_id=%s", (str(guild_id),)).fetchone()
+    if not row or (str(row[0]) == "started" and float(row[1] or 0) <= time.time()):
+        return jsonify({"ok": False, "error": "Activate Premium for this server first."}), 403
     if not user_can_manage_guild(guild_id):
         return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
