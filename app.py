@@ -135,7 +135,7 @@ def refresh_discord_session():
 @app.before_request
 def require_discord_for_site():
     # Public browsing is allowed. State-changing/private areas still require Discord.
-    public_get = {"/", "/commands", "/guidelines", "/announcements", "/suggestions", "/support"}
+    public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support"}
     public_secret_api = {"/api/arcade/start", "/api/arcade/hit", "/api/arcade/finish"}
     public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull"}
     endpoint = request.endpoint or ""
