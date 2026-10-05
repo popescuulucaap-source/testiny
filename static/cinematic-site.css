@@ -315,3 +315,109 @@ body.nightfall-space-page .planet-pluto{
 
 /* Exoplanets: no spacecraft has photographed their surfaces directly.
    Keep them as clearly stylized visualizations rather than fake "photos". */
+
+
+/* ===== CLOSE-UP REAL SPACE IMAGERY =====
+   Make every world fill its frame like a close spacecraft/telescope shot.
+   Solar-System worlds use real imagery; exoplanets use NASA scientific
+   artist concepts because they cannot be directly photographed.
+*/
+.space-planet{
+  overflow:hidden!important;
+  background-size:cover!important;
+  background-position:center!important;
+}
+
+/* Close-up scale: the object dominates the viewport instead of looking distant. */
+.planet-r136{width:420px!important;height:420px!important;right:6%!important;top:14%!important}
+.planet-earth{width:340px!important;height:340px!important;left:4%!important;top:12%!important}
+.planet-mars{width:300px!important;height:300px!important;right:6%!important;top:55%!important}
+.planet-jupiter{width:470px!important;height:470px!important;left:2%!important;top:48%!important}
+.planet-saturn{width:390px!important;height:390px!important;right:4%!important;top:8%!important}
+.planet-uranus{width:330px!important;height:330px!important;left:5%!important;top:18%!important}
+.planet-neptune{width:370px!important;height:370px!important;right:6%!important;top:38%!important}
+.planet-pluto{width:250px!important;height:250px!important;left:4%!important;top:58%!important}
+.planet-kepler16b{width:400px!important;height:400px!important;left:4%!important;top:34%!important}
+.planet-k218b{width:330px!important;height:330px!important;right:4%!important;top:18%!important}
+.planet-kepler186f{width:320px!important;height:320px!important;left:7%!important;top:44%!important}
+
+/* Real Hubble view of the R136 star cluster, cropped tightly for the home tab. */
+body.nightfall-space-page .planet-r136{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Star%20Cluster%20R136%20%28opo9404b%29.jpg")!important;
+  background-size:235%!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  border-radius:50%!important;
+  box-shadow:0 0 55px rgba(116,190,255,.55),0 0 120px rgba(53,125,255,.28)!important;
+}
+body.nightfall-space-page .planet-r136:before,
+body.nightfall-space-page .planet-r136:after{display:none!important}
+
+/* NASA/JPL close-up artist concept of Kepler-16b. */
+body.nightfall-space-page .planet-kepler16b{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Kepler-16b.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-kepler16b:before,
+body.nightfall-space-page .planet-kepler16b:after{display:none!important}
+
+/* NASA artist visualization of K2-18b. */
+body.nightfall-space-page .planet-k218b{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Koi-4878.01%2C%20toi-700d%20and%20k2-18b.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-k218b:before,
+body.nightfall-space-page .planet-k218b:after{display:none!important}
+
+/* NASA artist concept of Kepler-186f, cropped close to the world. */
+body.nightfall-space-page .planet-kepler186f{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Kepler186f-ArtistConcept-20140417.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-kepler186f:before,
+body.nightfall-space-page .planet-kepler186f:after{display:none!important}
+
+/* Remove painted CSS textures from the real-photo planets completely. */
+body.nightfall-space-page .planet-earth:before,
+body.nightfall-space-page .planet-mars:before,
+body.nightfall-space-page .planet-jupiter:before,
+body.nightfall-space-page .planet-saturn:before,
+body.nightfall-space-page .planet-uranus:before,
+body.nightfall-space-page .planet-neptune:before,
+body.nightfall-space-page .planet-pluto:before{display:none!important}
+
+/* Preserve Saturn's physical rings over the close-up photograph. */
+body.nightfall-space-page .planet-saturn:after{
+  display:block!important;
+  width:560px!important;
+  height:150px!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%) rotate(-17deg)!important;
+  border:13px solid rgba(225,201,151,.62)!important;
+  border-radius:50%!important;
+  box-shadow:0 0 18px rgba(255,220,160,.22)!important;
+  z-index:3!important;
+}
+
+/* On small screens, still keep the worlds close without filling the whole UI. */
+@media(max-width:700px){
+  .planet-r136{width:260px!important;height:260px!important}
+  .planet-earth{width:230px!important;height:230px!important}
+  .planet-mars{width:210px!important;height:210px!important}
+  .planet-jupiter{width:300px!important;height:300px!important}
+  .planet-saturn{width:270px!important;height:270px!important}
+  .planet-uranus{width:230px!important;height:230px!important}
+  .planet-neptune{width:250px!important;height:250px!important}
+  .planet-pluto{width:180px!important;height:180px!important}
+  .planet-kepler16b{width:280px!important;height:280px!important}
+  .planet-k218b{width:230px!important;height:230px!important}
+  .planet-kepler186f{width:220px!important;height:220px!important}
+  body.nightfall-space-page .planet-saturn:after{width:370px!important;height:100px!important}
+}
