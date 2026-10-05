@@ -149,24 +149,19 @@
 
   const loadServers = async () => {
     try {
-      const r = await fetch('/servers');
-      if (!r.ok) throw new Error();
-      const html = await r.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const cards = [...doc.querySelectorAll('[data-guild-id]')];
+      const r = await fetch('/api/premium/servers');
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.error || 'Could not load servers.');
       serverSelect.innerHTML = '';
-      cards.forEach(card => {
-        const id = card.dataset.guildId;
-        const name = card.dataset.guildName || id;
+      (data.servers || []).forEach(server => {
         const option = document.createElement('option');
-        option.value = id;
-        option.textContent = name;
+        option.value = server.id;
+        option.textContent = server.name;
         serverSelect.appendChild(option);
       });
-      if (!cards.length) serverSelect.innerHTML = '<option value="">No manageable servers found</option>';
-    } catch {
-      serverSelect.innerHTML = '<option value="">Open Dashboard to select a server</option>';
+      if (!data.servers?.length) serverSelect.innerHTML = '<option value="">No manageable Nightfall servers found</option>';
+    } catch (e) {
+      serverSelect.innerHTML = '<option value="">' + (e.message || 'Could not load servers.') + '</option>';
     }
   };
 
