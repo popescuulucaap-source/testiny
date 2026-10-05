@@ -307,7 +307,7 @@ def init_db():
                 cur.execute("ALTER TABLE arcade_rewards ADD COLUMN code TEXT")
             if "code_hash" in columns:
                 cur.execute("ALTER TABLE arcade_rewards ALTER COLUMN code_hash DROP NOT NULL")
-            cur.execute("UPDATE arcade_rewards SET code=%s WHERE code IS NULL OR code=''", (arcade_reward_code(),))
+            cur.execute("UPDATE arcade_rewards SET code=%s WHERE code IS NULL OR code=''", ("ducky-squad",))
             cur.execute("ALTER TABLE arcade_rewards ALTER COLUMN code SET NOT NULL")
             cur.execute("CREATE TABLE IF NOT EXISTS site_settings (discord_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', theme TEXT NOT NULL DEFAULT 'default', title TEXT NOT NULL DEFAULT '')")
             cur.execute("CREATE TABLE IF NOT EXISTS site_achievements (discord_id TEXT NOT NULL, achievement TEXT NOT NULL, unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, achievement))")
