@@ -69,3 +69,108 @@ body:before,body:after,.bg-grid{display:none!important}
 @keyframes nf-planet-float{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(0,-18px,0) rotate(2deg)}}
 @keyframes nf-moon-float{0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}50%{transform:translate3d(14px,-22px,0) rotate(3deg)}}
 @media(max-width:700px){.space-scene:after{opacity:.62}.space-planet-blue{width:145px!important;height:145px!important}.page-login .space-planet-blue:after,.page-auth .space-planet-blue:after,.page-secrets .space-planet-blue:after,.page-profile .space-planet-blue:after{width:230px;height:58px;left:-38px;top:55px;border-width:7px}}
+
+/* Slower, multi-direction space motion */
+.space-planet{will-change:transform!important}
+.page-index .planet-blue,.page-home .planet-moon{animation-duration:88s!important}
+.page-commands .planet-orange{animation-duration:82s!important}
+.page-guidelines .planet-red,.page-rules .planet-red{animation-duration:96s!important}
+.page-announcements .planet-purple,.page-updates .planet-purple{animation-duration:90s!important}
+.page-suggestions .planet-ice,.page-suggestion .planet-ice{animation-duration:94s!important}
+.page-redeem .planet-gold{animation-duration:92s!important}
+.page-support .planet-green{animation-duration:86s!important}
+.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation-duration:98s!important}
+.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation-duration:90s!important}
+
+@keyframes nf-travel-a{
+  0%{transform:translate3d(-8vw,12vh,0) rotate(-6deg)}
+  25%{transform:translate3d(18vw,-10vh,0) rotate(3deg)}
+  50%{transform:translate3d(45vw,14vh,0) rotate(8deg)}
+  75%{transform:translate3d(68vw,-7vh,0) rotate(-2deg)}
+  100%{transform:translate3d(92vw,10vh,0) rotate(7deg)}
+}
+@keyframes nf-travel-b{
+  0%{transform:translate3d(4vw,-10vh,0) rotate(3deg)}
+  25%{transform:translate3d(-12vw,15vh,0) rotate(-5deg)}
+  50%{transform:translate3d(25vw,4vh,0) rotate(4deg)}
+  75%{transform:translate3d(57vw,-14vh,0) rotate(-6deg)}
+  100%{transform:translate3d(88vw,12vh,0) rotate(2deg)}
+}
+@keyframes nf-travel-c{
+  0%{transform:translate3d(6vw,10vh,0) rotate(4deg)}
+  25%{transform:translate3d(30vw,-12vh,0) rotate(-3deg)}
+  50%{transform:translate3d(58vw,9vh,0) rotate(6deg)}
+  75%{transform:translate3d(78vw,-15vh,0) rotate(-4deg)}
+  100%{transform:translate3d(105vw,8vh,0) rotate(5deg)}
+}
+@keyframes nf-travel-d{
+  0%{transform:translate3d(-6vw,-8vh,0) rotate(-3deg)}
+  25%{transform:translate3d(17vw,13vh,0) rotate(5deg)}
+  50%{transform:translate3d(42vw,-14vh,0) rotate(-6deg)}
+  75%{transform:translate3d(70vw,8vh,0) rotate(3deg)}
+  100%{transform:translate3d(96vw,-10vh,0) rotate(-4deg)}
+}
+
+/* Stars drift slowly in several directions */
+.space-scene:after{
+  animation:nf-stars-drift 150s linear infinite alternate!important;
+  background-size:auto!important;
+}
+.space-scene:before{
+  animation:nf-space-drift 110s ease-in-out infinite alternate!important;
+}
+.space-nebula-a{animation:nf-nebula-a 125s ease-in-out infinite alternate!important}
+.space-nebula-b{animation:nf-nebula-b 145s ease-in-out infinite alternate!important}
+@keyframes nf-stars-drift{
+  0%{transform:translate3d(-2vw,-1vh,0) scale(1)}
+  25%{transform:translate3d(3vw,2vh,0) scale(1.01)}
+  50%{transform:translate3d(-1vw,5vh,0) scale(1.02)}
+  75%{transform:translate3d(4vw,1vh,0) scale(1.01)}
+  100%{transform:translate3d(-3vw,-4vh,0) scale(1.03)}
+}
+@keyframes nf-nebula-a{
+  0%{transform:translate3d(-4vw,4vh,0) rotate(-2deg)}
+  50%{transform:translate3d(8vw,-5vh,0) rotate(4deg)}
+  100%{transform:translate3d(15vw,7vh,0) rotate(-3deg)}
+}
+@keyframes nf-nebula-b{
+  0%{transform:translate3d(5vw,-3vh,0) rotate(3deg)}
+  50%{transform:translate3d(-8vw,6vh,0) rotate(-4deg)}
+  100%{transform:translate3d(-15vw,-5vh,0) rotate(2deg)}
+}
+
+/* Main hub: giant real NASA Sun photo */
+.space-sun{
+  position:absolute!important;
+  display:none!important;
+  width:min(58vw,760px)!important;
+  height:min(58vw,760px)!important;
+  min-width:420px!important;
+  min-height:420px!important;
+  right:-14vw!important;
+  top:8vh!important;
+  border-radius:50%!important;
+  background-image:url("https://assets.science.nasa.gov/dynamicimage/assets/science/psd/photojournal/pia/pia26/pia26681/PIA26681.jpg?crop=faces%2Cfocalpoint&fit=clip&h=4096&w=4096")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  box-shadow:0 0 55px 18px rgba(255,154,35,.42),0 0 140px 55px rgba(255,112,0,.22),0 0 260px 100px rgba(255,72,0,.12)!important;
+  z-index:1!important;
+  will-change:transform!important;
+  animation:nf-sun-orbit 105s ease-in-out infinite alternate!important;
+}
+.page-index .space-sun,.page-home .space-sun{display:block!important}
+@keyframes nf-sun-orbit{
+  0%{transform:translate3d(0,3vh,0) scale(1) rotate(-2deg)}
+  25%{transform:translate3d(-8vw,-4vh,0) scale(1.03) rotate(1deg)}
+  50%{transform:translate3d(-18vw,6vh,0) scale(1.06) rotate(3deg)}
+  75%{transform:translate3d(-7vw,-7vh,0) scale(1.02) rotate(-1deg)}
+  100%{transform:translate3d(8vw,2vh,0) scale(1.05) rotate(2deg)}
+}
+.page-index .planet-blue,.page-home .planet-moon{display:none!important}
+@media(max-width:700px){
+  .space-sun{
+    width:88vw!important;height:88vw!important;
+    min-width:0!important;min-height:0!important;
+    right:-30vw!important;top:13vh!important;
+  }
+}
