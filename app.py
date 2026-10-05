@@ -134,8 +134,16 @@ def refresh_discord_session():
 
 @app.before_request
 def require_discord_for_site():
+    # Public browsing is allowed. State-changing/private areas still require Discord.
+    public_get = {"/", "/commands", "/guidelines", "/announcements", "/suggestions", "/support"}
+    public_secret_api = {"/api/arcade/start", "/api/arcade/hit", "/api/arcade/finish"}
+    public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull"}
     endpoint = request.endpoint or ""
     if endpoint in {"login", "oauth_callback", "health"} or endpoint.startswith("static"):
+        return None
+    if request.method in {"GET", "HEAD"} and request.path in public_get:
+        return None
+    if request.path in public_secret_api or request.path in public_bot_api:
         return None
     if "access_token" not in session:
         return redirect(url_for("login", next=request.path))
@@ -1469,7 +1477,9 @@ def redeem():
 def arcade_start():
     user = current_site_user()
     if not user:
-        return jsonify({"ok": False, "error": "Discord login required."}), 401
+        session["anonymous_arcade"] = {"started_at": time.time(), "hits": 0, "completed": False}
+        session.modified = True
+        return jsonify({"ok": True, "seconds": 30, "hits": 0, "anonymous": True})
     if not DATABASE_URL:
         return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
     now = time.time()
@@ -1492,7 +1502,19 @@ def arcade_start():
 def arcade_hit():
     user = current_site_user()
     if not user:
-        return jsonify({"ok": False, "error": "Discord login required."}), 401
+        challenge = session.get("anonymous_arcade")
+        if not challenge:
+            return jsonify({"ok": False, "error": "Start the secret challenge first."}), 400
+        if challenge.get("completed"):
+            return jsonify({"ok": False, "error": "This challenge is already complete."}), 409
+        if time.time() - float(challenge.get("started_at", 0)) > 30:
+            session.pop("anonymous_arcade", None)
+            return jsonify({"ok": False, "error": "Time expired. Discover the star again to retry."}), 408
+        hits = min(10, int(challenge.get("hits", 0)) + 1)
+        challenge["hits"] = hits
+        session["anonymous_arcade"] = challenge
+        session.modified = True
+        return jsonify({"ok": True, "hits": hits, "complete": hits >= 10, "anonymous": True})
     if not DATABASE_URL:
         return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
     now = time.time()
@@ -1519,7 +1541,20 @@ def arcade_hit():
 def arcade_finish():
     user = current_site_user()
     if not user:
-        return jsonify({"ok": False, "error": "Discord login required."}), 401
+        challenge = session.get("anonymous_arcade")
+        if not challenge:
+            return jsonify({"ok": False, "error": "Start the secret challenge first."}), 400
+        if challenge.get("completed"):
+            return jsonify({"ok": False, "error": "This challenge is already complete."}), 409
+        if time.time() - float(challenge.get("started_at", 0)) > 30:
+            session.pop("anonymous_arcade", None)
+            return jsonify({"ok": False, "error": "Time expired. Discover the star again to retry."}), 408
+        if int(challenge.get("hits", 0)) < 10:
+            return jsonify({"ok": False, "error": "You need 10 hits to finish."}), 400
+        challenge["completed"] = True
+        session["anonymous_arcade"] = challenge
+        session.modified = True
+        return jsonify({"ok": True, "anonymous": True, "redeemable": False, "message": "Secret completed! Log in with Discord to redeem the reward."})
     if not DATABASE_URL:
         return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
     now = time.time()
