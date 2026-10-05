@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Planetary Archive{% endblock %}
+{% block content %}
+<section class="planets-page">
+  <div class="planets-hero">
+    <span class="eyebrow">NIGHTFALL • PLANETARY ARCHIVE</span>
+    <h1>Worlds beyond the night.</h1>
+    <p>Explore Solar System worlds and real exoplanets. The visual spheres are stylized 3D representations, while NASA's archives provide real mission imagery and scientific data.</p>
+  </div>
+  <div class="planet-gallery">
+    {% for key,name,ptype,desc in planets %}
+    <article class="planet-card">
+      <div class="planet-orb orb-{{ key }}"></div>
+      <span class="planet-type">{{ ptype }}</span>
+      <h2>{{ name }}</h2>
+      <p>{{ desc }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
