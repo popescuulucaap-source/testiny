@@ -1,6 +1,8 @@
 import os
 import json
 import secrets
+import base64
+import hashlib
 import threading
 import time
 from datetime import timedelta
@@ -65,6 +67,12 @@ SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID", "").strip()
 ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
+ROBLOX_OAUTH_CLIENT_ID = os.getenv("ROBLOX_OAUTH_CLIENT_ID", "").strip()
+ROBLOX_OAUTH_CLIENT_SECRET = os.getenv("ROBLOX_OAUTH_CLIENT_SECRET", "").strip()
+ROBLOX_OAUTH_REDIRECT_URI = (os.getenv("ROBLOX_OAUTH_REDIRECT_URI") or "https://testiny-7wuu.onrender.com/roblox/oauth/callback").strip()
+ROBLOX_OAUTH_AUTHORIZE_URL = "https://apis.roblox.com/oauth/v1/authorize"
+ROBLOX_OAUTH_TOKEN_URL = "https://apis.roblox.com/oauth/v1/token"
+ROBLOX_OAUTH_USERINFO_URL = "https://apis.roblox.com/oauth/v1/userinfo"
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
@@ -1465,6 +1473,132 @@ def premium_redeem_started():
         )
         conn.commit()
     return jsonify({"ok": True, "expires_at": expires_at, "message": "Premium activated for 3 months."})
+
+@app.get("/roblox/oauth/start")
+@login_required
+def roblox_oauth_start():
+    if not ROBLOX_OAUTH_CLIENT_ID or not ROBLOX_OAUTH_CLIENT_SECRET:
+        return redirect(url_for("premium_vault", roblox_error="Roblox connection is not configured yet."))
+
+    discord_id = current_discord_user_id()
+    state = secrets.token_urlsafe(32)
+    code_verifier = secrets.token_urlsafe(48)
+    code_challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(code_verifier.encode("ascii")).digest()
+    ).rstrip(b"=").decode("ascii")
+
+    session["roblox_oauth"] = {
+        "state": state,
+        "code_verifier": code_verifier,
+        "discord_id": str(discord_id),
+    }
+    params = {
+        "client_id": ROBLOX_OAUTH_CLIENT_ID,
+        "redirect_uri": ROBLOX_OAUTH_REDIRECT_URI,
+        "scope": "openid profile",
+        "response_type": "code",
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+        "prompt": "login",
+    }
+    return redirect(f"{ROBLOX_OAUTH_AUTHORIZE_URL}?{urlencode(params)}")
+
+
+@app.get("/roblox/oauth/callback")
+def roblox_oauth_callback():
+    oauth = session.pop("roblox_oauth", None)
+    if not oauth:
+        return redirect(url_for("premium_vault", roblox_error="The Roblox connection session expired. Please try again."))
+
+    error = request.args.get("error")
+    if error:
+        return redirect(url_for("premium_vault", roblox_error="Roblox connection was cancelled."))
+
+    state = request.args.get("state", "")
+    code = request.args.get("code", "")
+    if not state or not compare_digest(state, str(oauth.get("state", ""))) or not code:
+        return redirect(url_for("premium_vault", roblox_error="Roblox security verification failed. Please try again."))
+
+    if not ROBLOX_OAUTH_CLIENT_ID or not ROBLOX_OAUTH_CLIENT_SECRET:
+        return redirect(url_for("premium_vault", roblox_error="Roblox connection is not configured yet."))
+
+    discord_id = str(oauth.get("discord_id") or "")
+    if not discord_id:
+        return redirect(url_for("premium_vault", roblox_error="Your Discord session could not be verified."))
+
+    try:
+        token_response = requests.post(
+            ROBLOX_OAUTH_TOKEN_URL,
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "client_id": ROBLOX_OAUTH_CLIENT_ID,
+                "client_secret": ROBLOX_OAUTH_CLIENT_SECRET,
+                "redirect_uri": ROBLOX_OAUTH_REDIRECT_URI,
+                "code_verifier": oauth["code_verifier"],
+            },
+            timeout=12,
+        )
+        if token_response.status_code != 200:
+            app.logger.warning("Roblox OAuth token exchange failed: %s", token_response.status_code)
+            return redirect(url_for("premium_vault", roblox_error="Roblox could not complete the secure connection. Please try again."))
+
+        token_data = token_response.json()
+        access_token = str(token_data.get("access_token") or "")
+        if not access_token:
+            return redirect(url_for("premium_vault", roblox_error="Roblox did not return a valid access token."))
+
+        user_response = requests.get(
+            ROBLOX_OAUTH_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=12,
+        )
+        if user_response.status_code != 200:
+            app.logger.warning("Roblox OAuth userinfo failed: %s", user_response.status_code)
+            return redirect(url_for("premium_vault", roblox_error="Could not verify your Roblox account. Please try again."))
+
+        user_data = user_response.json()
+        roblox_user_id = str(user_data.get("sub") or "").strip()
+        if not roblox_user_id.isdigit():
+            return redirect(url_for("premium_vault", roblox_error="Roblox returned an invalid account identity."))
+
+        if not DATABASE_URL:
+            return redirect(url_for("premium_vault", roblox_error="Premium storage is unavailable."))
+
+        with db_connect() as conn:
+            existing = conn.execute(
+                "SELECT discord_id FROM roblox_links WHERE roblox_user_id=%s",
+                (roblox_user_id,),
+            ).fetchone()
+            if existing and str(existing[0]) != discord_id:
+                return redirect(url_for("premium_vault", roblox_error="That Roblox account is already connected to another Discord account."))
+
+            current = conn.execute(
+                "SELECT roblox_user_id FROM roblox_links WHERE discord_id=%s",
+                (discord_id,),
+            ).fetchone()
+            current_roblox_id = str(current[0]) if current and current[0] else ""
+            if current_roblox_id and current_roblox_id != roblox_user_id:
+                return redirect(url_for("premium_vault", roblox_error="A different Roblox account is already connected to this Discord account."))
+
+            if current:
+                conn.execute(
+                    "UPDATE roblox_links SET roblox_user_id=%s, link_token=%s, token_created_at=NOW(), updated_at=NOW() WHERE discord_id=%s",
+                    (roblox_user_id, secrets.token_hex(16), discord_id),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO roblox_links(discord_id, roblox_user_id, link_token) VALUES(%s,%s,%s)",
+                    (discord_id, roblox_user_id, secrets.token_hex(16)),
+                )
+            conn.commit()
+
+        return redirect(url_for("premium_vault", roblox_connected="1"))
+    except (requests.RequestException, ValueError, KeyError, TypeError, psycopg.Error) as exc:
+        app.logger.warning("Roblox OAuth connection failed: %s", type(exc).__name__)
+        return redirect(url_for("premium_vault", roblox_error="Roblox connection failed safely. Please try again."))
+
 
 @app.post("/api/premium/link/start")
 @login_required
