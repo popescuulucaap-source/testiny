@@ -206,6 +206,61 @@ def require_bot_key():
     return None
 
 
+def record_bot_event(event_type, guild_id=None, guild_name="", user_id=None, username="", command_name="", metadata=None):
+    if not DATABASE_URL:
+        return
+    try:
+        with db_connect() as conn:
+            conn.execute(
+                "INSERT INTO bot_telemetry (event_type,guild_id,guild_name,user_id,username,command_name,metadata) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (str(event_type)[:40], str(guild_id) if guild_id is not None else None, str(guild_name)[:120],
+                 str(user_id) if user_id is not None else None, str(username)[:120], str(command_name)[:120],
+                 json.dumps(metadata or {})[:4000]),
+            )
+            conn.commit()
+    except psycopg.Error as exc:
+        app.logger.warning("Could not record bot telemetry: %s", type(exc).__name__)
+
+@app.post("/api/bot/events")
+def bot_events():
+    denied = require_bot_key()
+    if denied:
+        return denied
+    payload = request.get_json(silent=True) or {}
+    events = payload.get("events")
+    if not isinstance(events, list) or len(events) > 200:
+        return jsonify({"ok": False, "error": "events must be a list of up to 200 items"}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": True, "stored": 0})
+    with db_connect() as conn:
+        for item in events:
+            if not isinstance(item, dict) or not item.get("event_type"):
+                continue
+            conn.execute(
+                "INSERT INTO bot_telemetry (event_type,guild_id,guild_name,user_id,username,command_name,metadata) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (str(item.get("event_type"))[:40], str(item.get("guild_id")) if item.get("guild_id") is not None else None,
+                 str(item.get("guild_name") or "")[:120], str(item.get("user_id")) if item.get("user_id") is not None else None,
+                 str(item.get("username") or "")[:120], str(item.get("command_name") or "")[:120],
+                 json.dumps(item.get("metadata") if isinstance(item.get("metadata"), dict) else {})[:4000]),
+            )
+        conn.commit()
+    return jsonify({"ok": True})
+
+@app.get("/admin/audit")
+def admin_audit():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    events = []
+    summary = {"commands": 0, "messages": 0, "tickets": 0, "forms": 0}
+    if DATABASE_URL:
+        with db_connect() as conn:
+            rows = conn.execute("SELECT event_type,guild_id,guild_name,user_id,username,command_name,metadata,created_at FROM bot_telemetry ORDER BY id DESC LIMIT 500").fetchall()
+            events = [{"event_type":r[0],"guild_id":r[1],"guild_name":r[2],"user_id":r[3],"username":r[4],"command_name":r[5],"metadata":r[6],"created_at":r[7]} for r in rows]
+            for key, label in (("command_used","commands"),("message_seen","messages"),("ticket_created","tickets"),("form_submitted","forms")):
+                row = conn.execute("SELECT COUNT(*) FROM bot_telemetry WHERE event_type=%s", (key,)).fetchone()
+                summary[label] = int(row[0] or 0)
+    return render_template("admin_audit.html", events=events, summary=summary)
+
 @app.post("/api/bot/heartbeat")
 def bot_heartbeat():
     global BOT_LAST_SEEN, BOT_GUILDS
@@ -287,7 +342,10 @@ def init_db():
         return
     with db_connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'website')")
+            cur.execute("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'website'")
+            cur.execute("CREATE TABLE IF NOT EXISTS bot_telemetry (id BIGSERIAL PRIMARY KEY, event_type TEXT NOT NULL, guild_id TEXT, guild_name TEXT, user_id TEXT, username TEXT, command_name TEXT, metadata TEXT NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE INDEX IF NOT EXISTS bot_telemetry_created_at_idx ON bot_telemetry(created_at DESC)")
             # Seed the public v1.2 release announcement once, without duplicating it.
             cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Nightfall v1.2 • The next chapter",))
             if not cur.fetchone():
@@ -340,10 +398,10 @@ def load_announcements():
         return session.get("announcements", [])
     with db_connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, title, body, date FROM announcements ORDER BY id DESC")
+            cur.execute("SELECT id, title, body, date, kind FROM announcements ORDER BY id DESC")
             return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3]} for r in cur.fetchall()]
 
-def save_announcement(title, body):
+def save_announcement(title, body, kind="website"):
     date=__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
     if not DATABASE_URL:
         items=session.get("announcements", [])
@@ -352,7 +410,7 @@ def save_announcement(title, body):
         return
     with db_connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO announcements (title, body, date) VALUES (%s, %s, %s)",(title,body,date))
+            cur.execute("INSERT INTO announcements (title, body, date, kind) VALUES (%s, %s, %s, %s)",(title,body,date,kind))
         conn.commit()
 
 def delete_announcement(announcement_id):
@@ -472,6 +530,18 @@ def admin():
         "verification_servers": verification_servers,
         "ticket_servers": ticket_servers,
     }
+    stats["telemetry_command_count"] = 0
+    stats["telemetry_message_count"] = 0
+    stats["telemetry_ticket_count"] = 0
+    stats["telemetry_form_count"] = 0
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                for key, field in (("command_used","telemetry_command_count"),("message_seen","telemetry_message_count"),("ticket_created","telemetry_ticket_count"),("form_submitted","telemetry_form_count")):
+                    row = conn.execute("SELECT COUNT(*) FROM bot_telemetry WHERE event_type=%s", (key,)).fetchone()
+                    stats[field] = int(row[0] or 0)
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read telemetry counts: %s", type(exc).__name__)
     return render_template("admin.html", announcements=announcements, custom_commands=custom_commands, database_enabled=bool(DATABASE_URL), stats=stats, bot_guilds=guilds)
 
 @app.post("/admin/command")
@@ -491,7 +561,9 @@ def admin_announcement():
         return redirect(url_for("admin_login"))
     title=(request.form.get("title") or "Update").strip()
     body=(request.form.get("body") or "").strip()
-    if title and body: save_announcement(title,body)
+    kind=(request.form.get("kind") or "website").strip().lower()
+    if kind not in {"bot","website"}: kind="website"
+    if title and body: save_announcement(title,body,kind)
     return redirect(url_for("admin"))
 
 @app.post("/admin/announcement/<int:announcement_id>/delete")
