@@ -2022,7 +2022,7 @@ def arcade_hit():
         if completed:
             return jsonify({"ok": False, "error": "This challenge has already been completed."}), 409
         if now - started_at > 30:
-            return jsonify({"ok": False, "error": "Time expired. You did not earn a code."}), 408
+            return jsonify({"ok": False, "error": "Time expired. Please try the challenge again."}), 408
         hits += 1
         if hits > 10:
             hits = 10
@@ -2047,7 +2047,7 @@ def arcade_finish():
         challenge["completed"] = True
         session["anonymous_arcade"] = challenge
         session.modified = True
-        return jsonify({"ok": True, "anonymous": True, "redeemable": False, "message": "Secret completed! Log in with Discord to redeem the reward."})
+        return jsonify({"ok": True, "anonymous": True, "redeemable": False, "message": "Challenge completed! Visit the Redeem Code section to continue."})
     if not DATABASE_URL:
         return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
     now = time.time()
