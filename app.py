@@ -1572,8 +1572,8 @@ def arcade_redeem():
         return jsonify({"ok": False, "error": "Invalid arcade code."}), 404
     with db_connect() as conn:
         reward = conn.execute(
-            "SELECT discord_id,redeemed_at FROM arcade_rewards WHERE code=%s FOR UPDATE",
-            (code,),
+            "SELECT discord_id,redeemed_at FROM arcade_rewards WHERE code=%s AND discord_id=%s FOR UPDATE",
+            (code, user["id"]),
         ).fetchone()
         if not reward:
             return jsonify({"ok": False, "error": "Invalid arcade code."}), 404
@@ -1582,8 +1582,8 @@ def arcade_redeem():
         if reward[1]:
             return jsonify({"ok": False, "error": "This arcade code has already been redeemed."}), 409
         conn.execute(
-            "UPDATE arcade_rewards SET redeemed_at=NOW(),redeemed_by=%s WHERE code=%s",
-            (user["id"], code),
+            "UPDATE arcade_rewards SET redeemed_at=NOW(),redeemed_by=%s WHERE code=%s AND discord_id=%s",
+            (user["id"], code, user["id"]),
         )
         conn.commit()
     return jsonify({"ok": True, "discount": 50, "message": "50% Premium discount redeemed successfully. Your discount is now attached to this Discord account."})
@@ -1679,6 +1679,12 @@ COMMANDS = [
     ("!roulette <bet> <pick>", "Games", "Play Roulette with a coin bet."),
 ]
 
+
+# Initialize persistent storage on both Gunicorn imports and direct starts.
+try:
+    init_db()
+except psycopg.Error as exc:
+    app.logger.error("Database initialization failed: %s", type(exc).__name__)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
