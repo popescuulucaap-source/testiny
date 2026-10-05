@@ -278,6 +278,7 @@ def bot_heartbeat():
                 "id": str(guild["id"]),
                 "name": str(guild.get("name") or "Discord server"),
                 "member_count": guild.get("member_count"),
+                "invite_url": str(guild.get("invite_url") or "").strip(),
                 "settings": guild.get("settings") if isinstance(guild.get("settings"), dict) else {},
             }
     last_seen = time.time()
