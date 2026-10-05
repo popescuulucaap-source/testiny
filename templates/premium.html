@@ -49,37 +49,6 @@
     </article>
   </div>
 
-  <div class="card premium-code-card">
-    <div>
-      <span class="eyebrow">STARTED</span>
-      <h2>3 months of Premium</h2>
-      <p>Redeem <strong>started</strong> once per account for 90 days of Premium. You must link your Roblox account first so the entitlement can be used by the game.</p>
-    </div>
-    <div class="premium-code-form">
-      <input id="startedCode" type="text" maxlength="40" autocomplete="off" placeholder="Enter code">
-      <button class="btn primary" id="redeemStarted" type="button">Redeem</button>
-      <span class="notice" id="startedResult" aria-live="polite"></span>
-    </div>
-  </div>
-
-  <div class="card premium-link-card">
-    <div>
-      <span class="eyebrow">ACCOUNT LINK</span>
-      <h2>Connect Roblox to Nightfall</h2>
-      <p>Linking lets Nightfall associate your Roblox Premium entitlement with your Discord account and protect the Vault from client-side fake unlocks.</p>
-    </div>
-    {% if link and link.roblox_user_id %}
-      <div class="premium-linked">
-        <strong>Roblox linked</strong>
-        <span>User ID {{ link.roblox_user_id }}</span>
-      </div>
-    {% else %}
-      <button class="btn secondary" id="generateLink" type="button">Generate Roblox link code</button>
-      <div class="vault-code" id="linkCode" hidden></div>
-      <p class="notice" id="linkHelp" hidden>Enter this code in the Nightfall Roblox account-link panel. It expires after 15 minutes.</p>
-    {% endif %}
-  </div>
-
   <div class="card premium-status-card">
     <div>
       <span class="eyebrow">YOUR STATUS</span>
@@ -155,51 +124,7 @@
 </section>
 
 <script>
-(() => {
-  const generate = document.getElementById('generateLink');
-  const code = document.getElementById('linkCode');
-  const help = document.getElementById('linkHelp');
-  generate?.addEventListener('click', async () => {
-    generate.disabled = true;
-    generate.textContent = 'Generating…';
-    try {
-      const r = await fetch('/api/premium/link/start', {method:'POST'});
-      const data = await r.json();
-      if (!data.ok) throw new Error(data.error || 'Could not create a link code.');
-      code.hidden = false;
-      code.textContent = data.code;
-      help.hidden = false;
-      generate.textContent = 'Generate new code';
-    } catch (e) {
-      generate.textContent = e.message || 'Failed';
-    } finally {
-      generate.disabled = false;
-    }
-  });
-
-  const redeem = document.getElementById('redeemStarted');
-  const startedInput = document.getElementById('startedCode');
-  const startedResult = document.getElementById('startedResult');
-  redeem?.addEventListener('click', async () => {
-    redeem.disabled = true;
-    startedResult.textContent = 'Checking code…';
-    try {
-      const r = await fetch('/api/premium/redeem-started', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({code: startedInput.value})
-      });
-      const data = await r.json();
-      if (!data.ok) throw new Error(data.error || 'Could not redeem code.');
-      startedResult.textContent = 'Premium activated for 3 months.';
-      setTimeout(() => location.reload(), 700);
-    } catch (e) {
-      startedResult.textContent = e.message || 'Redemption failed.';
-    } finally {
-      redeem.disabled = false;
-    }
-  });
-
+(()=>{
   const consoleEl = document.getElementById('vaultConsole');
   if (!consoleEl || consoleEl.hidden) return;
   const serverSelect = document.getElementById('serverSelect');
@@ -270,6 +195,8 @@
     }
   });
   loadServers();
+})();
+
 })();
 </script>
 {% endblock %}
