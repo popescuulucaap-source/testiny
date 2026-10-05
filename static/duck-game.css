@@ -37,3 +37,16 @@ body.duck-game-open{overflow:hidden}
 .duck-target:hover{transform:scale(1.12) rotate(-2deg)}
 .duck-target.duck-hit{animation:duckHit .18s ease forwards}
 @keyframes duckHit{to{transform:scale(1.35);opacity:0}}
+
+.duck-field{position:relative;overflow:hidden;min-height:520px;background:linear-gradient(#28344a 0 55%,#8b6b4e 55% 100%);border:1px solid rgba(255,255,255,.16);border-radius:24px;box-shadow:inset 0 -90px 0 rgba(0,0,0,.12)}
+.duck-stand-backdrop{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 78px,rgba(255,255,255,.045) 79px 80px)}
+.duck-booth-sign{position:absolute;top:28px;left:50%;transform:translateX(-50%);padding:13px 28px;border-radius:8px;background:#c58b4b;border:4px solid #5d3b28;color:#201711;font-weight:900;letter-spacing:.16em;box-shadow:0 8px 0 rgba(0,0,0,.2)}
+.duck-booth-lights{position:absolute;top:88px;left:50%;transform:translateX(-50%);letter-spacing:20px;font-size:18px;color:#f4d77a;text-shadow:0 0 12px #f4d77a}
+.duck-target{width:116px;height:142px;background:transparent;border:0;filter:drop-shadow(0 10px 5px rgba(0,0,0,.35));}
+.duck-target:before{content:"";position:absolute;left:10px;right:10px;bottom:2px;height:15px;background:#6b4a32;border-radius:3px;box-shadow:0 5px 0 #402b20}
+.duck-target:after{content:"";position:absolute;left:17px;right:17px;top:0;bottom:15px;border:7px solid #d7c39a;background-image:url("https://images.unsplash.com/photo-1555852095-64e5d6c3a9e3?auto=format&fit=crop&w=240&q=85");background-size:cover;background-position:center;border-radius:3px;box-shadow:inset 0 0 0 2px #604632}
+.toy-blaster{position:absolute;z-index:8;left:50%;bottom:18px;width:170px;height:100px;transform:translateX(-50%) rotate(-4deg);pointer-events:none;filter:drop-shadow(0 12px 8px rgba(0,0,0,.35))}
+.blaster-body{position:absolute;left:35px;top:25px;width:105px;height:43px;border-radius:18px 12px 10px 14px;background:linear-gradient(135deg,#7bd1ff,#2674bd);border:4px solid #173b62}
+.blaster-body:after{content:"";position:absolute;right:10px;top:10px;width:14px;height:14px;border-radius:50%;background:#ffe36e;box-shadow:0 0 12px #ffe36e}
+.blaster-barrel{position:absolute;left:125px;top:31px;width:43px;height:25px;border-radius:5px 14px 14px 5px;background:#f0d35d;border:4px solid #5d4a1e}
+.blaster-grip{position:absolute;left:55px;top:59px;width:31px;height:48px;border-radius:5px 5px 14px 14px;background:#f16b78;border:4px solid #6c2630;transform:rotate(12deg)}
