@@ -421,3 +421,75 @@ body.nightfall-space-page .planet-saturn:after{
   .planet-kepler186f{width:220px!important;height:220px!important}
   body.nightfall-space-page .planet-saturn:after{width:370px!important;height:100px!important}
 }
+
+
+/* ===== PLANET MOTION + RELIABLE HOME FALLBACK =====
+   Explicitly restore slow movement after the image overrides.
+   The home object always renders even if its external photo is unavailable.
+*/
+body.nightfall-space-page .space-planet{
+  animation-duration:220s!important;
+  animation-timing-function:ease-in-out!important;
+  animation-iteration-count:infinite!important;
+  animation-direction:alternate!important;
+  will-change:transform!important;
+}
+
+/* Force the page-specific objects to stay visible while they move. */
+body.nightfall-space-page.page-index .planet-r136,
+body.nightfall-space-page.page-commands .planet-earth,
+body.nightfall-space-page.page-guidelines .planet-mars,
+body.nightfall-space-page.page-announcements .planet-jupiter,
+body.nightfall-space-page.page-suggestions .planet-saturn,
+body.nightfall-space-page.page-redeem .planet-uranus,
+body.nightfall-space-page.page-support .planet-neptune,
+body.nightfall-space-page.page-community .planet-pluto,
+body.nightfall-space-page.page-servers .planet-kepler16b,
+body.nightfall-space-page.page-profile .planet-k218b,
+body.nightfall-space-page.page-notifications .planet-kepler186f{
+  display:block!important;
+}
+
+/* R136a1: use a known NASA/Hubble star-cluster image when available,
+   but keep a luminous star fallback so the home planet never disappears. */
+body.nightfall-space-page .planet-r136{
+  background-color:#75cfff!important;
+  background-image:
+    url("https://commons.wikimedia.org/wiki/Special:FilePath/NGC%202072.jpg"),
+    radial-gradient(circle at 42% 38%,#fff 0 7%,#dff7ff 15%,#82dfff 32%,#4a9dff 51%,#193c8c 72%,#050814 100%)!important;
+  background-size:235%,cover!important;
+  background-position:center,center!important;
+  background-repeat:no-repeat,no-repeat!important;
+  background-blend-mode:normal!important;
+}
+
+/* Make the home object visibly travel across the screen very slowly. */
+@keyframes nf-r136-drift-fixed{
+  0%{transform:translate3d(0,0,0) scale(.96)}
+  25%{transform:translate3d(-55px,35px,0) scale(1)}
+  50%{transform:translate3d(35px,-45px,0) scale(1.04)}
+  75%{transform:translate3d(-35px,55px,0) scale(.99)}
+  100%{transform:translate3d(55px,-25px,0) scale(.96)}
+}
+body.nightfall-space-page.page-index .planet-r136{
+  animation:nf-r136-drift-fixed 210s ease-in-out infinite alternate!important;
+}
+
+/* Make every other world unmistakably move, even if another stylesheet
+   has overridden its earlier animation declaration. */
+body.nightfall-space-page.page-commands .planet-earth{animation:nf-planet-a 190s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-guidelines .planet-mars{animation:nf-planet-b 205s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-announcements .planet-jupiter{animation:nf-planet-c 225s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-suggestions .planet-saturn{animation:nf-planet-d 240s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-redeem .planet-uranus{animation:nf-planet-e 255s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-support .planet-neptune{animation:nf-planet-f 270s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-community .planet-pluto{animation:nf-planet-g 285s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-servers .planet-kepler16b{animation:nf-planet-h 300s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-profile .planet-k218b{animation:nf-planet-i 315s ease-in-out infinite alternate!important}
+body.nightfall-space-page.page-notifications .planet-kepler186f{animation:nf-planet-j 330s ease-in-out infinite alternate!important}
+
+/* Do not let the reduced-motion preference accidentally disable movement
+   for the normal experience; only users who explicitly request it get static worlds. */
+@media(prefers-reduced-motion:reduce){
+  body.nightfall-space-page .space-planet{animation:none!important}
+}
