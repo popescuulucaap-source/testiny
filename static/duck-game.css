@@ -20,4 +20,20 @@
 body.duck-game-open{overflow:hidden}
 @media(max-width:700px){.duck-game{padding:12px}.duck-field{min-height:420px}.duck-target{font-size:40px}}
 
-.secret-star-visible{position:relative;cursor:pointer;border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;justify-content:center;gap:7px;z-index:20;padding:8px;border-radius:999px;transition:transform .2s ease,filter .2s ease,background .2s ease}.secret-star-visible span{font-size:9px;letter-spacing:.14em;opacity:.75}.secret-star-visible:hover{transform:scale(1.12);filter:drop-shadow(0 0 14px rgba(255,255,255,.65));background:rgba(255,255,255,.06)}.secret-star-visible:after{content:"10 clicks";position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:.1em;opacity:.55;white-space:nowrap}.secret-star-visible.secret-star-hit{animation:secretStarPulse .45s ease}
+.secret-star-visible{cursor:pointer;z-index:20;transition:transform .25s ease,filter .25s ease,opacity .25s ease}
+.secret-star-visible:hover{transform:scale(1.18);filter:drop-shadow(0 0 10px rgba(255,255,255,.55));opacity:1}
+.secret-star-visible:focus-visible{outline:1px solid rgba(255,255,255,.45);outline-offset:6px}
+.secret-star-hit{animation:secretStarPulse .45s ease}
+@keyframes secretStarPulse{50%{transform:scale(1.45);filter:drop-shadow(0 0 13px rgba(255,255,255,.8))}}
+.duck-game-stats{display:flex;gap:12px}
+.duck-game-stats span{padding:10px 16px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.05);font-size:.78rem;letter-spacing:.12em}
+.duck-field{cursor:crosshair}
+.duck-target{position:absolute;z-index:3;width:76px;height:54px;border:0;background:transparent;cursor:pointer;padding:0;transform-origin:center}
+.duck-target .duck-body{position:absolute;left:15px;top:20px;width:46px;height:27px;border-radius:50% 48% 45% 48%;background:#e9d9a9;box-shadow:0 7px 0 rgba(0,0,0,.16)}
+.duck-target .duck-head{position:absolute;left:43px;top:7px;width:27px;height:27px;border-radius:50%;background:#f0dfa8}
+.duck-target .duck-head:after{content:"";position:absolute;right:-9px;top:10px;width:13px;height:8px;border-radius:8px;background:#d48b3b}
+.duck-target .duck-eye{position:absolute;right:8px;top:9px;width:4px;height:4px;border-radius:50%;background:#161616}
+.duck-target .duck-wing{position:absolute;left:27px;top:24px;width:20px;height:10px;border-radius:50%;background:#c9b781;transform:rotate(-15deg)}
+.duck-target:hover{transform:scale(1.12) rotate(-2deg)}
+.duck-target.duck-hit{animation:duckHit .18s ease forwards}
+@keyframes duckHit{to{transform:scale(1.35);opacity:0}}
