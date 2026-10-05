@@ -1527,11 +1527,10 @@ def arcade_finish():
         existing = conn.execute("SELECT 1 FROM arcade_rewards WHERE discord_id=%s", (user["id"],)).fetchone()
         if existing:
             return jsonify({"ok": False, "error": "You already claimed your one arcade reward."}), 409
-        code = _new_arcade_code()
-        code_hash = _arcade_code_hash(code)
+        code = arcade_reward_code()
         conn.execute(
             "INSERT INTO arcade_rewards(discord_id,code) VALUES(%s,%s)",
-            (user["id"], arcade_reward_code()),
+            (user["id"], code),
         )
         conn.execute(
             "UPDATE arcade_challenges SET completed=TRUE WHERE discord_id=%s",
@@ -1569,7 +1568,7 @@ def arcade_redeem():
             return jsonify({"ok": False, "error": "This arcade code has already been redeemed."}), 409
         conn.execute(
             "UPDATE arcade_rewards SET redeemed_at=NOW(),redeemed_by=%s WHERE code=%s",
-            (user["id"], code_hash),
+            (user["id"], code),
         )
         conn.commit()
     return jsonify({"ok": True, "discount": 50, "message": "50% Premium discount redeemed successfully. Your discount is now attached to this Discord account."})
