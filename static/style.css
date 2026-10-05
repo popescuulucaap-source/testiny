@@ -50,3 +50,42 @@ body{background:
 .nav{background:rgba(5,6,12,.66)!important}
 main:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,8,25,.08),transparent 30%,rgba(3,4,9,.18));z-index:-1}
 @media(max-width:700px){.night-moon{width:125px!important;height:125px!important;top:80px!important;right:3vw!important;opacity:.62!important}}
+
+
+/* ===== RESPONSIVE NIGHTFALL LAYOUT ===== */
+html,body{width:100%;min-width:0}
+img,svg,video,iframe{max-width:100%;height:auto}
+main{width:100%;overflow:hidden}
+.hero,.section,.cta,.page-head,.command-grid,.legal-grid,.updates,.server-grid,.dashboard-head,.dashboard-grid,.auth-card,.admin-list{max-width:1120px}
+.nav{padding-left:clamp(14px,6vw,6%);padding-right:clamp(14px,6vw,6%)}
+.nav-links{flex-wrap:wrap}
+@media(max-width:850px){
+  .nav{position:sticky;overflow-x:auto;gap:12px}
+  .brand{flex:0 0 auto}
+  .nav-links{flex:1 0 auto;justify-content:flex-end;gap:8px}
+  .nav-links a{white-space:nowrap}
+  .nav-links a:not(.nav-pill){display:none}
+  .hero{width:calc(100% - 32px);grid-template-columns:1fr;gap:28px;min-height:0;padding:54px 0}
+  .hero h1{font-size:clamp(42px,12vw,72px)}
+  .hero-card{height:320px}
+  .section,.page-head{width:calc(100% - 32px)}
+  .section{padding:60px 0}
+  .cards,.command-grid,.legal-grid,.admin-grid,.three{grid-template-columns:1fr}
+  .command-grid{width:calc(100% - 32px)}
+  .cta{width:calc(100% - 32px);margin-bottom:60px;padding:28px}
+  .dashboard-head{width:calc(100% - 32px);display:grid;gap:18px;padding:45px 0 24px}
+  .dashboard-grid{width:calc(100% - 32px);grid-template-columns:1fr}
+  footer{padding:24px 16px}
+}
+@media(max-width:520px){
+  .brand-wordmark{max-width:125px}
+  .nav{padding-top:12px;padding-bottom:12px}
+  .nav-pill{padding:8px 10px;font-size:12px}
+  .hero-card{height:270px;border-radius:24px}
+  .lead{font-size:16px}
+  .actions .btn{width:100%}
+  .server-card{grid-template-columns:auto 1fr}
+  .server-card .btn{grid-column:1/-1;width:100%}
+  input,textarea,select{font-size:16px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
