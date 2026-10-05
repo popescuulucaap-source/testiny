@@ -9,6 +9,7 @@
 .duck-field{position:relative;flex:1;min-height:520px;border:1px solid rgba(255,255,255,.14);border-radius:24px;overflow:hidden;background:radial-gradient(circle at 50% 20%,rgba(80,100,180,.16),transparent 45%),linear-gradient(180deg,#10182b,#07101b 65%,#0a1714);box-shadow:0 20px 80px rgba(0,0,0,.35)}
 .duck-field:after{content:"";position:absolute;inset:auto 0 0;height:30%;background:linear-gradient(180deg,transparent,rgba(20,70,35,.25));pointer-events:none}
 .duck-start{position:absolute;z-index:2;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center}
+.duck-start[hidden]{display:none!important}
 .duck-target{position:absolute;z-index:3;border:0;background:transparent;font-size:48px;cursor:crosshair;filter:drop-shadow(0 8px 10px rgba(0,0,0,.35));transition:transform .08s}
 .duck-target:hover{transform:scale(1.15) rotate(-4deg)}
 .duck-target.duck-hit{transform:scale(1.6);opacity:0}
@@ -44,7 +45,7 @@ body.duck-game-open{overflow:hidden}
 .duck-booth-lights{position:absolute;top:88px;left:50%;transform:translateX(-50%);letter-spacing:20px;font-size:18px;color:#f4d77a;text-shadow:0 0 12px #f4d77a}
 .duck-target{width:116px;height:142px;background:transparent;border:0;filter:drop-shadow(0 10px 5px rgba(0,0,0,.35));}
 .duck-target:before{content:"";position:absolute;left:10px;right:10px;bottom:2px;height:15px;background:#6b4a32;border-radius:3px;box-shadow:0 5px 0 #402b20}
-.duck-target:after{content:"";position:absolute;left:17px;right:17px;top:0;bottom:15px;border:7px solid #d7c39a;background-image:url("https://images.unsplash.com/photo-1555852095-64e5d6c3a9e3?auto=format&fit=crop&w=240&q=85");background-size:cover;background-position:center;border-radius:3px;box-shadow:inset 0 0 0 2px #604632}
+.duck-target:after{content:"";position:absolute;left:17px;right:17px;top:0;bottom:15px;border:7px solid #d7c39a;background-image:url("https://upload.wikimedia.org/wikipedia/commons/4/4f/Mallard_duck_close-up.jpg");background-size:cover;background-position:center;border-radius:3px;box-shadow:inset 0 0 0 2px #604632}
 .toy-blaster{position:absolute;z-index:8;left:50%;bottom:18px;width:170px;height:100px;transform:translateX(-50%) rotate(-4deg);pointer-events:none;filter:drop-shadow(0 12px 8px rgba(0,0,0,.35))}
 .blaster-body{position:absolute;left:35px;top:25px;width:105px;height:43px;border-radius:18px 12px 10px 14px;background:linear-gradient(135deg,#7bd1ff,#2674bd);border:4px solid #173b62}
 .blaster-body:after{content:"";position:absolute;right:10px;top:10px;width:14px;height:14px;border-radius:50%;background:#ffe36e;box-shadow:0 0 12px #ffe36e}
@@ -53,7 +54,7 @@ body.duck-game-open{overflow:hidden}
 
 
 .duck-target:after{
-  background-image:url("https://images.unsplash.com/photo-1555852095-64e5d6c3a9e3?auto=format&fit=crop&w=360&q=90");
+  background-image:url("https://upload.wikimedia.org/wikipedia/commons/4/4f/Mallard_duck_close-up.jpg");
   background-size:cover;
   background-position:center;
   filter:none;
@@ -61,3 +62,7 @@ body.duck-game-open{overflow:hidden}
 .duck-target .duck-body,.duck-target .duck-head,.duck-target .duck-wing{display:none;}
 .duck-game.is-running .duck-start{display:none!important;}
 .duck-reward-code{display:block;margin:14px 0;font-size:1.25rem;letter-spacing:.08em;}
+
+/* Reliable real-photo target + start overlay fix */
+.duck-target:after{background-image:url("https://upload.wikimedia.org/wikipedia/commons/4/4f/Mallard_duck_close-up.jpg")!important;background-size:cover;background-position:center;}
+.duck-game.is-running .duck-start,.duck-start[hidden]{display:none!important;}
