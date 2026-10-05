@@ -7,15 +7,23 @@ document.addEventListener('DOMContentLoaded',()=>{
       sessionStorage.setItem(key,'1');
       const bar=loader.querySelector('.intro-progress-fill');
       const label=loader.querySelector('.intro-progress-label');
-      const start=performance.now(),duration=4000;
+      const start=performance.now(),duration=1800;
+      const finish=()=>{
+        if(bar)bar.style.transform='scaleX(1)';
+        if(label)label.textContent='100%';
+        loader.classList.add('hidden');
+        setTimeout(()=>loader.remove(),650);
+      };
       const step=now=>{
         const progress=Math.min(1,(now-start)/duration);
         if(bar)bar.style.transform=`scaleX(${progress})`;
         if(label)label.textContent=`${Math.round(progress*100)}%`;
         if(progress<1)requestAnimationFrame(step);
-        else {loader.classList.add('hidden');setTimeout(()=>loader.remove(),650);}
+        else finish();
       };
       requestAnimationFrame(step);
+      // Never leave the page behind a stuck intro if animation frames are interrupted.
+      setTimeout(finish,2200);
     }
   }
 
