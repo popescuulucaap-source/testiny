@@ -1,7 +1,31 @@
 {% extends "base.html" %}
 {% block title %}Nightfall • Updates{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">OFFICIAL UPDATES</span><h1>What's new in Nightfall.</h1><p>New commands, features, fixes and announcements.</p></section>
-<div class="updates">{% for a in announcements %}<article class="update"><span>{{ a.date }} · {{ "BOT UPDATE" if a.kind == "bot" else "WEBSITE UPDATE" }}</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No announcements yet.</h3><p>Use the admin panel to publish the first Nightfall update.</p></article>{% endfor %}</div>
+<section class="page-head">
+  <span class="eyebrow">NIGHTFALL CHANGELOG</span>
+  <h1>Everything that changes. In one place.</h1>
+  <p>Website updates and Discord bot updates are tracked here automatically, and admins can publish their own announcements.</p>
+</section>
+<section class="update-center">
+  <div class="update-center-head">
+    <div><span class="eyebrow">LIVE UPDATE CENTER</span><h2>Site &amp; Bot Updates</h2></div>
+    <span class="update-center-status">● TRACKING</span>
+  </div>
+  <div class="update-columns">
+    <section class="update-column">
+      <div class="update-column-title"><span class="update-icon">◈</span><div><h3>Site Updates</h3><p>Website, dashboard and design changes.</p></div></div>
+      <div class="updates">
+        {% for a in site_updates %}<article class="update"><span>{{ a.date }} · SITE UPDATE</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>
+        {% else %}<article class="card"><h3>No site updates yet.</h3><p>New website changes will appear here.</p></article>{% endfor %}
+      </div>
+    </section>
+    <section class="update-column">
+      <div class="update-column-title"><span class="update-icon">✦</span><div><h3>Bot Updates</h3><p>Nightfall Discord bot changes and fixes.</p></div></div>
+      <div class="updates">
+        {% for a in bot_updates %}<article class="update"><span>{{ a.date }} · BOT UPDATE</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>
+        {% else %}<article class="card"><h3>No bot updates yet.</h3><p>New bot changes will appear here automatically.</p></article>{% endfor %}
+      </div>
+    </section>
+  </div>
+</section>
 {% endblock %}
-
