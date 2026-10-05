@@ -424,3 +424,38 @@ main:before{
 .orb-kepler{--planet-glow:rgba(255,150,80,.4);background:radial-gradient(circle,#d89052,#8b3f28 55%,#24110c 90%)}
 .orb-k218{--planet-glow:rgba(90,210,255,.4);background:radial-gradient(circle,#b0efff,#4d91bb 55%,#12263d 90%)}
 .orb-kepler186{--planet-glow:rgba(255,90,120,.3);background:radial-gradient(circle,#bf5f6f,#552b54 55%,#130b22 90%)}
+
+
+/* NIGHTFALL CONTROL CENTER — live metrics + guided setup */
+.dashboard-metrics{
+  position:relative;z-index:2;max-width:1280px;margin:0 auto 22px;
+  padding:0 5vw;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;
+}
+.dashboard-metric{
+  min-width:0;display:flex;align-items:center;gap:14px;padding:18px 20px;
+  border:1px solid rgba(143,198,255,.12);border-radius:20px;
+  background:linear-gradient(145deg,rgba(11,22,43,.78),rgba(2,7,17,.88));
+  box-shadow:0 18px 55px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.04);
+}
+.dashboard-metric>span{font-size:25px;filter:drop-shadow(0 0 12px rgba(120,200,255,.28))}
+.dashboard-metric small{display:block;color:rgba(180,210,240,.52);font-size:9px;letter-spacing:.16em}
+.dashboard-metric strong{display:block;margin-top:4px;color:#eef8ff;font-size:22px;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+.dashboard-jump{display:inline-block;margin-top:12px;color:#9bdcff;text-decoration:none;font-size:12px;font-weight:700}
+.dashboard-jump:hover{text-decoration:underline}
+.dashboard-checklist{margin-top:22px!important}
+.dashboard-checklist h3{margin:8px 0 18px}
+.checklist-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.checklist-grid>div{
+  padding:15px;border:1px solid rgba(143,198,255,.09);border-radius:16px;
+  background:rgba(255,255,255,.025);display:flex;gap:10px;align-items:flex-start
+}
+.checklist-grid b{color:#8fd9ff;font-size:12px;letter-spacing:.08em}
+.checklist-grid span{color:rgba(220,232,248,.68);font-size:13px;line-height:1.45}
+@media(max-width:900px){
+  .dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .checklist-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .dashboard-metrics{grid-template-columns:1fr;padding:0 18px}
+  .checklist-grid{grid-template-columns:1fr}
+}
