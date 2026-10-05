@@ -1,16 +1,8 @@
 -- Nightfall Premium entitlement system
--- Place this Script in ServerScriptService.
---
--- Permanent Premium passes:
---   Full price: 1747241092 (179 Robux)
---   Arcade offer: 1744202935 (70 Robux)
---
--- Temporary code:
---   started = 3 months of Premium
---
--- The server is authoritative: clients cannot grant themselves Premium by
--- changing UI/local values. Pass ownership is verified with MarketplaceService
--- and the temporary entitlement is stored in DataStoreService.
+-- One Script: ServerScriptService/NightfallPremium
+-- Full Premium pass: 1747241092 (179 Robux)
+-- Arcade Premium pass: 1744202935 (70 Robux)
+-- Code "started": one-time 90-day Premium entitlement
 
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -20,40 +12,10 @@ local HttpService = game:GetService("HttpService")
 
 local FULL_PREMIUM_PASS_ID = 1747241092
 local DISCOUNT_PREMIUM_PASS_ID = 1744202935
-
 local STARTED_CODE = "started"
 local STARTED_DURATION_SECONDS = 90 * 24 * 60 * 60
-local NIGHTFALL_WEBSITE_URL = "https://testiny-7wuu.onrender.com"
-
+local WEBSITE_URL = "https://testiny-7wuu.onrender.com"
 local PREMIUM_STORE = DataStoreService:GetDataStore("NightfallPremium_v1")
-
-local remotes = ReplicatedStorage:FindFirstChild("NightfallPremium")
-if not remotes then
-    remotes = Instance.new("Folder")
-    remotes.Name = "NightfallPremium"
-    remotes.Parent = ReplicatedStorage
-end
-
-local redeemFunction = remotes:FindFirstChild("RedeemCode")
-if not redeemFunction then
-    redeemFunction = Instance.new("RemoteFunction")
-    redeemFunction.Name = "RedeemCode"
-    redeemFunction.Parent = remotes
-end
-
-local statusFunction = remotes:FindFirstChild("GetStatus")
-if not statusFunction then
-    statusFunction = Instance.new("RemoteFunction")
-    statusFunction.Name = "GetStatus"
-    statusFunction.Parent = remotes
-end
-
-local purchaseEvent = remotes:FindFirstChild("PremiumPurchase")
-if not purchaseEvent then
-    purchaseEvent = Instance.new("RemoteEvent")
-    purchaseEvent.Name = "PremiumPurchase"
-    purchaseEvent.Parent = remotes
-end
 
 local PREMIUM_FEATURES = {
     Customization = true,
@@ -75,27 +37,119 @@ local PREMIUM_FEATURES = {
     Vault = true,
 }
 
-local function applyFeatureAttributes(player, premium)
-    for featureName, enabledForPremium in pairs(PREMIUM_FEATURES) do
-        player:SetAttribute("NightfallPremium_" .. featureName, premium and enabledForPremium or false)
-    end
+local remotes = ReplicatedStorage:FindFirstChild("NightfallPremium")
+if not remotes then
+    remotes = Instance.new("Folder")
+    remotes.Name = "NightfallPremium"
+    remotes.Parent = ReplicatedStorage
 end
 
-local function bridgeSecret()
+local function getRemote(className, name)
+    local object = remotes:FindFirstChild(name)
+    if object then return object end
+    object = Instance.new(className)
+    object.Name = name
+    object.Parent = remotes
+    return object
+end
+
+local redeemFunction = getRemote("RemoteFunction", "RedeemCode")
+local statusFunction = getRemote("RemoteFunction", "GetStatus")
+local linkFunction = getRemote("RemoteFunction", "LinkAccount")
+local purchaseEvent = getRemote("RemoteEvent", "PremiumPurchase")
+
+local cache = {}
+
+local function loadData(userId)
+    local key = "user_" .. tostring(userId)
+    local ok, data = pcall(function()
+        return PREMIUM_STORE:GetAsync(key)
+    end)
+    if not ok then
+        warn("[Nightfall Premium] Could not load entitlement:", data)
+        return nil
+    end
+    if type(data) ~= "table" then data = {} end
+    return data
+end
+
+local function saveData(userId, data)
+    local key = "user_" .. tostring(userId)
+    local ok, err = pcall(function()
+        PREMIUM_STORE:SetAsync(key, data)
+    end)
+    if not ok then
+        warn("[Nightfall Premium] Could not save entitlement:", err)
+    end
+    return ok
+end
+
+local function ownsPass(userId, passId)
+    local ok, owns = pcall(function()
+        return MarketplaceService:UserOwnsGamePassAsync(userId, passId)
+    end)
+    if not ok then
+        warn("[Nightfall Premium] Could not verify pass " .. tostring(passId) .. ":", owns)
+        return false
+    end
+    return owns == true
+end
+
+local function getData(userId)
+    if cache[userId] then return cache[userId] end
+    local data = loadData(userId)
+    if data then cache[userId] = data end
+    return data
+end
+
+local function getTemporaryExpiry(data)
+    local expiresAt = tonumber(data and data.premiumExpiresAt) or 0
+    if expiresAt > os.time() then return expiresAt end
+    return 0
+end
+
+local function getPremiumStatus(userId)
+    if ownsPass(userId, FULL_PREMIUM_PASS_ID) then
+        return true, "pass", 0
+    end
+    if ownsPass(userId, DISCOUNT_PREMIUM_PASS_ID) then
+        return true, "arcade_pass", 0
+    end
+    local data = getData(userId)
+    local expiresAt = getTemporaryExpiry(data)
+    if expiresAt > 0 then
+        return true, "started", expiresAt
+    end
+    return false, "none", 0
+end
+
+local function applyPremium(player)
+    local premium, source, expiresAt = getPremiumStatus(player.UserId)
+    player:SetAttribute("NightfallPremium", premium)
+    player:SetAttribute("NightfallPremiumSource", source)
+    player:SetAttribute("NightfallPremiumExpiresAt", expiresAt)
+    for featureName, enabled in pairs(PREMIUM_FEATURES) do
+        player:SetAttribute("NightfallPremium_" .. featureName, premium and enabled or false)
+    end
+    return premium, source, expiresAt
+end
+
+local function getBridgeSecret()
     local ok, secret = pcall(function()
         return HttpService:GetSecret("NIGHTFALL_BRIDGE_SECRET")
     end)
-    return ok and secret or nil
+    if ok and secret then return secret end
+    return nil
 end
 
 local function websitePost(path, body)
-    local secret = bridgeSecret()
+    local secret = getBridgeSecret()
     if not secret then
-        return false, "NIGHTFALL_BRIDGE_SECRET is not configured in Roblox Creator secrets."
+        return false, "NIGHTFALL_BRIDGE_SECRET is not configured."
     end
     local ok, response = pcall(function()
         return HttpService:RequestAsync({
-            Url = NIGHTFALL_WEBSITE_URL .. path,
+            Url = WEBSITE_URL .. path,
             Method = "POST",
             Headers = {
                 ["Content-Type"] = "application/json",
@@ -105,96 +159,13 @@ local function websitePost(path, body)
         })
     end)
     if not ok or not response.Success then
-        return false, "Nightfall website request failed."
+        return false, "Website request failed."
     end
     local decodedOk, decoded = pcall(function()
         return HttpService:JSONDecode(response.Body)
     end)
-    return decodedOk, decoded
-end
-
-local linkFunction = remotes:FindFirstChild("LinkAccount")
-if not linkFunction then
-    linkFunction = Instance.new("RemoteFunction")
-    linkFunction.Name = "LinkAccount"
-    linkFunction.Parent = remotes
-end
-
-local cache = {}
-
-local function getData(userId)
-    local key = "user_" .. tostring(userId)
-    local success, data = pcall(function()
-        return PREMIUM_STORE:GetAsync(key)
-    end)
-
-    if not success then
-        warn("[Nightfall Premium] Could not load entitlement:", data)
-        return nil
-    end
-
-    if type(data) ~= "table" then
-        data = {}
-    end
-
-    return data
-end
-
-local function saveData(userId, data)
-    local key = "user_" .. tostring(userId)
-    local success, err = pcall(function()
-        PREMIUM_STORE:SetAsync(key, data)
-    end)
-
-    if not success then
-        warn("[Nightfall Premium] Could not save entitlement:", err)
-    end
-
-    return success
-end
-
-local function ownsPass(userId, passId)
-    local success, owns = pcall(function()
-        return MarketplaceService:UserOwnsGamePassAsync(userId, passId)
-    end)
-
-    if not success then
-        warn("[Nightfall Premium] Could not verify pass:", passId, owns)
-        return false
-    end
-
-    return owns == true
-end
-
-local function hasPermanentPremium(userId)
-    return ownsPass(userId, FULL_PREMIUM_PASS_ID)
-        or ownsPass(userId, DISCOUNT_PREMIUM_PASS_ID)
-end
-
-local function getTemporaryExpiry(data)
-    local expiresAt = tonumber(data and data.premiumExpiresAt) or 0
-    if expiresAt > os.time() then
-        return expiresAt
-    end
-    return 0
-end
-
-local function isPremium(userId)
-    if hasPermanentPremium(userId) then
-        return true, "pass", 0
-    end
-
-    local data = cache[userId] or getData(userId)
-    if data then
-        cache[userId] = data
-    end
-
-    local expiresAt = getTemporaryExpiry(data)
-    if expiresAt > 0 then
-        return true, "started", expiresAt
-    end
-
-    return false, "none", 0
+    if decodedOk then return true, decoded end
+    return true, {}
 end
 
 local function syncPremiumToWebsite(player, premium, source, expiresAt)
@@ -202,122 +173,132 @@ local function syncPremiumToWebsite(player, premium, source, expiresAt)
         websitePost("/api/roblox/premium-sync", {
             roblox_user_id = tostring(player.UserId),
             premium = premium,
-            source = source,
-            expires_at = expiresAt,
+            premium_source = source,
+            premium_expires_at = expiresAt or 0,
         })
     end)
 end
 
-local function applyPremium(player)
-    local premium, source, expiresAt = isPremium(player.UserId)
-
-    player:SetAttribute("NightfallPremium", premium)
-    player:SetAttribute("NightfallPremiumSource", source)
-    player:SetAttribute("NightfallPremiumExpiresAt", expiresAt)
-
+local function refreshAndSync(player)
+    local premium, source, expiresAt = applyPremium(player)
+    syncPremiumToWebsite(player, premium, source, expiresAt)
     return premium, source, expiresAt
-end
-
-local function hasRedeemedStarted(data)
-    return data and data.startedRedeemed == true
 end
 
 linkFunction.OnServerInvoke = function(player, rawCode)
     local code = tostring(rawCode or ""):upper():gsub("%s+", "")
-    if not code:match("^[A-F0-9]+$") or #code < 6 or #code > 20 then
+    if not code:match("^[A-Z0-9%-]+$") or #code < 4 or #code > 32 then
         return { ok = false, error = "Invalid link code." }
     end
     local ok, response = websitePost("/api/roblox/link/claim", {
-        code = code,
         roblox_user_id = tostring(player.UserId),
+        link_token = code,
+        code = code,
     })
-    if not ok or type(response) ~= "table" or response.ok ~= true then
-        return { ok = false, error = (type(response) == "table" and response.error) or "Could not link the account." }
+    if not ok or type(response) ~= "table" or response.ok == false then
+        return {
+            ok = false,
+            error = (type(response) == "table" and response.error) or "Could not link the account.",
+        }
     end
-    local premium, source, expiresAt = applyPremium(player)
-    return { ok = true, premium = premium, source = source, expiresAt = expiresAt }
+    local premium, source, expiresAt = refreshAndSync(player)
+    return { ok = true, success = true, premium = premium, source = source, expiresAt = expiresAt }
 end
 
 redeemFunction.OnServerInvoke = function(player, rawCode)
     if type(rawCode) ~= "string" then
-        return { ok = false, error = "Invalid code." }
+        return { ok = false, success = false, error = "Invalid code." }
     end
-
     local code = string.lower(rawCode:gsub("^%s+", ""):gsub("%s+$", ""))
     if code ~= STARTED_CODE then
-        return { ok = false, error = "Invalid code." }
+        return { ok = false, success = false, error = "Invalid code." }
     end
 
-    local data = cache[player.UserId] or getData(player.UserId)
+    local data = getData(player.UserId)
     if not data then
-        return { ok = false, error = "Premium service is temporarily unavailable." }
+        return { ok = false, success = false, error = "Premium service is temporarily unavailable." }
+    end
+    if data.startedRedeemed == true then
+        return { ok = false, success = false, error = "This code has already been redeemed on your account." }
     end
 
-    cache[player.UserId] = data
-
-    if hasRedeemedStarted(data) then
-        return { ok = false, error = "This code has already been redeemed on your account." }
-    end
-
-    local existingExpiry = getTemporaryExpiry(data)
     local now = os.time()
-
     data.startedRedeemed = true
     data.startedRedeemedAt = now
-    data.premiumExpiresAt = math.max(existingExpiry, now) + STARTED_DURATION_SECONDS
+    data.premiumExpiresAt = now + STARTED_DURATION_SECONDS
     data.premiumSource = "started"
 
     if not saveData(player.UserId, data) then
-        return { ok = false, error = "Could not save the Premium entitlement. Try again." }
+        return { ok = false, success = false, error = "Could not save the Premium entitlement. Try again." }
     end
 
     cache[player.UserId] = data
-    local premium, source, expiresAt = applyPremium(player)
+    local premium, source, expiresAt = refreshAndSync(player)
 
     return {
         ok = premium,
+        success = premium,
         source = source,
         expiresAt = expiresAt,
-        offerUnlocked = true,
         message = "3 months of Premium have been added to your account.",
         vaultUnlocked = premium,
     }
 end
 
 statusFunction.OnServerInvoke = function(player)
-    local premium, source, expiresAt = applyPremium(player)
-
+    local premium, source, expiresAt = refreshAndSync(player)
+    local data = getData(player.UserId)
     return {
         premium = premium,
         source = source,
         expiresAt = expiresAt,
+        startedRedeemed = data and data.startedRedeemed == true or false,
+        vaultUnlocked = premium,
         arcadeOfferUnlocked = false,
+        features = PREMIUM_FEATURES,
     }
 end
 
-local function onPlayerAdded(player)
+Players.PlayerAdded:Connect(function(player)
     task.spawn(function()
-        applyPremium(player)
+        refreshAndSync(player)
     end)
-end
+end)
 
-Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(function(player)
+    cache[player.UserId] = nil
+end)
 
 for _, player in ipairs(Players:GetPlayers()) do
     task.spawn(function()
-        applyPremium(player)
+        refreshAndSync(player)
     end)
 end
 
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, purchased)
-    if not purchased then
-        return
-    end
-
+    if not purchased then return end
     if gamePassId == FULL_PREMIUM_PASS_ID or gamePassId == DISCOUNT_PREMIUM_PASS_ID then
-        -- Roblox updates the ownership cache for this event on the server.
-        applyPremium(player)
-        purchaseEvent:FireClient(player, true)
+        local premium, source, expiresAt = refreshAndSync(player)
+        purchaseEvent:FireClient(player, {
+            success = premium,
+            premium = premium,
+            source = source,
+            expiresAt = expiresAt,
+            vaultUnlocked = premium,
+        })
     end
 end)
-\n-- Premium feature flags. These are authoritative server attributes; UI alone never grants access.\nlocal PREMIUM_FEATURES = {\n    Customization = true,\n    AIFeatures = true,\n    EightBall = true,\n    PremiumSpaceThemes = true,\n    ProfileEffects = true,\n    UIColors = true,\n    PremiumBadge = true,\n    NameEffects = true,\n    ChatEffects = true,\n    ExclusivePlanetBackgrounds = true,\n    PremiumDailyReward = true,\n    PremiumRewards = true,\n    ExtraArcadeRewards = true,\n    LeaderboardBadge = true,\n    PremiumTitles = true,\n    EarlyAccess = true,\n    Vault = false, -- Premium does not automatically unlock the Vault.\n}\n\nlocal function applyFeatureAttributes(player, premium)\n    for featureName, enabledForPremium in pairs(PREMIUM_FEATURES) do\n        local attributeName = "NightfallPremium_" .. featureName\n        player:SetAttribute(attributeName, premium and enabledForPremium or false)\n    end\nend\n
+
+task.spawn(function()
+    while true do
+        task.wait(60)
+        for _, player in ipairs(Players:GetPlayers()) do
+            local premium, source, expiresAt = applyPremium(player)
+            if source == "started" or not premium then
+                syncPremiumToWebsite(player, premium, source, expiresAt)
+            end
+        end
+    end
+end)
+
+print("[Nightfall Premium] One-file server system loaded.")
