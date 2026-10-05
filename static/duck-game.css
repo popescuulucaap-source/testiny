@@ -19,3 +19,5 @@
 @keyframes secretStarPulse{50%{transform:scale(1.5) rotate(20deg);filter:drop-shadow(0 0 16px rgba(255,255,255,.8))}}
 body.duck-game-open{overflow:hidden}
 @media(max-width:700px){.duck-game{padding:12px}.duck-field{min-height:420px}.duck-target{font-size:40px}}
+
+.secret-star-visible{position:relative;cursor:pointer;border:0;background:transparent;color:inherit;font:inherit;display:inline-flex;align-items:center;justify-content:center;gap:7px;z-index:20;padding:8px;border-radius:999px;transition:transform .2s ease,filter .2s ease,background .2s ease}.secret-star-visible span{font-size:9px;letter-spacing:.14em;opacity:.75}.secret-star-visible:hover{transform:scale(1.12);filter:drop-shadow(0 0 14px rgba(255,255,255,.65));background:rgba(255,255,255,.06)}.secret-star-visible:after{content:"10 clicks";position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:.1em;opacity:.55;white-space:nowrap}.secret-star-visible.secret-star-hit{animation:secretStarPulse .45s ease}
