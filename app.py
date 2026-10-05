@@ -1133,7 +1133,13 @@ def guidelines():
 
 @app.get("/announcements")
 def announcements():
-    return render_template("announcements.html", announcements=load_announcements())
+    items = load_announcements()
+    return render_template(
+        "announcements.html",
+        announcements=items,
+        site_updates=[item for item in items if item.get("kind") != "bot"],
+        bot_updates=[item for item in items if item.get("kind") == "bot"],
+    )
 
 
 @app.get("/login")
