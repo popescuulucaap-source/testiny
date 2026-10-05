@@ -337,15 +337,92 @@ def site_context():
 def db_connect():
     return psycopg.connect(DATABASE_URL) if DATABASE_URL else None
 
+
+REPO_SYNC_LOCK = threading.Lock()
+REPO_SYNC_LAST_CHECK = 0.0
+REPO_SYNC_INTERVAL = 300
+
+def sync_repository_updates(force=False):
+    """Turn new GitHub commits into public site/bot updates."""
+    global REPO_SYNC_LAST_CHECK
+    if not DATABASE_URL:
+        return
+    now = time.time()
+    with REPO_SYNC_LOCK:
+        if not force and now - REPO_SYNC_LAST_CHECK < REPO_SYNC_INTERVAL:
+            return
+        REPO_SYNC_LAST_CHECK = now
+    repos = [
+        ("site", "Website Update", "popescuulucaap-source/testiny"),
+        ("bot", "Bot Update", "popescuulucaap-source/night-fall-discord-bot"),
+    ]
+    try:
+        with db_connect() as conn:
+            for repo_kind, label, repo_name in repos:
+                response = requests.get(
+                    f"https://api.github.com/repos/{repo_name}/commits",
+                    params={"per_page": 1},
+                    headers={"Accept": "application/vnd.github+json", "User-Agent": "Nightfall-Updates"},
+                    timeout=8,
+                )
+                if response.status_code != 200:
+                    continue
+                commits = response.json()
+                if not commits:
+                    continue
+                commit = commits[0]
+                sha = str(commit.get("sha") or "")
+                message = str(commit.get("commit", {}).get("message") or "Repository update").splitlines()[0].strip()
+                if not sha:
+                    continue
+                row = conn.execute("SELECT commit_sha FROM repository_updates WHERE repo_kind=%s", (repo_kind,)).fetchone()
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO repository_updates (repo_kind, commit_sha, checked_at) VALUES (%s,%s,NOW())",
+                        (repo_kind, sha),
+                    )
+                    continue
+                if row[0] == sha:
+                    conn.execute("UPDATE repository_updates SET checked_at=NOW() WHERE repo_kind=%s", (repo_kind,))
+                    continue
+                conn.execute(
+                    "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
+                    (
+                        f"{label} • {message[:120]}",
+                        f"Automatically detected from GitHub commit {sha[:7]}. {message}",
+                        __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d"),
+                        "bot" if repo_kind == "bot" else "website",
+                    ),
+                )
+                conn.execute(
+                    "UPDATE repository_updates SET commit_sha=%s, checked_at=NOW() WHERE repo_kind=%s",
+                    (sha, repo_kind),
+                )
+            conn.commit()
+    except (requests.RequestException, ValueError, psycopg.Error) as exc:
+        app.logger.warning("Could not sync repository updates: %s", type(exc).__name__)
+
 def init_db():
     if not DATABASE_URL:
         return
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'website')")
+            cur.execute("CREATE TABLE IF NOT EXISTS repository_updates (repo_kind TEXT PRIMARY KEY, commit_sha TEXT NOT NULL, checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'website'")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_telemetry (id BIGSERIAL PRIMARY KEY, event_type TEXT NOT NULL, guild_id TEXT, guild_name TEXT, user_id TEXT, username TEXT, command_name TEXT, metadata TEXT NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE INDEX IF NOT EXISTS bot_telemetry_created_at_idx ON bot_telemetry(created_at DESC)")
+            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Nightfall Updates Center • Automatic tracking",))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
+                    (
+                        "Nightfall Updates Center • Automatic tracking",
+                        "Website and bot changes are now tracked from their GitHub repositories. New commits can appear here automatically, and admins can publish their own site or bot updates from the Admin panel.",
+                        "2026-10-05",
+                        "website",
+                    ),
+                )
             # Seed the public v1.2 release announcement once, without duplicating it.
             cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Nightfall v1.2 • The next chapter",))
             if not cur.fetchone():
@@ -394,12 +471,13 @@ def init_db():
         conn.commit()
 
 def load_announcements():
+    sync_repository_updates()
     if not DATABASE_URL:
         return session.get("announcements", [])
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, title, body, date, kind FROM announcements ORDER BY id DESC")
-            return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3]} for r in cur.fetchall()]
+            return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3],"kind":r[4] or "website"} for r in cur.fetchall()]
 
 def save_announcement(title, body, kind="website"):
     date=__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
@@ -444,6 +522,7 @@ def all_commands():
     return list(COMMANDS)
 
 init_db()
+sync_repository_updates(force=True)
 
 @app.get("/")
 def index():
@@ -465,6 +544,7 @@ def admin_login():
     if request.method == "POST":
         if ADMIN_PASSWORD and request.form.get("password") == ADMIN_PASSWORD:
             session["admin"] = True
+            session.permanent = True
             return redirect(url_for("admin"))
         return render_template("admin_login.html", error="Incorrect admin password.")
     return render_template("admin_login.html")
@@ -473,6 +553,7 @@ def admin_login():
 def admin():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
+    session.permanent = True
     announcements = load_announcements()
     custom_commands = load_custom_commands()
     guilds = bot_guild_snapshot()
@@ -553,6 +634,7 @@ def admin_command():
     desc=(request.form.get("description") or "").strip()
     if cmd and desc:
         save_custom_command(cmd,cat,desc)
+        save_announcement("Website Update • Command library changed", f"Admin added {cmd} to the {cat} command category.", "website")
     return redirect(url_for("admin"))
 
 @app.post("/admin/announcement")
