@@ -1,8 +1,8 @@
 /* NIGHTFALL — clean cinematic space background */
-html,body{background:#01030a!important;color:var(--text);min-height:100%;overflow-x:hidden}
-body{position:relative}
+html,body{background:transparent!important;color:var(--text);min-height:100%;overflow-x:hidden}
+body{position:relative;background:transparent!important}
 body:before,body:after,.bg-grid{display:none!important}
-.space-scene{position:fixed!important;inset:0!important;z-index:-1!important;pointer-events:none!important;overflow:hidden!important;background:#01030a!important}
+.space-scene{position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;overflow:hidden!important;background:#01030a!important}
 .space-scene:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(38,61,110,.20),transparent 52%),radial-gradient(ellipse at 12% 80%,rgba(53,25,100,.16),transparent 42%),linear-gradient(180deg,#01030a 0%,#020612 52%,#010208 100%);animation:nf-space-drift 24s ease-in-out infinite alternate}
 .space-scene:after{content:"";position:absolute;inset:0;opacity:.24;background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.4px);background-size:137px 151px;background-position:19px 31px;animation:nf-stars 90s linear infinite}
 .space-stars{display:none!important}
