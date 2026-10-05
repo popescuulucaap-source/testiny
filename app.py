@@ -1580,10 +1580,6 @@ def premium_servers():
     link = get_roblox_link(current_discord_user_id())
     if not roblox_premium_active(link):
         return jsonify({"ok": False, "error": "Premium is required to open the Vault."}), 403
-    with db_connect() as conn:
-        row = conn.execute("SELECT source, expires_at FROM premium_guilds WHERE guild_id=%s", (str(guild_id),)).fetchone()
-    if not row or (str(row[0]) == "started" and float(row[1] or 0) <= time.time()):
-        return jsonify({"ok": False, "error": "Activate Premium for this server first."}), 403
     try:
         response = requests.get(f"{DISCORD_API}/users/@me/guilds", headers=discord_headers(), timeout=12)
         if response.status_code != 200:
@@ -1617,6 +1613,10 @@ def premium_vault_data(guild_id):
     link = get_roblox_link(current_discord_user_id())
     if not roblox_premium_active(link):
         return jsonify({"ok": False, "error": "Premium is required to open the Vault."}), 403
+    with db_connect() as conn:
+        row = conn.execute("SELECT source, expires_at FROM premium_guilds WHERE guild_id=%s", (str(guild_id),)).fetchone()
+    if not row or (str(row[0]) == "started" and float(row[1] or 0) <= time.time()):
+        return jsonify({"ok": False, "error": "Activate Premium for this server first."}), 403
     if not user_can_manage_guild(guild_id):
         return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
