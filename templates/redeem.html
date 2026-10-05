@@ -1,35 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Redeem • Nightfall{% endblock %}
+{% block title %}Special • Nightfall{% endblock %}
 {% block content %}
-<section class="page-shell" style="max-width:760px;margin:0 auto;padding:70px 20px;">
-  <div class="card" style="padding:32px;">
-    <span class="eyebrow">NIGHTFALL PREMIUM</span>
-    <h1 style="margin:10px 0;">Redeem Discount Code</h1>
-    <p style="opacity:.78;">Arcade reward codes are unique, one-time use, and locked to the Discord account that earned them.</p>
+<section class="page-shell" style="max-width:920px;margin:0 auto;padding:70px 20px;">
+  <div class="section-heading">
+    <span class="eyebrow">NIGHTFALL SPECIAL</span>
+    <h1>Special Codes</h1>
+    <p>Your special rewards live here. The <strong>started</strong> code is separate from the arcade discount code.</p>
+  </div>
+  <div class="card" style="padding:30px;margin-bottom:24px;">
+    <span class="eyebrow">STARTED • 3 MONTHS</span>
+    <h2>Redeem your free Premium time</h2>
+    <p>Enter <strong>started</strong> here to receive 3 months of Premium. It can be redeemed only once per account.</p>
+    <form id="startedForm" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-top:20px;">
+      <input id="startedCode" type="text" maxlength="40" autocomplete="off" placeholder="Enter started" required style="width:100%;padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:inherit;font:inherit;">
+      <button class="btn primary" type="submit">Redeem started</button>
+    </form>
+    <div id="startedResult" role="status" aria-live="polite" style="margin-top:12px;"></div>
+  </div>
+  <div class="card" style="padding:30px;">
+    <span class="eyebrow">ARCADE DISCOUNT</span>
+    <h2>Redeem your arcade code</h2>
+    <p>Complete the Nightfall arcade first, then enter <strong>ducky-squad</strong> here. The reward is tied to the Discord account that earned it and can only be redeemed once.</p>
     {% if reward and reward[0] %}
-      <div class="notice" style="margin-top:24px;">This Discord account has already redeemed its arcade discount. It cannot redeem another arcade code.</div>
+      <div class="notice" style="margin-top:20px;">This Discord account has already redeemed its arcade discount.</div>
     {% else %}
-      <form id="arcadeRedeemForm" style="display:grid;gap:14px;margin-top:24px;">
-        <input id="arcadeCode" maxlength="40" autocomplete="off" placeholder="ducky-squad" required style="width:100%;padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:inherit;font:inherit;text-transform:uppercase;">
-        <button class="btn primary" type="submit">Redeem 50% off</button>
-        <div id="redeemResult" role="status" aria-live="polite"></div>
+      <form id="arcadeRedeemForm" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-top:20px;">
+        <input id="arcadeCode" maxlength="40" autocomplete="off" placeholder="ducky-squad" required style="width:100%;padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:inherit;font:inherit;">
+        <button class="btn primary" type="submit">Redeem discount</button>
       </form>
+      <div id="redeemResult" role="status" aria-live="polite" style="margin-top:12px;"></div>
     {% endif %}
-    <div style="margin-top:28px;opacity:.7;font-size:.92rem;"><b>Important:</b> one Discord account can earn and redeem the arcade reward only once. Codes cannot be transferred to another Discord account.</div>
   </div>
 </section>
 <script>
-document.getElementById('arcadeRedeemForm')?.addEventListener('submit',async(event)=>{
-  event.preventDefault();
-  const input=document.getElementById('arcadeCode'), result=document.getElementById('redeemResult');
-  const code=input.value.trim().toUpperCase();
+document.getElementById('startedForm')?.addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const result=document.getElementById('startedResult'), input=document.getElementById('startedCode');
   result.textContent='Checking code…';
   try{
-    const response=await fetch('/api/arcade/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
-    const data=await response.json();
+    const r=await fetch('/api/premium/redeem-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:input.value.trim()})});
+    const data=await r.json();
+    result.textContent=data.ok?'✓ 3 months of Premium activated.':'✕ '+(data.error||'Invalid code.');
+    if(data.ok) setTimeout(()=>location.reload(),700);
+  }catch(err){result.textContent='✕ Could not connect to the redemption system.';}
+});
+document.getElementById('arcadeRedeemForm')?.addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const result=document.getElementById('redeemResult'), input=document.getElementById('arcadeCode');
+  result.textContent='Checking code…';
+  try{
+    const r=await fetch('/api/arcade/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:input.value.trim()})});
+    const data=await r.json();
     result.textContent=data.ok?'✓ 50% Premium discount redeemed successfully.':'✕ '+(data.error||'Invalid code.');
-    if(data.ok) event.target.innerHTML='<strong>✓ Discount redeemed.</strong><p>Your 50% Premium discount is attached to this Discord account.</p>';
-  }catch(error){result.textContent='✕ Could not connect to the redemption system.';}
+    if(data.ok) e.target.innerHTML='<strong>✓ Discount redeemed.</strong><p>Your 50% Premium discount is attached to this Discord account.</p>';
+  }catch(err){result.textContent='✕ Could not connect to the redemption system.';}
 });
 </script>
 {% endblock %}
