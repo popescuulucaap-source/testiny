@@ -389,6 +389,22 @@ def index():
     ]
     return render_template("index.html", features=features, command_count=len(COMMANDS))
 
+@app.get("/planets")
+def planets():
+    planets_data = [
+        ("earth", "Earth", "Rocky world", "Blue oceans, clouds, continents and a nitrogen-rich atmosphere."),
+        ("mars", "Mars", "Rocky world", "A cold iron-rich desert with polar ice and ancient valleys."),
+        ("jupiter", "Jupiter", "Gas giant", "A giant hydrogen-helium world with powerful storms and bands."),
+        ("saturn", "Saturn", "Gas giant", "A pale gas giant surrounded by its spectacular ring system."),
+        ("uranus", "Uranus", "Ice giant", "A tilted blue-green ice giant with a faint ring system."),
+        ("neptune", "Neptune", "Ice giant", "A deep-blue world with supersonic winds and huge storms."),
+        ("pluto", "Pluto", "Dwarf planet", "A distant icy world with mountains, plains and a hazy atmosphere."),
+        ("kepler", "Kepler-16b", "Circumbinary planet", "A real planet orbiting two stars."),
+        ("k218", "K2-18b", "Sub-Neptune", "A real exoplanet larger than Earth and smaller than Neptune."),
+        ("kepler186", "Kepler-186f", "Earth-size exoplanet", "An Earth-size exoplanet around a cool red dwarf.")
+    ]
+    return render_template("planets.html", planets=planets_data)
+
 @app.route("/admin", methods=["GET","POST"])
 def admin_login():
     if session.get("admin"):
