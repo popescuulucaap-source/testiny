@@ -352,3 +352,53 @@ body:before,body:after,.bg-grid{display:none!important}
 .page-support .planet-green{animation:nf-travel-d 178s ease-in-out infinite alternate-reverse!important}
 .page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation:nf-travel-b 200s ease-in-out infinite alternate!important}
 .page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation:nf-travel-c 185s ease-in-out infinite alternate!important}
+
+
+/* FINAL SPACE OVERRIDE — real planet photos + real starfield, cinematic background */
+.space-scene:after{
+  display:block!important;
+  content:""!important;
+  inset:0!important;
+  opacity:.55!important;
+  background-image:url("https://images-assets.nasa.gov/image/PIA15416/PIA15416~orig.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  animation:nf-real-stars 420s linear infinite alternate!important;
+}
+.space-planet{
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  overflow:visible!important;
+}
+.planet-moon{background-image:url("https://images-assets.nasa.gov/image/PIA00405/PIA00405~orig.jpg")!important}
+.planet-orange{background-image:url("https://images-assets.nasa.gov/image/PIA00407/PIA00407~orig.jpg")!important}
+.planet-blue{background-image:url("https://images-assets.nasa.gov/image/PIA18033/PIA18033~orig.jpg")!important}
+.planet-purple{background-image:url("https://images-assets.nasa.gov/image/PIA01492/PIA01492~orig.jpg")!important}
+.planet-ice{background-image:url("https://images-assets.nasa.gov/image/PIA18182/PIA18182~orig.jpg")!important}
+.planet-red{background-image:url("https://images-assets.nasa.gov/image/PIA04866/PIA04866~orig.jpg")!important}
+.planet-ringed{background-image:url("https://images-assets.nasa.gov/image/PIA17172/PIA17172~orig.jpg")!important}
+.planet-green{background-image:url("https://images-assets.nasa.gov/image/PIA00271/PIA00271~orig.jpg")!important}
+.planet-gold{background-image:url("https://images-assets.nasa.gov/image/PIA11245/PIA11245~orig.jpg")!important}
+.space-planet:before{
+  content:""!important;
+  inset:0!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle at 27% 23%,rgba(255,255,255,.18),transparent 18%),linear-gradient(135deg,rgba(255,255,255,.06),transparent 44%,rgba(0,0,0,.42) 100%)!important;
+  mix-blend-mode:screen!important;
+}
+.planet-ringed:after{
+  content:""!important;
+  display:block!important;
+  width:300px!important;height:70px!important;
+  left:-50px!important;top:65px!important;
+  border:8px solid rgba(220,205,170,.42)!important;
+  border-radius:50%!important;
+  transform:rotate(-17deg)!important;
+}
+@keyframes nf-real-stars{
+  0%{transform:scale(1) translate3d(0,0,0)}
+  50%{transform:scale(1.04) translate3d(-1vw,1vh,0)}
+  100%{transform:scale(1.08) translate3d(1vw,-1vh,0)}
+}
