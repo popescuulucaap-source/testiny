@@ -115,7 +115,7 @@
       <div>
         <span class="eyebrow">PREMIUM VAULT</span>
         <h2>Control a selected server</h2>
-        <p>Only users with verified Premium and Discord server-management permission can use these controls.</p>
+        <p>Premium is activated per Discord server. Select a server below after buying Premium or redeeming <strong>started</strong>.</p>
       </div>
       <select id="serverSelect" class="vault-select">
         <option value="">Loading servers…</option>
@@ -216,10 +216,31 @@
       (data.servers || []).forEach(server => {
         const option = document.createElement('option');
         option.value = server.id;
-        option.textContent = server.name;
+        option.textContent = server.name + (server.premium_active ? ' — Premium active' : ' — Premium not activated');
         serverSelect.appendChild(option);
       });
-      if (!data.servers?.length) serverSelect.innerHTML = '<option value="">No manageable Nightfall servers found</option>';
+      if (!data.servers?.length) {
+        serverSelect.innerHTML = '<option value="">No manageable Nightfall servers found</option>';
+      } else {
+        const activateServer = async () => {
+          if (!serverSelect.value) return;
+          result.textContent = 'Activating Premium for this server…';
+          try {
+            const r = await fetch('/api/premium/activate-guild', {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({guild_id: serverSelect.value})
+            });
+            const body = await r.json();
+            if (!r.ok || !body.ok) throw new Error(body.error || 'Could not activate Premium.');
+            result.textContent = 'Premium is active for this server.';
+          } catch (e) {
+            result.textContent = e.message || 'Could not activate Premium.';
+          }
+        };
+        serverSelect.addEventListener('change', activateServer);
+        activateServer();
+      }
     } catch (e) {
       serverSelect.innerHTML = '<option value="">Could not load servers</option>';
       result.textContent = e.message || 'Could not load servers.';
