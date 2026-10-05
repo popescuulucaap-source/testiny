@@ -238,13 +238,14 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   if(secretStar){
     secretStar.addEventListener('click',event=>{
-      event.preventDefault();event.stopPropagation();
-      const now=Date.now();
-      starClicks=now-starLast<1800?starClicks+1:1;starLast=now;
-      secretStar.classList.add('secret-star-hit');
-      setTimeout(()=>secretStar.classList.remove('secret-star-hit'),500);
-      if(starClicks>=10){starClicks=0;openDuckGame();}
-    });
+    event.preventDefault();event.stopPropagation();
+    const now=Date.now();
+    starClicks=now-starLast<5000?starClicks+1:1;
+    starLast=now;
+    secretStar.classList.add('secret-star-hit');
+    setTimeout(()=>secretStar.classList.remove('secret-star-hit'),500);
+    if(starClicks>=10){starClicks=0;openDuckGame();}
+  });
   }
   duckStartBtn?.addEventListener('click',startDuckGame);
   duckClose?.addEventListener('click',closeDuckGame);
