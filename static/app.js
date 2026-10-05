@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   },{passive:true}));
 
   // ===== SINGLE HIDDEN SECRET =====
-  // Only the marked secret star can unlock the mini-game. Ten clicks are required.
+  // One click on the marked secret star unlocks the mini-game.
   const secretStar=document.querySelector('[data-secret-star]');
   const duckGame=document.getElementById('duckGame');
   const duckField=document.getElementById('duckField');
@@ -243,7 +243,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     duckField.appendChild(duck);
   };
 
-  let carnivalAudio=null;
   const playArcadeSound=(type)=>{
     try{
       const ctx=new (window.AudioContext||window.webkitAudioContext)();
