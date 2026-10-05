@@ -72,15 +72,15 @@ body:before,body:after,.bg-grid{display:none!important}
 
 /* Slower, multi-direction space motion */
 .space-planet{will-change:transform!important}
-.page-index .planet-blue,.page-home .planet-moon{animation-duration:88s!important}
-.page-commands .planet-orange{animation-duration:82s!important}
-.page-guidelines .planet-red,.page-rules .planet-red{animation-duration:96s!important}
-.page-announcements .planet-purple,.page-updates .planet-purple{animation-duration:90s!important}
-.page-suggestions .planet-ice,.page-suggestion .planet-ice{animation-duration:94s!important}
-.page-redeem .planet-gold{animation-duration:92s!important}
-.page-support .planet-green{animation-duration:86s!important}
-.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation-duration:98s!important}
-.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation-duration:90s!important}
+.page-index .planet-blue,.page-home .planet-moon{animation-duration:180s!important}
+.page-commands .planet-orange{animation-duration:170s!important}
+.page-guidelines .planet-red,.page-rules .planet-red{animation-duration:195s!important}
+.page-announcements .planet-purple,.page-updates .planet-purple{animation-duration:185s!important}
+.page-suggestions .planet-ice,.page-suggestion .planet-ice{animation-duration:190s!important}
+.page-redeem .planet-gold{animation-duration:188s!important}
+.page-support .planet-green{animation-duration:178s!important}
+.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation-duration:200s!important}
+.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation-duration:185s!important}
 
 @keyframes nf-travel-a{
   0%{transform:translate3d(-8vw,12vh,0) rotate(-6deg)}
@@ -113,14 +113,14 @@ body:before,body:after,.bg-grid{display:none!important}
 
 /* Stars drift slowly in several directions */
 .space-scene:after{
-  animation:nf-stars-drift 150s linear infinite alternate!important;
+  animation:nf-stars-drift 300s linear infinite alternate!important;
   background-size:auto!important;
 }
 .space-scene:before{
-  animation:nf-space-drift 110s ease-in-out infinite alternate!important;
+  animation:nf-space-drift 220s ease-in-out infinite alternate!important;
 }
-.space-nebula-a{animation:nf-nebula-a 125s ease-in-out infinite alternate!important}
-.space-nebula-b{animation:nf-nebula-b 145s ease-in-out infinite alternate!important}
+.space-nebula-a{animation:nf-nebula-a 250s ease-in-out infinite alternate!important}
+.space-nebula-b{animation:nf-nebula-b 290s ease-in-out infinite alternate!important}
 @keyframes nf-stars-drift{
   0%{transform:translate3d(-2vw,-1vh,0) scale(1)}
   25%{transform:translate3d(3vw,2vh,0) scale(1.01)}
@@ -156,7 +156,7 @@ body:before,body:after,.bg-grid{display:none!important}
   box-shadow:0 0 55px 18px rgba(255,154,35,.42),0 0 140px 55px rgba(255,112,0,.22),0 0 260px 100px rgba(255,72,0,.12)!important;
   z-index:1!important;
   will-change:transform!important;
-  animation:nf-sun-orbit 105s ease-in-out infinite alternate!important;
+  animation:nf-sun-orbit 240s ease-in-out infinite alternate!important;
 }
 .page-index .space-sun,.page-home .space-sun{display:block!important}
 @keyframes nf-sun-orbit{
