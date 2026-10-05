@@ -423,17 +423,31 @@ def init_db():
                         "website",
                     ),
                 )
-            # Seed the public v1.2 release announcement once, without duplicating it.
-            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Nightfall v1.2 • The next chapter",))
-            if not cur.fetchone():
-                cur.execute(
-                    "INSERT INTO announcements (title, body, date) VALUES (%s, %s, %s)",
-                    (
-                        "Nightfall v1.2 • The next chapter",
-                        "Nightfall v1.2 is here. This update brings a richer cinematic website, the new Planetary Archive with worlds beyond Earth, a more detailed R136a1 centerpiece, and a stronger server dashboard with live metrics and guided setup. We also expanded the Discord command experience with slash-command support for the new hybrid commands while keeping the familiar ! prefix. More server controls, support tools and improvements are on the way.",
-                        "2026-10-05",
-                    ),
-                )
+            # Seed the public bot release announcements once, without duplicating them.
+            bot_releases = [
+                (
+                    "Nightfall v1.0 • Bot Update",
+                    "Nightfall v1.0 introduced the core Discord bot experience, moderation tools and server-management features.",
+                    "2026-10-01",
+                ),
+                (
+                    "Nightfall v1.1 • Bot Update",
+                    "Nightfall v1.1 expanded the bot with additional server tools, protection features and quality-of-life improvements.",
+                    "2026-10-03",
+                ),
+                (
+                    "Nightfall v1.2 • Bot Update",
+                    "Nightfall v1.2 brought new bot improvements, expanded command support and stronger server-management features.",
+                    "2026-10-05",
+                ),
+            ]
+            for title, body, date in bot_releases:
+                cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", (title,))
+                if not cur.fetchone():
+                    cur.execute(
+                        "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
+                        (title, body, date, "bot"),
+                    )
             cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, suggestion TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
