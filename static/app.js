@@ -244,11 +244,50 @@ document.addEventListener('DOMContentLoaded',()=>{
   };
   const startCarnivalMusic=()=>{
     try{
-      carnivalAudio=new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_9a4e8c6f0b.mp3');
-      carnivalAudio.loop=true;carnivalAudio.volume=.22;carnivalAudio.play().catch(()=>{});
+      ensureAudio();
+      if(carnivalAudio)return;
+      const ctx=audioCtx;
+      const gain=ctx.createGain();
+      gain.gain.value=.08;
+      gain.connect(master);
+      carnivalAudio={gain,stops:[]};
+      const melody=[659.25,783.99,880,783.99,659.25,523.25,587.33,659.25,783.99,987.77,880,783.99];
+      const bass=[164.81,164.81,196,196,220,220,196,196];
+      const playBar=()=>{
+        if(!carnivalAudio)return;
+        const now=ctx.currentTime;
+        melody.forEach((freq,i)=>{
+          const t=now+i*.28;
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.type='square';o.frequency.value=freq;
+          g.gain.setValueAtTime(.0001,t);
+          g.gain.exponentialRampToValueAtTime(.16,t+.025);
+          g.gain.exponentialRampToValueAtTime(.0001,t+.22);
+          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.24);
+          carnivalAudio.stops.push(o);
+        });
+        bass.forEach((freq,i)=>{
+          const t=now+i*.42;
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.type='triangle';o.frequency.value=freq;
+          g.gain.setValueAtTime(.0001,t);
+          g.gain.exponentialRampToValueAtTime(.09,t+.04);
+          g.gain.exponentialRampToValueAtTime(.0001,t+.34);
+          o.connect(g);g.connect(gain);o.start(t);o.stop(t+.36);
+          carnivalAudio.stops.push(o);
+        });
+        carnivalAudio.timer=setTimeout(playBar,3300);
+      };
+      playBar();
     }catch(e){}
   };
-  const stopCarnivalMusic=()=>{if(carnivalAudio){carnivalAudio.pause();carnivalAudio.currentTime=0;carnivalAudio=null;}};
+  const stopCarnivalMusic=()=>{
+    if(carnivalAudio){
+      if(carnivalAudio.timer)clearTimeout(carnivalAudio.timer);
+      if(carnivalAudio.gain&&audioCtx)carnivalAudio.gain.gain.setTargetAtTime(.0001,audioCtx.currentTime,.08);
+      carnivalAudio=null;
+    }
+  };
   const startDuckGame=async()=>{
     if(!duckGame)return;
     if(duckTimer){clearInterval(duckTimer);duckTimer=null;}
@@ -259,7 +298,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     }catch(error){duckResult.innerHTML='<strong>Challenge unavailable.</strong><span>Could not connect to the reward system.</span>';return;}
     duckRunning=true;duckHits=0;duckTime=30; startCarnivalMusic(); playArcadeSound('start');duckDeadline=Date.now()+30000;
     duckHitsEl.textContent='0';duckTimeEl.textContent='30';duckResult.textContent='';
-    if(duckStart)duckStart.hidden=true;
+    if(duckStart){duckStart.hidden=true;duckStart.style.display='none';}
+    duckGame?.classList.add('is-running');
     moveDuck();
     duckTimer=setInterval(()=>{
       const remaining=Math.max(0,duckDeadline-Date.now());
