@@ -349,7 +349,7 @@ def get_roblox_link(discord_id):
         return None
     with db_connect() as conn:
         row = conn.execute(
-            "SELECT discord_id, roblox_user_id, link_token, premium, premium_source, premium_expires_at, updated_at FROM roblox_links WHERE discord_id=%s",
+            "SELECT discord_id, roblox_user_id, link_token, premium, premium_source, premium_expires_at, started_redeemed, updated_at FROM roblox_links WHERE discord_id=%s",
             (str(discord_id),),
         ).fetchone()
     if not row:
@@ -357,15 +357,24 @@ def get_roblox_link(discord_id):
     return {
         "discord_id": row[0], "roblox_user_id": row[1], "link_token": row[2],
         "premium": bool(row[3]), "premium_source": row[4],
-        "premium_expires_at": float(row[5] or 0), "updated_at": row[6],
+        "premium_expires_at": float(row[5] or 0), "started_redeemed": bool(row[6]), "updated_at": row[7],
     }
 
 def roblox_premium_active(link):
     if not link:
         return False
-    if link["premium"]:
+    expires_at = float(link.get("premium_expires_at") or 0)
+    if link.get("premium_source") == "started":
+        return expires_at > time.time()
+    if link.get("premium"):
         return True
-    return float(link.get("premium_expires_at") or 0) > time.time()
+    return expires_at > time.time()
+
+ROBLOX_PREMIUM_PASS_URL = "https://www.roblox.com/game-pass/1747241092"
+ROBLOX_ARCADE_OFFER_URL = "https://www.roblox.com/game-pass/1744202935"
+STARTED_CODE = "started"
+PREMIUM_FULL_PRICE = 179
+PREMIUM_ARCADE_PRICE = 70
 
 
 
@@ -496,6 +505,7 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_challenges (discord_id TEXT PRIMARY KEY, started_at DOUBLE PRECISION NOT NULL, hits INTEGER NOT NULL DEFAULT 0, completed BOOLEAN NOT NULL DEFAULT FALSE)")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS roblox_links (discord_id TEXT PRIMARY KEY, roblox_user_id TEXT UNIQUE, link_token TEXT UNIQUE NOT NULL, token_created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), premium BOOLEAN NOT NULL DEFAULT FALSE, premium_source TEXT NOT NULL DEFAULT 'none', premium_expires_at DOUBLE PRECISION NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("ALTER TABLE roblox_links ADD COLUMN IF NOT EXISTS started_redeemed BOOLEAN NOT NULL DEFAULT FALSE")
             # Safe, backwards-compatible migration. Older installs used code_hash.
             # Keep that legacy column nullable instead of dropping it during startup;
             # this avoids breaking existing rows/constraints while allowing new rows
@@ -1399,8 +1409,50 @@ def dashboard_action(guild_id):
 @app.get("/premium")
 @login_required
 def premium_vault():
-    link = get_roblox_link(current_discord_user_id())
-    return render_template("premium.html", link=link, premium_active=roblox_premium_active(link))
+    discord_id = current_discord_user_id()
+    link = get_roblox_link(discord_id)
+    arcade_unlocked = False
+    arcade_redeemed = False
+    if DATABASE_URL and discord_id:
+        with db_connect() as conn:
+            reward = conn.execute("SELECT redeemed_at FROM arcade_rewards WHERE discord_id=%s", (discord_id,)).fetchone()
+            arcade_redeemed = bool(reward and reward[0])
+            arcade_unlocked = arcade_redeemed
+    return render_template(
+        "premium.html",
+        link=link,
+        premium_active=roblox_premium_active(link),
+        arcade_unlocked=arcade_unlocked,
+        arcade_redeemed=arcade_redeemed,
+        premium_full_price=PREMIUM_FULL_PRICE,
+        premium_arcade_price=PREMIUM_ARCADE_PRICE,
+        premium_full_url=ROBLOX_PREMIUM_PASS_URL,
+        premium_arcade_url=ROBLOX_ARCADE_OFFER_URL,
+    )
+
+@app.post("/api/premium/redeem-started")
+@login_required
+def premium_redeem_started():
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Premium storage is unavailable."}), 503
+    discord_id = current_discord_user_id()
+    payload = request.get_json(silent=True) or {}
+    code = str(payload.get("code") or "").strip().lower()
+    if code != STARTED_CODE:
+        return jsonify({"ok": False, "error": "Invalid code."}), 400
+    link = get_roblox_link(discord_id)
+    if not link or not link.get("roblox_user_id"):
+        return jsonify({"ok": False, "error": "Link your Roblox account before redeeming started."}), 400
+    if link.get("started_redeemed"):
+        return jsonify({"ok": False, "error": "The started code has already been redeemed on this account."}), 409
+    expires_at = time.time() + 90 * 24 * 60 * 60
+    with db_connect() as conn:
+        conn.execute(
+            "UPDATE roblox_links SET premium=TRUE, premium_source='started', premium_expires_at=%s, started_redeemed=TRUE, updated_at=NOW() WHERE discord_id=%s",
+            (expires_at, discord_id),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "expires_at": expires_at, "message": "Premium activated for 3 months."})
 
 @app.post("/api/premium/link/start")
 @login_required
