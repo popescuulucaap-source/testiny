@@ -6,13 +6,13 @@
     <div class="hero-copy">
       <div class="eyebrow home-eyebrow"><span class="signal-dot"></span> NIGHTFALL • 1.0v UPDATE</div>
       <h1>Your server.<br><span>After dark.</span></h1>
-      <p class="lead">🌙 Nightfall is your all-in-one Discord guardian: smooth moderation, smart server safety, tickets, invites, giveaways, games, and creative tools. Set up your server with <code>!setup</code>, then let the night run smoother. ✨</p>
+      <p class="lead">🌙 Nightfall is your all-in-one Discord guardian: smooth moderation, smart server safety, tickets, invites, giveaways, AI tools, and a focused web dashboard. Set up your server with <code>!setup</code>, then let the night run smoother. ✨</p>
       <div class="actions"><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a><a class="btn ghost" href="/commands">Explore commands <span aria-hidden="true">→</span></a></div>
       <div class="trust-row"><span>✦ 1.0v UPDATE</span><span>✦ Admin controls</span><span>✦ {{ command_count }} commands</span></div>
     </div>
     <div class="hero-card home-visual" aria-label="Nightfall bird emblem">
       <div class="visual-halo"></div><div class="visual-orbit visual-orbit-one"></div><div class="visual-orbit visual-orbit-two"></div>
-      <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span><span class="visual-star star-three">✦</span>
+      <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span><span class="visual-star star-three" data-secret-star title="A quiet star">✦</span>
       <img class="home-mark" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bird logo">
       <div class="visual-caption"><span class="visual-caption-mark"><i></i></span><div><b>Nightfall</b><small>Your server, in good hands.</small></div><span class="visual-caption-tools">{{ command_count }} commands</span></div>
     </div>
@@ -22,10 +22,10 @@
   <section class="nightfall-status-card" aria-label="Nightfall status"><div class="status-dot" id="nightfallStatusDot"></div><div><span class="eyebrow">NIGHTFALL STATUS</span><h2 id="nightfallStatusTitle">Checking Nightfall…</h2><p id="nightfallStatusText">Checking the latest bot heartbeat.</p></div></section>
   <section class="home-about" id="about">
     <div class="about-wordmark-wrap"><img src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall wordmark"><span>BUILT FOR DISCORD.</span></div>
-    <div class="about-copy"><span class="eyebrow">ABOUT • 1.0v UPDATE</span><p>🌙 Nightfall keeps the busywork out of your way with moderation, security, tickets, invites, games, and creative tools—so your community can shine. ✨</p><div class="about-actions"><a class="about-copy-link" href="/commands">Explore all commands ↗</a></div></div>
+    <div class="about-copy"><span class="eyebrow">ABOUT • 1.0v UPDATE</span><p>🌙 Nightfall keeps the busywork out of your way with moderation, security, tickets, invites, AI tools and a focused dashboard—so your community can shine. ✨</p><div class="about-actions"><a class="about-copy-link" href="/commands">Explore all commands ↗</a></div></div>
   </section>
 
-  <section class="home-ribbon" aria-label="Nightfall capabilities"><span>MODERATION</span><i>✦</i><span>SECURITY</span><i>✦</i><span>COMMUNITY</span><i>✦</i><span>TICKETS</span><i>✦</i><span>GIVEAWAYS</span><i>✦</i><span>GAMES</span></section>
+  <section class="home-ribbon" aria-label="Nightfall capabilities"><span>MODERATION</span><i>✦</i><span>SECURITY</span><i>✦</i><span>AI TOOLS</span><i>✦</i><span>TICKETS</span><i>✦</i><span>GIVEAWAYS</span><i>✦</i><span>GAMES</span></section>
 
   <section class="section home-features" id="features">
     <div class="section-heading"><span class="eyebrow">A BETTER NIGHT SHIFT</span><h2>All your essentials.<br><span class="heading-accent">One steady guardian.</span></h2><p>Powerful tools without the clutter. Choose what your server needs and manage it from Discord or the web dashboard.</p></div>
@@ -43,48 +43,27 @@
 
   <section class="suggestion-hero" id="suggestions"><div><span class="eyebrow">SHAPE THE NIGHT</span><h2>Have an idea?</h2><p>Tell us what Nightfall should add, improve, or remove.</p></div><a class="btn primary" href="/suggestions">Suggest something <span aria-hidden="true">→</span></a></section>
 
-
-  <section class="nightfall-games" id="nightfall-games">
-    <div class="section-heading"><span class="eyebrow">NIGHTFALL ARCADE • SECRET ZONE</span><h2>Play while you hunt.</h2><p>Ten tiny games are hidden in the night. Winning them can reveal extra secrets.</p></div>
-    <div class="game-menu">
-      <button class="game-tab" data-game="coin">🪙 Coin Flip</button>
-      <button class="game-tab" data-game="guess">🔢 Guess 1–20</button>
-      <button class="game-tab" data-game="reaction">⚡ Reaction</button>
-      <button class="game-tab" data-game="memory">🧠 Memory</button>
-      <button class="game-tab" data-game="tap">🌙 Night Tap</button><button class="game-tab" data-game="trivia">🧠 Night Trivia</button><button class="game-tab" data-game="math">➗ Math Rush</button><button class="game-tab" data-game="word">🔤 Word Scramble</button><button class="game-tab" data-game="stars">⭐ Catch the Stars</button><button class="game-tab" data-game="pattern">🟣 Pattern Memory</button>
-    </div>
-    <div class="game-result" id="gameResult">Choose a game above.</div>
-  </section>
-
   <section class="nightfall-premium-coming" id="premium">
     <div class="premium-coming-mark">✦</div>
     <div><span class="eyebrow">NIGHTFALL PREMIUM</span><h2>Premium is coming soon.</h2><p>AI tools, deeper customization and premium server controls are on the way.</p></div>
     <span class="premium-coming-badge">COMING SOON</span>
   </section>
-  <section class="nightfall-code-vault" id="codes">
-    <div class="code-vault-head"><div><span class="eyebrow">SECRET CODE VAULT</span><h2>Found a Nightfall code?</h2><p>Enter a code you've discovered. Codes only work after you've found their secret.</p></div><span class="code-vault-count" id="secretCount">0 / 100 FOUND</span></div>
-    <form class="nightfall-code-form" id="nightfallCodeForm" autocomplete="off"><input id="nightfallCodeInput" name="code" type="text" maxlength="32" placeholder="Enter a discovered code…" aria-label="Nightfall secret code"><button class="btn primary" type="submit">Redeem code <span aria-hidden="true">→</span></button></form>
-    <div class="nightfall-code-result" id="nightfallCodeResult" role="status" aria-live="polite"></div>
-  </section>
 
 
   <section class="nightfall-reviews" id="reviews"><div class="section-heading"><span class="eyebrow">COMMUNITY REVIEWS</span><h2>Rate Nightfall.</h2><p>Leave a rating and tell the community what you think. Reviews with spam, heavy profanity, or abusive content are automatically filtered.</p></div><div class="review-layout"><form class="review-form" id="reviewForm"><input name="name" maxlength="40" placeholder="Your name (optional)" autocomplete="nickname"><select name="rating" aria-label="Rating"><option value="5">★★★★★ — 5</option><option value="4">★★★★☆ — 4</option><option value="3">★★★☆☆ — 3</option><option value="2">★★☆☆☆ — 2</option><option value="1">★☆☆☆☆ — 1</option></select><textarea name="review" maxlength="500" required placeholder="Write your review…"></textarea><button class="btn primary" type="submit">Post review →</button><div id="reviewResult" class="review-result" role="status"></div></form><div class="review-list" id="reviewList"><p class="review-loading">Loading community reviews…</p></div></div></section>
 
-  <section class="nightfall-secret-social" id="nightfall-secret-social" hidden>
-    <div><span class="eyebrow">YOU FOUND THE HIDDEN FEED</span><h2>Nightfall, off the map.</h2><p>This social corner is intentionally hidden from the main navigation.</p></div>
-    <div class="secret-social-links">
-      <a class="secret-social-link" href="https://discord.gg/ddjhskT4VY" target="_blank" rel="noopener">💬 Secret Discord</a>
-      <a class="secret-social-link" href="https://www.youtube.com/@nightfall-bot" target="_blank" rel="noopener">▶ Secret YouTube</a>
-      <a class="secret-social-link" href="#" onclick="return false">✦ Secret feed coming soon</a>
+  <section class="duck-game" id="duckGame" hidden aria-label="Nightfall secret mini-game">
+    <div class="duck-game-shell">
+      <div class="duck-game-head">
+        <div><span class="eyebrow">SECRET NIGHT • STARR PROTOCOL</span><h2>Duck Dash</h2><p>Hit 10 moving duck targets before the timer runs out. This is a stylized arcade challenge — no weapon simulation.</p></div>
+        <button class="duck-close" id="duckClose" type="button" aria-label="Close game">×</button>
+      </div>
+      <div class="duck-game-stats"><span>HITS <b id="duckHits">0</b>/10</span><span>TIME <b id="duckTime">30</b>s</span></div>
+      <div class="duck-field" id="duckField"><div class="duck-start" id="duckStart"><b>SECRET UNLOCKED</b><span>Press start when you're ready.</span><button class="btn primary" id="duckStartBtn" type="button">Start challenge</button></div></div>
+      <div class="duck-result" id="duckResult" role="status" aria-live="polite"></div>
     </div>
   </section>
 
   <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
-
-  <section class="easter-egg-panel" aria-label="Nightfall secret" hidden>
-    <span class="eyebrow">SECRET SIGNAL • 01</span>
-    <h2>You found the quiet side of Nightfall.</h2>
-    <p>Some things are better discovered than announced. ✦</p>
-  </section>
 </div>
 {% endblock %}
