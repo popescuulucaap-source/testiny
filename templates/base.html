@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=20261006">
   <link rel="stylesheet" href="{{ url_for('static', filename='duck-game.css') }}?v=20261006">
 </head>
-<body>
+<body class="nightfall-space-page page-{{ request.endpoint|default('home')|replace('_', '-') }}">
   <div class="space-scene" aria-hidden="true">
     <div class="space-nebula space-nebula-a"></div>
     <div class="space-nebula space-nebula-b"></div>
