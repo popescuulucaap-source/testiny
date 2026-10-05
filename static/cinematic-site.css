@@ -1,376 +1,21 @@
-/* NIGHTFALL — clean cinematic space background */
-html,body{background:transparent!important;color:var(--text);min-height:100%;overflow-x:hidden}
-body{position:relative;background:transparent!important}
-body:before,body:after,.bg-grid{display:none!important}
-.space-scene{position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;overflow:hidden!important;background:#01030a!important}
-.space-scene:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(38,61,110,.20),transparent 52%),radial-gradient(ellipse at 12% 80%,rgba(53,25,100,.16),transparent 42%),linear-gradient(180deg,#01030a 0%,#020612 52%,#010208 100%);animation:nf-space-drift 24s ease-in-out infinite alternate}
-.space-scene:after{content:"";position:absolute;inset:0;opacity:.72;background-image:radial-gradient(ellipse 1px 4px at 12% 18%,rgba(255,255,255,.95),transparent 70%),radial-gradient(ellipse 1px 4px at 38% 72%,rgba(210,230,255,.9),transparent 70%),radial-gradient(ellipse 4px 1px at 38% 72%,rgba(210,230,255,.75),transparent 70%),radial-gradient(ellipse 1px 4px at 67% 31%,rgba(255,255,255,.9),transparent 70%),radial-gradient(ellipse 4px 1px at 67% 31%,rgba(255,255,255,.75),transparent 70%),radial-gradient(ellipse 1px 4px at 86% 78%,rgba(200,220,255,.9),transparent 70%),radial-gradient(ellipse 4px 1px at 86% 78%,rgba(200,220,255,.7),transparent 70%),radial-gradient(circle at 8% 55%,rgba(255,255,255,.85) 0 1.2px,transparent 2px),radial-gradient(circle at 24% 36%,rgba(190,220,255,.8) 0 1px,transparent 1.8px),radial-gradient(circle at 51% 16%,rgba(255,255,255,.85) 0 1.2px,transparent 2px),radial-gradient(circle at 74% 62%,rgba(255,255,255,.8) 0 1px,transparent 1.8px),radial-gradient(circle at 94% 43%,rgba(190,220,255,.8) 0 1.2px,transparent 2px);animation:nf-stars 70s linear infinite}
-.space-stars{display:none!important}
-.space-nebula{position:absolute!important;filter:blur(55px)!important;opacity:.35!important}
-.space-nebula-a{width:60vw!important;height:30vw!important;left:-20vw!important;top:15vh!important;background:radial-gradient(ellipse,rgba(91,65,190,.28),transparent 70%)!important}
-.space-nebula-b{width:55vw!important;height:30vw!important;right:-20vw!important;bottom:5vh!important;background:radial-gradient(ellipse,rgba(30,108,175,.20),transparent 70%)!important}
-
-/* Planet layers — every tab gets a different world, all drifting across the sky */
-.space-planet{position:absolute!important;border-radius:50%!important;pointer-events:none!important;display:none!important}
-.space-planet:before,.space-planet:after{content:"";position:absolute;pointer-events:none}
-.planet-moon{width:170px!important;height:170px!important;background:radial-gradient(circle at 34% 28%,#fff 0 5%,#c9cbd0 27%,#8b8f98 56%,#454a53 79%,#11141a 100%)!important;box-shadow:0 0 38px #dce9ff2a,inset -34px -28px 48px #000d!important}
-.planet-orange{width:145px!important;height:145px!important;background:radial-gradient(circle at 32% 27%,#ffe0b0 0 5%,#df8a4d 24%,#9d4935 50%,#451f28 77%,#09050b 100%)!important;box-shadow:0 0 35px #e98b5428,inset -28px -25px 42px #000d!important}
-.planet-blue{width:240px!important;height:240px!important;background:radial-gradient(circle at 31% 25%,#e6fbff 0 5%,#64c4e2 20%,#2b739f 45%,#123c61 72%,#030a14 100%)!important;box-shadow:0 0 48px #65d7ff2c,inset -42px -38px 60px #000d!important}
-.planet-purple{width:210px!important;height:210px!important;background:radial-gradient(circle at 32% 26%,#f4e7ff 0 5%,#b78be4 22%,#70499f 48%,#302044 75%,#07040c 100%)!important;box-shadow:0 0 45px #b887ff2b,inset -38px -34px 55px #000d!important}
-.planet-ice{width:190px!important;height:190px!important;background:radial-gradient(circle at 30% 25%,#f4ffff 0 5%,#9ee7ee 21%,#4d91b1 47%,#21465f 74%,#050c12 100%)!important;box-shadow:0 0 44px #73e8ff2a,inset -35px -32px 52px #000d!important}
-.planet-red{width:225px!important;height:225px!important;background:radial-gradient(circle at 32% 26%,#ffd6cc 0 5%,#d56d63 21%,#873b43 48%,#3c1d2b 74%,#09050a 100%)!important;box-shadow:0 0 46px #e8756d2b,inset -40px -36px 58px #000d!important}
-.planet-ringed{width:200px!important;height:200px!important;background:radial-gradient(circle at 31% 25%,#fff0c9 0 5%,#d2a765 22%,#91663e 47%,#4a332a 73%,#0a0709 100%)!important;box-shadow:0 0 45px #e7bd7628,inset -38px -34px 54px #000d!important}
-.planet-ringed:after{width:300px;height:70px;left:-50px;top:65px;border:9px solid rgba(222,192,135,.55);border-left-color:rgba(255,228,174,.78);border-right-color:rgba(108,74,46,.35);border-radius:50%;transform:rotate(-17deg);box-shadow:0 0 13px rgba(255,220,160,.18)}
-.planet-green{width:180px!important;height:180px!important;background:radial-gradient(circle at 32% 26%,#e6ffe9 0 5%,#75c98b 22%,#397454 48%,#183c30 74%,#050b08 100%)!important;box-shadow:0 0 42px #72dc9128,inset -34px -30px 50px #000d!important}
-.planet-gold{width:215px!important;height:215px!important;background:radial-gradient(circle at 32% 25%,#fff0bd 0 5%,#d9b75c 22%,#91752f 48%,#4a3c1b 74%,#090805 100%)!important;box-shadow:0 0 44px #e6c55a28,inset -39px -35px 56px #000d!important}
-
-/* Unique planet per page */
-.page-index .planet-blue{display:block!important}
-.page-commands .planet-orange{display:block!important}
-.page-guidelines .planet-red{display:block!important}
-.page-rules .planet-red{display:block!important}
-.page-announcements .planet-purple{display:block!important}
-.page-updates .planet-purple{display:block!important}
-.page-suggestions .planet-ice{display:block!important}
-.page-suggestion .planet-ice{display:block!important}
-.page-redeem .planet-gold{display:block!important}
-.page-support .planet-green{display:block!important}
-.page-login .planet-ringed{display:block!important}
-.page-auth .planet-ringed{display:block!important}
-.page-profile .planet-moon{display:block!important}
-.page-notifications .planet-blue{display:block!important}
-.page-servers .planet-orange{display:block!important}
-.page-secrets .planet-ringed{display:block!important}
-.page-home .planet-moon{display:block!important}
-
-/* Smooth left ↔ right travel instead of tiny floating */
-.page-index .planet-blue,.page-home .planet-moon{left:-8vw!important;top:18vh!important;animation:nf-travel-a 24s ease-in-out infinite alternate}
-.page-commands .planet-orange{left:-10vw!important;top:22vh!important;animation:nf-travel-b 21s ease-in-out infinite alternate}
-.page-guidelines .planet-red,.page-rules .planet-red{right:-8vw!important;top:16vh!important;animation:nf-travel-c 27s ease-in-out infinite alternate}
-.page-announcements .planet-purple,.page-updates .planet-purple{left:-7vw!important;bottom:12vh!important;animation:nf-travel-d 23s ease-in-out infinite alternate}
-.page-suggestions .planet-ice,.page-suggestion .planet-ice{right:-7vw!important;top:20vh!important;animation:nf-travel-c 25s ease-in-out infinite alternate-reverse}
-.page-redeem .planet-gold{left:-9vw!important;top:15vh!important;animation:nf-travel-a 26s ease-in-out infinite alternate}
-.page-support .planet-green{right:-8vw!important;bottom:10vh!important;animation:nf-travel-d 22s ease-in-out infinite alternate-reverse}
-.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{right:-7vw!important;top:17vh!important;animation:nf-travel-b 25s ease-in-out infinite alternate}
-.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{left:-7vw!important;top:19vh!important;animation:nf-travel-c 24s ease-in-out infinite alternate}
-@keyframes nf-travel-a{0%{transform:translate3d(-2vw,8px,0) rotate(-4deg)}50%{transform:translate3d(38vw,-22px,0) rotate(4deg)}100%{transform:translate3d(82vw,12px,0) rotate(8deg)}}
-@keyframes nf-travel-b{0%{transform:translate3d(0,0,0) rotate(2deg)}50%{transform:translate3d(40vw,25px,0) rotate(-4deg)}100%{transform:translate3d(82vw,-18px,0) rotate(3deg)}}
-@keyframes nf-travel-c{0%{transform:translate3d(0,-12px,0) rotate(3deg)}50%{transform:translate3d(-42vw,18px,0) rotate(-3deg)}100%{transform:translate3d(-84vw,-8px,0) rotate(5deg)}}
-@keyframes nf-travel-d{0%{transform:translate3d(-3vw,15px,0) rotate(-3deg)}50%{transform:translate3d(43vw,-18px,0) rotate(4deg)}100%{transform:translate3d(86vw,10px,0) rotate(-2deg)}}
-.nav,main,footer{position:relative!important;z-index:2!important;background:transparent!important}
-.nav{background:rgba(2,4,10,.58)!important;backdrop-filter:blur(12px)!important}
-.hero-card,.card,.command-card,.update,.server-card,.auth-card,.cta,.command-tools,.support-panel,.nightfall-games,.nightfall-status-card,.nightfall-reviews{background:rgba(5,8,17,.70)!important;backdrop-filter:blur(10px)!important}
-.home-page,.cinematic-intro,.cinematic-sky{background:transparent!important}
-.cinematic-sky:before,.cinematic-sky:after,.cinematic-vignette,.cinematic-moon{opacity:0!important;display:none!important;visibility:hidden!important}
-.space-planet-moon:before{content:"";inset:20% 12% 14% 18%;background:radial-gradient(circle at 30% 35%,rgba(255,255,255,.22),transparent 14%),radial-gradient(circle at 68% 58%,rgba(30,32,34,.34),transparent 13%),radial-gradient(circle at 48% 75%,rgba(40,42,43,.28),transparent 18%);filter:blur(1px)}
-.site-loader{z-index:9999!important;background:#01030a!important}
-@keyframes nf-space-drift{from{transform:scale(1)}to{transform:scale(1.08) translate3d(1.5%, -1%,0)}}
-@keyframes nf-stars{to{transform:translate3d(-70px,35px,0)}}
-@keyframes nf-planet-float{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(0,-18px,0) rotate(2deg)}}
-@keyframes nf-moon-float{0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}50%{transform:translate3d(14px,-22px,0) rotate(3deg)}}
-@media(max-width:700px){.space-scene:after{opacity:.62}.space-planet-blue{width:145px!important;height:145px!important}.page-login .space-planet-blue:after,.page-auth .space-planet-blue:after,.page-secrets .space-planet-blue:after,.page-profile .space-planet-blue:after{width:230px;height:58px;left:-38px;top:55px;border-width:7px}}
-
-/* Slower, multi-direction space motion */
-.space-planet{will-change:transform!important}
-.page-index .planet-blue,.page-home .planet-moon{animation-duration:180s!important}
-.page-commands .planet-orange{animation-duration:170s!important}
-.page-guidelines .planet-red,.page-rules .planet-red{animation-duration:195s!important}
-.page-announcements .planet-purple,.page-updates .planet-purple{animation-duration:185s!important}
-.page-suggestions .planet-ice,.page-suggestion .planet-ice{animation-duration:190s!important}
-.page-redeem .planet-gold{animation-duration:188s!important}
-.page-support .planet-green{animation-duration:178s!important}
-.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation-duration:200s!important}
-.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation-duration:185s!important}
-
-@keyframes nf-travel-a{
-  0%{transform:translate3d(-8vw,12vh,0) rotate(-6deg)}
-  25%{transform:translate3d(18vw,-10vh,0) rotate(3deg)}
-  50%{transform:translate3d(45vw,14vh,0) rotate(8deg)}
-  75%{transform:translate3d(68vw,-7vh,0) rotate(-2deg)}
-  100%{transform:translate3d(92vw,10vh,0) rotate(7deg)}
-}
-@keyframes nf-travel-b{
-  0%{transform:translate3d(4vw,-10vh,0) rotate(3deg)}
-  25%{transform:translate3d(-12vw,15vh,0) rotate(-5deg)}
-  50%{transform:translate3d(25vw,4vh,0) rotate(4deg)}
-  75%{transform:translate3d(57vw,-14vh,0) rotate(-6deg)}
-  100%{transform:translate3d(88vw,12vh,0) rotate(2deg)}
-}
-@keyframes nf-travel-c{
-  0%{transform:translate3d(6vw,10vh,0) rotate(4deg)}
-  25%{transform:translate3d(30vw,-12vh,0) rotate(-3deg)}
-  50%{transform:translate3d(58vw,9vh,0) rotate(6deg)}
-  75%{transform:translate3d(78vw,-15vh,0) rotate(-4deg)}
-  100%{transform:translate3d(105vw,8vh,0) rotate(5deg)}
-}
-@keyframes nf-travel-d{
-  0%{transform:translate3d(-6vw,-8vh,0) rotate(-3deg)}
-  25%{transform:translate3d(17vw,13vh,0) rotate(5deg)}
-  50%{transform:translate3d(42vw,-14vh,0) rotate(-6deg)}
-  75%{transform:translate3d(70vw,8vh,0) rotate(3deg)}
-  100%{transform:translate3d(96vw,-10vh,0) rotate(-4deg)}
-}
-
-/* Stars drift slowly in several directions */
-.space-scene:after{
-  animation:nf-stars-drift 300s linear infinite alternate!important;
-  background-size:auto!important;
-}
-.space-scene:before{
-  animation:nf-space-drift 220s ease-in-out infinite alternate!important;
-}
-.space-nebula-a{animation:nf-nebula-a 250s ease-in-out infinite alternate!important}
-.space-nebula-b{animation:nf-nebula-b 290s ease-in-out infinite alternate!important}
-@keyframes nf-stars-drift{
-  0%{transform:translate3d(-2vw,-1vh,0) scale(1)}
-  25%{transform:translate3d(3vw,2vh,0) scale(1.01)}
-  50%{transform:translate3d(-1vw,5vh,0) scale(1.02)}
-  75%{transform:translate3d(4vw,1vh,0) scale(1.01)}
-  100%{transform:translate3d(-3vw,-4vh,0) scale(1.03)}
-}
-@keyframes nf-nebula-a{
-  0%{transform:translate3d(-4vw,4vh,0) rotate(-2deg)}
-  50%{transform:translate3d(8vw,-5vh,0) rotate(4deg)}
-  100%{transform:translate3d(15vw,7vh,0) rotate(-3deg)}
-}
-@keyframes nf-nebula-b{
-  0%{transform:translate3d(5vw,-3vh,0) rotate(3deg)}
-  50%{transform:translate3d(-8vw,6vh,0) rotate(-4deg)}
-  100%{transform:translate3d(-15vw,-5vh,0) rotate(2deg)}
-}
-
-/* Main hub: giant real NASA Sun photo */
+/* FINAL REAL SPACE IMAGERY OVERRIDE */
 .space-sun{
-  position:absolute!important;
   display:none!important;
-  width:min(58vw,760px)!important;
-  height:min(58vw,760px)!important;
-  min-width:420px!important;
-  min-height:420px!important;
-  right:-14vw!important;
-  top:8vh!important;
-  border-radius:50%!important;
-  background-image:url("https://assets.science.nasa.gov/dynamicimage/assets/science/psd/photojournal/pia/pia26/pia26681/PIA26681.jpg?crop=faces%2Cfocalpoint&fit=clip&h=4096&w=4096")!important;
+  background-image:url("https://images-assets.nasa.gov/image/PIA26681/PIA26681~orig.jpg")!important;
   background-size:cover!important;
   background-position:center!important;
-  box-shadow:0 0 55px 18px rgba(255,154,35,.42),0 0 140px 55px rgba(255,112,0,.22),0 0 260px 100px rgba(255,72,0,.12)!important;
-  z-index:1!important;
-  will-change:transform!important;
-  animation:nf-sun-orbit 240s ease-in-out infinite alternate!important;
+  background-repeat:no-repeat!important;
+  border-radius:50%!important;
+  box-shadow:0 0 70px 24px rgba(255,150,35,.48),0 0 170px 70px rgba(255,90,0,.24),0 0 300px 120px rgba(255,60,0,.14)!important;
 }
 .page-index .space-sun,.page-home .space-sun{display:block!important}
-@keyframes nf-sun-orbit{
-  0%{transform:translate3d(0,3vh,0) scale(1) rotate(-2deg)}
-  25%{transform:translate3d(-8vw,-4vh,0) scale(1.03) rotate(1deg)}
-  50%{transform:translate3d(-18vw,6vh,0) scale(1.06) rotate(3deg)}
-  75%{transform:translate3d(-7vw,-7vh,0) scale(1.02) rotate(-1deg)}
-  100%{transform:translate3d(8vw,2vh,0) scale(1.05) rotate(2deg)}
-}
-.page-index .planet-blue,.page-home .planet-moon{display:none!important}
-@media(max-width:700px){
-  .space-sun{
-    width:88vw!important;height:88vw!important;
-    min-width:0!important;min-height:0!important;
-    right:-30vw!important;top:13vh!important;
-  }
-}
 
-
-/* REAL NASA SPACE IMAGERY — replace the CSS-painted worlds with actual mission photographs */
+/* Real NASA mission photographs for every planet layer */
 .space-planet{
   background-size:cover!important;
   background-position:center!important;
   background-repeat:no-repeat!important;
-  overflow:visible!important;
-  box-shadow:0 0 42px rgba(180,210,255,.20),inset -28px -24px 42px rgba(0,0,0,.42)!important;
-}
-.space-planet:before{
-  inset:0!important;
-  border-radius:50%!important;
-  background:radial-gradient(circle at 28% 24%,rgba(255,255,255,.20),transparent 16%),linear-gradient(135deg,rgba(255,255,255,.08),transparent 42%,rgba(0,0,0,.38) 100%)!important;
-  mix-blend-mode:screen!important;
-}
-.space-planet:after{content:none!important}
-
-/* Moon — Galileo */
-.planet-moon{
-  background-image:url("https://images-assets.nasa.gov/image/PIA00405/PIA00405~orig.jpg")!important;
-}
-/* Mars — Viking Orbiter */
-.planet-orange{
-  background-image:url("https://images-assets.nasa.gov/image/PIA00407/PIA00407~orig.jpg")!important;
-}
-/* Earth — Suomi NPP / Blue Marble */
-.planet-blue{
-  background-image:url("https://images-assets.nasa.gov/image/PIA18033/PIA18033~orig.jpg")!important;
-}
-/* Neptune — Voyager 2 */
-.planet-purple{
-  background-image:url("https://images-assets.nasa.gov/image/PIA01492/PIA01492~orig.jpg")!important;
-}
-/* Uranus — Voyager 2 */
-.planet-ice{
-  background-image:url("https://images-assets.nasa.gov/image/PIA18182/PIA18182~orig.jpg")!important;
-}
-/* Jupiter — Cassini */
-.planet-red{
-  background-image:url("https://images-assets.nasa.gov/image/PIA04866/PIA04866~orig.jpg")!important;
-}
-/* Saturn — Cassini */
-.planet-ringed{
-  background-image:url("https://images-assets.nasa.gov/image/PIA17172/PIA17172~orig.jpg")!important;
-}
-/* Venus — Magellan mission global view */
-.planet-green{
-  background-image:url("https://images-assets.nasa.gov/image/PIA00271/PIA00271~orig.jpg")!important;
-}
-/* Mercury — MESSENGER */
-.planet-gold{
-  background-image:url("https://images-assets.nasa.gov/image/PIA11245/PIA11245~orig.jpg")!important;
-}
-
-/* Keep Saturn's real ring visible around its real photograph */
-.planet-ringed:after{
-  content:""!important;
-  width:300px!important;height:70px!important;
-  left:-50px!important;top:65px!important;
-  border:8px solid rgba(220,205,170,.48)!important;
-  border-left-color:rgba(255,235,190,.70)!important;
-  border-right-color:rgba(110,85,60,.28)!important;
-  border-radius:50%!important;
-  transform:rotate(-17deg)!important;
-  box-shadow:0 0 14px rgba(255,220,160,.16)!important;
-}
-
-/* Real Hubble star-field photograph behind the smaller star specks */
-.space-scene:after{
-  background-image:
-    linear-gradient(rgba(1,3,10,.42),rgba(1,3,10,.42)),
-    url("https://images-assets.nasa.gov/image/PIA10957/PIA10957~orig.jpg")!important;
-  background-size:cover!important;
-  background-position:center!important;
-  background-blend-mode:normal!important;
-  opacity:.30!important;
-  animation:nf-stars-drift 300s linear infinite alternate!important;
-}
-
-
-/* NIGHTFALL CLASSIC SPACE — no real-photo planets, no star photo, no green image */
-.space-scene{background:#01030a!important}
-.space-scene:before{
-  background:
-    radial-gradient(ellipse at 50% 45%,rgba(38,61,110,.20),transparent 52%),
-    radial-gradient(ellipse at 12% 80%,rgba(53,25,100,.16),transparent 42%),
-    linear-gradient(180deg,#01030a 0%,#020612 52%,#010208 100%)!important;
-}
-.space-scene:after{
-  display:none!important;
-  content:none!important;
-  background:none!important;
-}
-.space-stars{display:none!important}
-.space-nebula-a{background:radial-gradient(ellipse,rgba(91,65,190,.28),transparent 70%)!important}
-.space-nebula-b{background:radial-gradient(ellipse,rgba(30,108,175,.20),transparent 70%)!important}
-
-/* Restore fictional/cinematic planets */
-.space-planet{
-  background-image:none!important;
-  background-size:auto!important;
-  box-shadow:0 0 42px rgba(180,210,255,.18),inset -28px -24px 42px rgba(0,0,0,.55)!important;
-}
-.space-planet:before{
-  content:""!important;
-  inset:0!important;
-  border-radius:50%!important;
-  background:radial-gradient(circle at 28% 24%,rgba(255,255,255,.18),transparent 17%),linear-gradient(135deg,rgba(255,255,255,.08),transparent 42%,rgba(0,0,0,.40) 100%)!important;
-  mix-blend-mode:screen!important;
-}
-.space-planet:after{content:none!important}
-
-/* Different fictional worlds */
-.planet-moon{background:radial-gradient(circle at 34% 28%,#f2f4f7 0 5%,#c5c8cf 27%,#858a94 56%,#454a53 79%,#11141a 100%)!important}
-.planet-orange{background:radial-gradient(circle at 32% 27%,#ffdca5 0 5%,#df884b 24%,#9b4634 50%,#421f27 77%,#09050b 100%)!important}
-.planet-blue{background:radial-gradient(circle at 31% 25%,#e6fbff 0 5%,#61c5e4 20%,#2b739f 45%,#123c61 72%,#030a14 100%)!important}
-.planet-purple{background:radial-gradient(circle at 32% 26%,#f4e7ff 0 5%,#b78be4 22%,#70499f 48%,#302044 75%,#07040c 100%)!important}
-.planet-ice{background:radial-gradient(circle at 30% 25%,#f4ffff 0 5%,#9ee7ee 21%,#4d91b1 47%,#21465f 74%,#050c12 100%)!important}
-.planet-red{background:radial-gradient(circle at 32% 26%,#ffd6cc 0 5%,#d56d63 21%,#873b43 48%,#3c1d2b 74%,#09050a 100%)!important}
-.planet-ringed{background:radial-gradient(circle at 31% 25%,#fff0c9 0 5%,#d2a765 22%,#91663e 47%,#4a332a 73%,#0a0709 100%)!important}
-.planet-green{background:radial-gradient(circle at 32% 26%,#e6ffe9 0 5%,#75c98b 22%,#397454 48%,#183c30 74%,#050b08 100%)!important}
-.planet-gold{background:radial-gradient(circle at 32% 25%,#fff0bd 0 5%,#d9b75c 22%,#91752f 48%,#4a3c1b 74%,#090805 100%)!important}
-
-/* Saturn-style fictional ring */
-.planet-ringed:after{
-  content:""!important;
-  display:block!important;
-  width:300px!important;height:70px!important;
-  left:-50px!important;top:65px!important;
-  border:8px solid rgba(220,205,170,.48)!important;
-  border-left-color:rgba(255,235,190,.70)!important;
-  border-right-color:rgba(110,85,60,.28)!important;
-  border-radius:50%!important;
-  transform:rotate(-17deg)!important;
-}
-
-/* Main hub sun — fictional cinematic sun, not a real photo */
-.space-sun{
-  background-image:none!important;
-  background:
-    radial-gradient(circle at 36% 30%,#fff9c7 0 4%,#ffd34d 13%,#ff8a18 34%,#e43d0b 58%,#6d1207 78%,#180301 100%)!important;
-  box-shadow:
-    0 0 55px 18px rgba(255,154,35,.42),
-    0 0 140px 55px rgba(255,112,0,.22),
-    0 0 260px 100px rgba(255,72,0,.12)!important;
-}
-
-/* All available Nightfall pages get their own planet */
-.page-index .planet-blue{display:block!important}
-.page-commands .planet-orange{display:block!important}
-.page-guidelines .planet-red{display:block!important}
-.page-rules .planet-red{display:block!important}
-.page-announcements .planet-purple{display:block!important}
-.page-updates .planet-purple{display:block!important}
-.page-suggestions .planet-ice{display:block!important}
-.page-suggestion .planet-ice{display:block!important}
-.page-redeem .planet-gold{display:block!important}
-.page-support .planet-green{display:block!important}
-.page-login .planet-ringed{display:block!important}
-.page-auth .planet-ringed{display:block!important}
-.page-secrets .planet-ringed{display:block!important}
-.page-profile .planet-moon{display:block!important}
-.page-notifications .planet-blue{display:block!important}
-.page-servers .planet-orange{display:block!important}
-.page-home .space-sun{display:block!important}
-.page-home .planet-moon{display:block!important}
-
-/* Slow cinematic movement */
-.page-index .planet-blue,.page-home .planet-moon{animation:nf-travel-a 180s ease-in-out infinite alternate!important}
-.page-commands .planet-orange{animation:nf-travel-b 170s ease-in-out infinite alternate!important}
-.page-guidelines .planet-red,.page-rules .planet-red{animation:nf-travel-c 195s ease-in-out infinite alternate!important}
-.page-announcements .planet-purple,.page-updates .planet-purple{animation:nf-travel-d 185s ease-in-out infinite alternate!important}
-.page-suggestions .planet-ice,.page-suggestion .planet-ice{animation:nf-travel-c 190s ease-in-out infinite alternate-reverse!important}
-.page-redeem .planet-gold{animation:nf-travel-a 188s ease-in-out infinite alternate!important}
-.page-support .planet-green{animation:nf-travel-d 178s ease-in-out infinite alternate-reverse!important}
-.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation:nf-travel-b 200s ease-in-out infinite alternate!important}
-.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation:nf-travel-c 185s ease-in-out infinite alternate!important}
-
-
-/* FINAL SPACE OVERRIDE — real planet photos + real starfield, cinematic background */
-.space-scene:after{
-  display:block!important;
-  content:""!important;
-  inset:0!important;
-  opacity:.55!important;
-  background-image:url("https://images-assets.nasa.gov/image/PIA15416/PIA15416~orig.jpg")!important;
-  background-size:cover!important;
-  background-position:center!important;
-  background-repeat:no-repeat!important;
-  animation:nf-real-stars 420s linear infinite alternate!important;
-}
-.space-planet{
-  background-size:cover!important;
-  background-position:center!important;
-  background-repeat:no-repeat!important;
-  overflow:visible!important;
+  box-shadow:0 0 45px rgba(160,205,255,.22),inset -30px -25px 45px rgba(0,0,0,.34)!important;
 }
 .planet-moon{background-image:url("https://images-assets.nasa.gov/image/PIA00405/PIA00405~orig.jpg")!important}
 .planet-orange{background-image:url("https://images-assets.nasa.gov/image/PIA00407/PIA00407~orig.jpg")!important}
@@ -381,24 +26,33 @@ body:before,body:after,.bg-grid{display:none!important}
 .planet-ringed{background-image:url("https://images-assets.nasa.gov/image/PIA17172/PIA17172~orig.jpg")!important}
 .planet-green{background-image:url("https://images-assets.nasa.gov/image/PIA00271/PIA00271~orig.jpg")!important}
 .planet-gold{background-image:url("https://images-assets.nasa.gov/image/PIA11245/PIA11245~orig.jpg")!important}
-.space-planet:before{
+
+/* Keep the real Saturn rings from being replaced by the old painted ring */
+.planet-ringed:after{content:none!important}
+
+/* Keep the background dark cinematic; no green wash */
+.space-scene{background:#01030a!important}
+.space-scene:before{
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(35,55,105,.18),transparent 54%),
+    radial-gradient(ellipse at 15% 80%,rgba(70,35,125,.12),transparent 45%),
+    linear-gradient(180deg,#01030a 0%,#020612 52%,#010208 100%)!important;
+}
+
+/* Real star-field photograph */
+.space-scene:after{
+  display:block!important;
   content:""!important;
   inset:0!important;
-  border-radius:50%!important;
-  background:radial-gradient(circle at 27% 23%,rgba(255,255,255,.18),transparent 18%),linear-gradient(135deg,rgba(255,255,255,.06),transparent 44%,rgba(0,0,0,.42) 100%)!important;
-  mix-blend-mode:screen!important;
-}
-.planet-ringed:after{
-  content:""!important;
-  display:block!important;
-  width:300px!important;height:70px!important;
-  left:-50px!important;top:65px!important;
-  border:8px solid rgba(220,205,170,.42)!important;
-  border-radius:50%!important;
-  transform:rotate(-17deg)!important;
+  opacity:.52!important;
+  background-image:url("https://images-assets.nasa.gov/image/PIA10957/PIA10957~orig.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  animation:nf-real-stars 420s linear infinite alternate!important;
 }
 @keyframes nf-real-stars{
   0%{transform:scale(1) translate3d(0,0,0)}
-  50%{transform:scale(1.04) translate3d(-1vw,1vh,0)}
-  100%{transform:scale(1.08) translate3d(1vw,-1vh,0)}
+  50%{transform:scale(1.035) translate3d(-1vw,1vh,0)}
+  100%{transform:scale(1.07) translate3d(1vw,-1vh,0)}
 }
