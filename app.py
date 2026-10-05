@@ -487,7 +487,7 @@ def support():
 
 @app.route("/secrets")
 def secrets_page():
-    return render_template("secrets.html")
+    return redirect(url_for("index"))
 
 def _support_ticket_row(row):
     return {
@@ -667,8 +667,7 @@ def _official_youtube_videos(limit=15):
 
 @app.get("/community")
 def community():
-    session["daily_community_visit"]=True
-    return render_template("community.html", social_user=_social_user())
+    return redirect(url_for("index"))
 
 
 @app.get("/api/social/feed")
