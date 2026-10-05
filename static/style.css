@@ -30,3 +30,10 @@ footer:before{content:"";position:absolute;left:6%;right:6%;top:0;height:1px;bac
 @keyframes nfSceneBreathe{from{transform:scale(1);opacity:.72}to{transform:scale(1.04);opacity:1}}
 @keyframes nfGlowFloat{50%{transform:translate(55px,15px) scale(1.15);opacity:.7}}
 @media(prefers-reduced-motion:reduce){body:before,.page-head:before{animation:none!important}.btn:before{display:none}}
+
+/* ===== NIGHTFALL MOON CINEMATIC ATMOSPHERE — SITEWIDE ===== */
+.night-moon{position:fixed;z-index:-1;top:72px;right:6vw;width:170px;height:170px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 38% 34%,#fff 0,#e9e8ff 28%,#c8c5e9 58%,#8d8aa9 100%);box-shadow:0 0 35px #c9c6ff55,0 0 110px #8b7cff20;opacity:.78;animation:nf-moon-drift 12s ease-in-out infinite}.night-moon:before,.night-moon:after{content:"";position:absolute;border-radius:50%;background:#77758e22}.night-moon:before{width:31px;height:18px;left:35px;top:48px;box-shadow:54px 39px 0 #77758e1b,18px 73px 0 #77758e17,75px 5px 0 #77758e14}.night-moon:after{width:16px;height:10px;left:95px;top:86px;box-shadow:-48px 35px 0 #77758e14}
+.night-mist{position:fixed;z-index:-1;left:-10%;right:-10%;top:150px;height:180px;pointer-events:none;background:radial-gradient(ellipse,#a9a4d516,transparent 68%);filter:blur(16px);animation:nf-mist 18s ease-in-out infinite alternate}.night-stars{position:fixed;z-index:-1;inset:0;pointer-events:none;opacity:.48;background-image:radial-gradient(#fff 1px,transparent 1.5px),radial-gradient(#9eecff 1px,transparent 1.5px);background-size:137px 137px,211px 211px;background-position:20px 80px,90px 20px;animation:nf-stars 45s linear infinite}
+@keyframes nf-moon-drift{0%,100%{transform:translateY(0) scale(1);opacity:.72}50%{transform:translateY(12px) scale(1.035);opacity:.9}}@keyframes nf-mist{to{transform:translateX(7%) scale(1.06)}}@keyframes nf-stars{to{background-position:157px 217px,300px 130px}}
+@media(max-width:700px){.night-moon{width:105px;height:105px;top:78px;right:4vw;opacity:.48}.night-mist{top:130px;height:120px}}
+@media(prefers-reduced-motion:reduce){.night-moon,.night-mist,.night-stars{animation:none}}
