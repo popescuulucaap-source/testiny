@@ -12,7 +12,16 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=20261006">
   <link rel="stylesheet" href="{{ url_for('static', filename='duck-game.css') }}?v=20261006">
 </head>
-<body><div class="night-stars" aria-hidden="true"></div><div class="night-mist" aria-hidden="true"></div><div class="night-moon" aria-hidden="true"></div>
+<body>
+  <div class="space-scene" aria-hidden="true">
+    <div class="space-nebula space-nebula-a"></div>
+    <div class="space-nebula space-nebula-b"></div>
+    <div class="space-stars space-stars-a"></div>
+    <div class="space-stars space-stars-b"></div>
+    <div class="space-planet space-planet-moon"></div>
+    <div class="space-planet space-planet-orange"></div>
+    <div class="space-planet space-planet-blue"></div>
+  </div>
 {% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div><script>
 (function(){
   var l=document.getElementById('nightfall-loader');
