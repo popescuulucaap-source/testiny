@@ -148,3 +148,70 @@ html,body{background:#000!important}
 @media(prefers-reduced-motion:reduce){
   .space-stars-photo,.space-planet,.planet-r136:after{animation:none!important}
 }
+
+
+/* ===== FINAL SPACE LAYER FIX =====
+   Keep the planetary scene above every old page background.
+*/
+body.nightfall-space-page{background:#000!important}
+body.nightfall-space-page .space-scene{
+  z-index:1!important;
+}
+body.nightfall-space-page > nav,
+body.nightfall-space-page > main,
+body.nightfall-space-page > footer{
+  position:relative;
+  z-index:2;
+}
+body.nightfall-space-page .space-stars-photo{
+  z-index:0!important;
+}
+body.nightfall-space-page .space-planet{
+  z-index:2!important;
+}
+
+/* The old cinematic hero was covering the home-page planet with its own sky. */
+body.nightfall-space-page .cinematic-intro{
+  background:transparent!important;
+}
+body.nightfall-space-page .cinematic-sky{
+  background:transparent!important;
+  animation:none!important;
+}
+body.nightfall-space-page .cinematic-sky:before,
+body.nightfall-space-page .cinematic-sky:after{
+  display:none!important;
+}
+body.nightfall-space-page .cinematic-moon,
+body.nightfall-space-page .cinematic-cloud{
+  display:none!important;
+}
+
+/* Make sure no old pseudo-background can sit between the real star map and content. */
+body.nightfall-space-page:before,
+body.nightfall-space-page:after,
+body.nightfall-space-page .bg-grid{
+  display:none!important;
+}
+body.nightfall-space-page .home-page,
+body.nightfall-space-page .home-page > *{
+  background-color:transparent;
+}
+
+/* One — and only one — home planet: R136a1. */
+body.nightfall-space-page.page-index .planet-blue{
+  display:none!important;
+}
+body.nightfall-space-page.page-index .planet-r136{
+  display:block!important;
+}
+
+/* Keep panels readable without replacing the black sky. */
+body.nightfall-space-page .hero-card{
+  background:linear-gradient(145deg,#090b12b8,#05060ab8)!important;
+}
+body.nightfall-space-page .card,
+body.nightfall-space-page .nightfall-status-card,
+body.nightfall-space-page .nightfall-premium-coming{
+  background:linear-gradient(145deg,#090b12d9,#05060ad9)!important;
+}
