@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Nightfall • Admin{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">ADMIN CONTROL • LIVE OVERVIEW</span><h1>Manage Nightfall.</h1><p>See bot and website health, review activity, add command notes, and publish Bot or Website Updates.</p></section>
+<section class="page-head"><span class="eyebrow">ADMIN CONTROL • DISCORD VERIFIED</span><h1>Manage Nightfall.</h1><p>Admin access requires your Discord account plus the admin password. You are signed in as <strong>{{ session.get("user", {}).get("global_name") or session.get("user", {}).get("username") or "Discord user" }}</strong>.</p></section>
 <section class="admin-stats" aria-label="Nightfall service statistics">
  <article class="admin-stat"><span>BOT STATUS</span><b class="{{ 'is-online' if stats.bot_online else 'is-offline' }}"><i></i>{{ 'Online' if stats.bot_online else 'Offline' }}</b><small>{% if stats.last_seen %}Last heartbeat {{ (stats.last_seen|int)|datetimeformat }}{% else %}Waiting for the bot heartbeat{% endif %}</small></article>
  <article class="admin-stat"><span>DISCORD SERVERS</span><b>{{ stats.guild_count }}</b><small>{{ stats.member_count }} members reported by the bot</small></article>
