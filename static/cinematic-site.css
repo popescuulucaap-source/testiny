@@ -12,8 +12,8 @@ body:before,body:after,.bg-grid{display:none!important}
 
 /* Planet layers: each tab gets its own main planet */
 .space-planet{position:absolute!important;border-radius:50%!important;pointer-events:none!important;display:block!important}
-.space-planet-moon{display:none!important}
-.space-planet-orange{display:none!important}
+.space-planet-moon{display:block!important;width:175px!important;height:175px!important;right:27vw!important;bottom:10vh!important;background:radial-gradient(circle at 35% 30%,#f4f4f1 0 8%,#cfcfc8 32%,#8f918f 61%,#4b4d4d 84%,#15171a 100%)!important;box-shadow:0 0 32px #d9e2ee25,inset -32px -28px 42px #000b!important;animation:nf-moon-float 17s ease-in-out infinite}
+.space-planet-orange{display:block!important;width:125px!important;height:125px!important;left:25vw!important;bottom:9vh!important;background:radial-gradient(circle at 34% 27%,#ffd6a5 0 5%,#d8753f 22%,#9b3f2f 48%,#4a1d22 76%,#080508 100%)!important;box-shadow:0 0 30px #e47d4a25,inset -24px -22px 36px #000c!important;animation:nf-planet-float 19s ease-in-out infinite reverse}
 .space-planet-blue{display:none!important}
 .space-scene .space-planet:before,.space-scene .space-planet:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
 .page-home .space-planet-blue,.page-index .space-planet-blue{display:block!important;width:310px!important;height:310px!important;right:7vw!important;top:18vh!important;left:auto!important;background:radial-gradient(circle at 34% 27%,#eefaff 0 4%,#65b9dd 17%,#2b6e9d 43%,#123b60 68%,#030b17 100%)!important;box-shadow:0 0 45px #5fc8ff35,inset -55px -45px 70px #000b!important;animation:nf-planet-float 12s ease-in-out infinite}
@@ -33,9 +33,11 @@ body:before,body:after,.bg-grid{display:none!important}
 .nav{background:rgba(2,4,10,.58)!important;backdrop-filter:blur(12px)!important}
 .hero-card,.card,.command-card,.update,.server-card,.auth-card,.cta,.command-tools,.support-panel,.nightfall-games,.nightfall-status-card,.nightfall-reviews{background:rgba(5,8,17,.70)!important;backdrop-filter:blur(10px)!important}
 .home-page,.cinematic-intro,.cinematic-sky{background:transparent!important}
-.cinematic-sky:before,.cinematic-sky:after,.cinematic-vignette{opacity:0!important;display:none!important}
+.cinematic-sky:before,.cinematic-sky:after,.cinematic-vignette,.cinematic-moon{opacity:0!important;display:none!important;visibility:hidden!important}
+.space-planet-moon:before{content:"";inset:20% 12% 14% 18%;background:radial-gradient(circle at 30% 35%,rgba(255,255,255,.22),transparent 14%),radial-gradient(circle at 68% 58%,rgba(30,32,34,.34),transparent 13%),radial-gradient(circle at 48% 75%,rgba(40,42,43,.28),transparent 18%);filter:blur(1px)}
 .site-loader{z-index:9999!important;background:#01030a!important}
 @keyframes nf-space-drift{from{transform:scale(1)}to{transform:scale(1.08) translate3d(1.5%, -1%,0)}}
 @keyframes nf-stars{to{transform:translate3d(-70px,35px,0)}}
 @keyframes nf-planet-float{0%,100%{transform:translate3d(0,0,0) rotate(0deg)}50%{transform:translate3d(0,-18px,0) rotate(2deg)}}
+@keyframes nf-moon-float{0%,100%{transform:translate3d(0,0,0) rotate(-2deg)}50%{transform:translate3d(14px,-22px,0) rotate(3deg)}}
 @media(max-width:700px){.space-scene:after{opacity:.17;background-size:190px 207px}.space-planet-blue{width:155px!important;height:155px!important}.page-login .space-planet-blue:after,.page-auth .space-planet-blue:after,.page-secrets .space-planet-blue:after,.page-profile .space-planet-blue:after{width:230px;height:58px;left:-38px;top:55px;border-width:7px}}
