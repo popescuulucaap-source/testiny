@@ -1093,12 +1093,26 @@ def dashboard(guild_id):
     bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), None)
     settings = bot_guild.get("settings", {}) if bot_guild else {}
     bot_error = None if bot_online() and bot_guild else "Nightfall is offline or is not connected to this server."
+
+    # Compact live server metrics for the control center.
+    enabled_security = sum(bool(settings.get(key)) for key in ("anti_raid", "anti_nuke", "anti_link"))
+    enabled_community = sum(bool(settings.get(key)) for key in ("welcome_channel_id", "leave_channel_id", "autorole_id", "booster_role_id", "vouch_channel_id", "feedback_channel_id"))
+    enabled_support = sum(bool(settings.get(key)) for key in ("ticket_panel_channel_id", "ticket_category_id", "jail_enabled", "jail_appeal_channel_id"))
+    dashboard_stats = {
+        "members": int(guild.get("approximate_member_count") or guild.get("member_count") or (bot_guild or {}).get("member_count") or 0),
+        "security": enabled_security,
+        "community": enabled_community,
+        "support": enabled_support,
+        "prefix": settings.get("prefix", "!"),
+        "bot_online": bot_online() and bool(bot_guild),
+    }
     return render_template(
         "dashboard.html",
         guild=guild,
         settings=settings,
         bot_error=bot_error,
         setting_groups=SETTING_GROUPS,
+        dashboard_stats=dashboard_stats,
     )
 
 
