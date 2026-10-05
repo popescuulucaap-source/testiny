@@ -1,6 +1,7 @@
 import os
 import json
 import secrets
+import hashlib
 import threading
 import time
 from datetime import timedelta
@@ -294,6 +295,8 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS site_xp_events (discord_id TEXT NOT NULL, action TEXT NOT NULL, last_awarded TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, action))")
             cur.execute("CREATE TABLE IF NOT EXISTS site_notifications (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS arcade_challenges (discord_id TEXT PRIMARY KEY, started_at DOUBLE PRECISION NOT NULL, hits INTEGER NOT NULL DEFAULT 0, completed BOOLEAN NOT NULL DEFAULT FALSE)")
+            cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code_hash TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS site_settings (discord_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', theme TEXT NOT NULL DEFAULT 'default', title TEXT NOT NULL DEFAULT '')")
             cur.execute("CREATE TABLE IF NOT EXISTS site_achievements (discord_id TEXT NOT NULL, achievement TEXT NOT NULL, unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, achievement))")
             cur.execute("CREATE TABLE IF NOT EXISTS site_reputation (discord_id TEXT PRIMARY KEY, score INTEGER NOT NULL DEFAULT 0)")
@@ -1429,6 +1432,152 @@ def api_award_xp():
         return jsonify({"ok":False,"error":"Unknown XP action."}),400
     award_site_xp(action, 10)
     return jsonify({"ok":True})
+
+def _arcade_code_hash(code):
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+def _new_arcade_code():
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "NF50-" + "".join(secrets.choice(alphabet) for _ in range(4)) + "-" + "".join(secrets.choice(alphabet) for _ in range(4))
+
+@app.get("/redeem")
+@login_required
+def redeem():
+    user = current_site_user()
+    reward = None
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                reward = conn.execute(
+                    "SELECT redeemed_at FROM arcade_rewards WHERE discord_id=%s",
+                    (user["id"],),
+                ).fetchone()
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load arcade reward: %s", type(exc).__name__)
+    return render_template("redeem.html", user=user, reward=reward)
+
+@app.post("/api/arcade/start")
+def arcade_start():
+    user = current_site_user()
+    if not user:
+        return jsonify({"ok": False, "error": "Discord login required."}), 401
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
+    now = time.time()
+    with db_connect() as conn:
+        existing = conn.execute(
+            "SELECT 1 FROM arcade_rewards WHERE discord_id=%s",
+            (user["id"],),
+        ).fetchone()
+        if existing:
+            return jsonify({"ok": False, "error": "You already completed the secret arcade and claimed your one reward."}), 409
+        conn.execute(
+            "INSERT INTO arcade_challenges(discord_id,started_at,hits,completed) VALUES(%s,%s,0,FALSE) "
+            "ON CONFLICT(discord_id) DO UPDATE SET started_at=EXCLUDED.started_at,hits=0,completed=FALSE",
+            (user["id"], now),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "seconds": 30, "hits": 0})
+
+@app.post("/api/arcade/hit")
+def arcade_hit():
+    user = current_site_user()
+    if not user:
+        return jsonify({"ok": False, "error": "Discord login required."}), 401
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
+    now = time.time()
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT started_at,hits,completed FROM arcade_challenges WHERE discord_id=%s FOR UPDATE",
+            (user["id"],),
+        ).fetchone()
+        if not row:
+            return jsonify({"ok": False, "error": "Start the arcade challenge first."}), 400
+        started_at, hits, completed = float(row[0]), int(row[1]), bool(row[2])
+        if completed:
+            return jsonify({"ok": False, "error": "This challenge has already been completed."}), 409
+        if now - started_at > 30:
+            return jsonify({"ok": False, "error": "Time expired. You did not earn a code."}), 408
+        hits += 1
+        if hits > 10:
+            hits = 10
+        conn.execute("UPDATE arcade_challenges SET hits=%s WHERE discord_id=%s", (hits, user["id"]))
+        conn.commit()
+    return jsonify({"ok": True, "hits": hits, "complete": hits >= 10})
+
+@app.post("/api/arcade/finish")
+def arcade_finish():
+    user = current_site_user()
+    if not user:
+        return jsonify({"ok": False, "error": "Discord login required."}), 401
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
+    now = time.time()
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT started_at,hits,completed FROM arcade_challenges WHERE discord_id=%s FOR UPDATE",
+            (user["id"],),
+        ).fetchone()
+        if not row:
+            return jsonify({"ok": False, "error": "Start the arcade challenge first."}), 400
+        started_at, hits, completed = float(row[0]), int(row[1]), bool(row[2])
+        if completed:
+            return jsonify({"ok": False, "error": "You already claimed your arcade reward."}), 409
+        if now - started_at > 30:
+            return jsonify({"ok": False, "error": "Time expired. Start the challenge again."}), 408
+        if hits < 10:
+            return jsonify({"ok": False, "error": "You need 10 hits to earn the reward."}), 400
+        existing = conn.execute("SELECT 1 FROM arcade_rewards WHERE discord_id=%s", (user["id"],)).fetchone()
+        if existing:
+            return jsonify({"ok": False, "error": "You already claimed your one arcade reward."}), 409
+        code = _new_arcade_code()
+        code_hash = _arcade_code_hash(code)
+        conn.execute(
+            "INSERT INTO arcade_rewards(discord_id,code_hash) VALUES(%s,%s)",
+            (user["id"], code_hash),
+        )
+        conn.execute(
+            "UPDATE arcade_challenges SET completed=TRUE WHERE discord_id=%s",
+            (user["id"],),
+        )
+        conn.commit()
+    return jsonify({
+        "ok": True,
+        "code": code,
+        "discount": 50,
+        "message": "Unique one-time 50% off code created for this Discord account."
+    })
+
+@app.post("/api/arcade/redeem")
+def arcade_redeem():
+    user = current_site_user()
+    if not user:
+        return jsonify({"ok": False, "error": "Discord login required."}), 401
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Reward storage is unavailable."}), 503
+    payload = request.get_json(silent=True) or {}
+    code = str(payload.get("code") or "").strip().upper()
+    if not code:
+        return jsonify({"ok": False, "error": "Enter your arcade code."}), 400
+    code_hash = _arcade_code_hash(code)
+    with db_connect() as conn:
+        reward = conn.execute(
+            "SELECT discord_id,redeemed_at FROM arcade_rewards WHERE code_hash=%s FOR UPDATE",
+            (code_hash,),
+        ).fetchone()
+        if not reward:
+            return jsonify({"ok": False, "error": "Invalid arcade code."}), 404
+        if str(reward[0]) != str(user["id"]):
+            return jsonify({"ok": False, "error": "That code belongs to a different Discord account."}), 403
+        if reward[1]:
+            return jsonify({"ok": False, "error": "This arcade code has already been redeemed."}), 409
+        conn.execute(
+            "UPDATE arcade_rewards SET redeemed_at=NOW(),redeemed_by=%s WHERE code_hash=%s",
+            (user["id"], code_hash),
+        )
+        conn.commit()
+    return jsonify({"ok": True, "discount": 50, "message": "50% Premium discount redeemed successfully. Your discount is now attached to this Discord account."})
 
 @app.post("/api/arcade/score")
 def arcade_score():
