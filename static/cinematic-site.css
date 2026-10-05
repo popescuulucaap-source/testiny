@@ -1,58 +1,82 @@
-/* FINAL REAL SPACE IMAGERY OVERRIDE */
-.space-sun{
-  display:none!important;
-  background-image:url("https://images-assets.nasa.gov/image/PIA26681/PIA26681~orig.jpg")!important;
-  background-size:cover!important;
-  background-position:center!important;
-  background-repeat:no-repeat!important;
-  border-radius:50%!important;
-  box-shadow:0 0 70px 24px rgba(255,150,35,.48),0 0 170px 70px rgba(255,90,0,.24),0 0 300px 120px rgba(255,60,0,.14)!important;
+/* FINAL 3D PLANETS + COMMANDS LAYOUT FIX */
+.command-grid{
+  width:100%!important;
+  max-width:1200px!important;
+  margin:0 auto!important;
+  padding:12px 4px 48px!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
 }
-.page-index .space-sun,.page-home .space-sun{display:block!important}
+.command-card{
+  min-width:0!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+}
+.command-card code,.command-card p{
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+}
+.command-tools{
+  width:100%!important;
+  max-width:1200px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+main{
+  overflow:visible!important;
+}
+@media(max-width:700px){
+  .command-grid{grid-template-columns:minmax(0,1fr)!important;padding-left:10px!important;padding-right:10px!important}
+  .command-card{min-height:0!important}
+}
 
-/* Real NASA mission photographs for every planet layer */
+/* Make the real NASA photographs look spherical/3D */
 .space-planet{
-  background-size:cover!important;
-  background-position:center!important;
-  background-repeat:no-repeat!important;
-  box-shadow:0 0 45px rgba(160,205,255,.22),inset -30px -25px 45px rgba(0,0,0,.34)!important;
+  border-radius:50%!important;
+  overflow:visible!important;
+  isolation:isolate!important;
+  transform-style:preserve-3d!important;
+  filter:saturate(1.08) contrast(1.06)!important;
+  box-shadow:
+    0 0 28px rgba(150,205,255,.18),
+    0 18px 42px rgba(0,0,0,.42),
+    inset -38px -30px 55px rgba(0,0,0,.68),
+    inset 14px 10px 22px rgba(255,255,255,.10)!important;
 }
-.planet-moon{background-image:url("https://images-assets.nasa.gov/image/PIA00405/PIA00405~orig.jpg")!important}
-.planet-orange{background-image:url("https://images-assets.nasa.gov/image/PIA00407/PIA00407~orig.jpg")!important}
-.planet-blue{background-image:url("https://images-assets.nasa.gov/image/PIA18033/PIA18033~orig.jpg")!important}
-.planet-purple{background-image:url("https://images-assets.nasa.gov/image/PIA01492/PIA01492~orig.jpg")!important}
-.planet-ice{background-image:url("https://images-assets.nasa.gov/image/PIA18182/PIA18182~orig.jpg")!important}
-.planet-red{background-image:url("https://images-assets.nasa.gov/image/PIA04866/PIA04866~orig.jpg")!important}
-.planet-ringed{background-image:url("https://images-assets.nasa.gov/image/PIA17172/PIA17172~orig.jpg")!important}
-.planet-green{background-image:url("https://images-assets.nasa.gov/image/PIA00271/PIA00271~orig.jpg")!important}
-.planet-gold{background-image:url("https://images-assets.nasa.gov/image/PIA11245/PIA11245~orig.jpg")!important}
-
-/* Keep the real Saturn rings from being replaced by the old painted ring */
-.planet-ringed:after{content:none!important}
-
-/* Keep the background dark cinematic; no green wash */
-.space-scene{background:#01030a!important}
-.space-scene:before{
-  background:
-    radial-gradient(ellipse at 50% 45%,rgba(35,55,105,.18),transparent 54%),
-    radial-gradient(ellipse at 15% 80%,rgba(70,35,125,.12),transparent 45%),
-    linear-gradient(180deg,#01030a 0%,#020612 52%,#010208 100%)!important;
-}
-
-/* Real star-field photograph */
-.space-scene:after{
-  display:block!important;
+.space-planet:before{
   content:""!important;
+  position:absolute!important;
   inset:0!important;
-  opacity:.52!important;
-  background-image:url("https://images-assets.nasa.gov/image/PIA10957/PIA10957~orig.jpg")!important;
-  background-size:cover!important;
-  background-position:center!important;
-  background-repeat:no-repeat!important;
-  animation:nf-real-stars 420s linear infinite alternate!important;
+  border-radius:50%!important;
+  pointer-events:none!important;
+  background:
+    radial-gradient(circle at 29% 23%,rgba(255,255,255,.28) 0%,rgba(255,255,255,.10) 12%,transparent 27%),
+    radial-gradient(circle at 70% 72%,rgba(0,0,0,.60) 0%,rgba(0,0,0,.34) 32%,transparent 68%),
+    linear-gradient(125deg,rgba(255,255,255,.10),transparent 38%,rgba(0,0,0,.48) 82%)!important;
+  box-shadow:inset -22px -18px 35px rgba(0,0,0,.42),inset 8px 6px 18px rgba(255,255,255,.08)!important;
+  z-index:2!important;
+  mix-blend-mode:normal!important;
 }
-@keyframes nf-real-stars{
-  0%{transform:scale(1) translate3d(0,0,0)}
-  50%{transform:scale(1.035) translate3d(-1vw,1vh,0)}
-  100%{transform:scale(1.07) translate3d(1vw,-1vh,0)}
+.space-planet:after{
+  content:""!important;
+  position:absolute!important;
+  inset:-3px!important;
+  border-radius:50%!important;
+  pointer-events:none!important;
+  box-shadow:inset 0 0 8px rgba(255,255,255,.12),0 0 18px rgba(150,210,255,.10)!important;
+  z-index:3!important;
+}
+.planet-ringed:after{
+  content:""!important;
+  inset:auto!important;
+  width:310px!important;
+  height:78px!important;
+  left:-55px!important;
+  top:61px!important;
+  border:8px solid rgba(210,190,155,.48)!important;
+  border-radius:50%!important;
+  transform:rotate(-17deg) translateZ(-1px)!important;
+  box-shadow:0 0 14px rgba(255,220,160,.15)!important;
 }
