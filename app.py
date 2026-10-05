@@ -64,7 +64,7 @@ INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID", "").strip()
-ROBLOX_BRIDGE_SECRET = os.getenv("ROBLOX_BRIDGE_SECRET", "").strip()
+ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
 
 DISCORD_API = "https://discord.com/api/v10"
 MANAGE_GUILD = 0x20
@@ -1442,7 +1442,7 @@ def roblox_link_claim():
         discord_id = str(row[0])
         conn.execute(
             "UPDATE roblox_links SET roblox_user_id=%s, link_token=%s, updated_at=NOW() WHERE discord_id=%s",
-            (roblox_user_id, "LINKED", discord_id),
+            (roblox_user_id, secrets.token_hex(16), discord_id),
         )
         conn.commit()
     return jsonify({"ok": True, "discord_id": discord_id})
@@ -1473,6 +1473,28 @@ def roblox_premium_sync():
         )
         conn.commit()
     return jsonify({"ok": True, "premium": premium, "source": source, "expires_at": expires_at})
+
+@app.get("/api/premium/servers")
+@login_required
+def premium_servers():
+    link = get_roblox_link(current_discord_user_id())
+    if not roblox_premium_active(link):
+        return jsonify({"ok": False, "error": "Premium is required to open the Vault."}), 403
+    try:
+        response = requests.get(f"{DISCORD_API}/users/@me/guilds", headers=discord_headers(), timeout=12)
+        if response.status_code != 200:
+            return jsonify({"ok": False, "error": "Could not read your Discord servers."}), 502
+        manageable = []
+        for guild in response.json():
+            permissions = int(guild.get("permissions", "0"))
+            if not (permissions & MANAGE_GUILD or permissions & ADMINISTRATOR):
+                continue
+            gid = str(guild.get("id"))
+            if any(item["id"] == gid for item in bot_guild_snapshot()):
+                manageable.append({"id": gid, "name": guild.get("name", "Unknown server")})
+        return jsonify({"ok": True, "servers": manageable})
+    except (requests.RequestException, ValueError, TypeError):
+        return jsonify({"ok": False, "error": "Could not read your Discord servers."}), 502
 
 @app.get("/api/premium/status")
 @login_required
