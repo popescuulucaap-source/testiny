@@ -44,3 +44,9 @@ box-shadow:0 0 45px rgba(72,164,230,.25),inset -30px -25px 45px rgba(0,0,0,.7)!i
  .space-planet-blue{width:78px!important;height:78px!important;left:2vw!important;top:47vh!important}
  .space-scene:after{background-size:29px 35px,79px 91px,151px 163px;opacity:.72}
 }
+
+/* Keep the cinematic space scene behind the entire document, including the bottom of long pages. */
+.space-scene{position:fixed!important;z-index:0!important}
+html,body{min-height:100%!important}
+main,footer{background:transparent!important}
+footer{z-index:10!important}
