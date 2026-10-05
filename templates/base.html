@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-home.css') }}?v=6">
   <link rel="stylesheet" href="{{ url_for('static', filename='duck-game.css') }}?v=1">
 </head>
-<body>
+<body><div class="night-stars" aria-hidden="true"></div><div class="night-mist" aria-hidden="true"></div><div class="night-moon" aria-hidden="true"></div>
 {% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div><script>
 (function(){
   var l=document.getElementById('nightfall-loader');
