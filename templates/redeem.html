@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Redeem • Nightfall{% endblock %}
+{% block content %}
+<section class="page-shell" style="max-width:760px;margin:0 auto;padding:70px 20px;">
+  <div class="card" style="padding:32px;">
+    <span class="eyebrow">NIGHTFALL PREMIUM</span>
+    <h1 style="margin:10px 0;">Redeem your 50% off code</h1>
+    <p style="opacity:.78;">Arcade reward codes are unique, one-time use, and locked to the Discord account that earned them.</p>
+    {% if reward and reward[0] %}
+      <div class="notice" style="margin-top:24px;">This Discord account has already redeemed its arcade discount. It cannot redeem another arcade code.</div>
+    {% else %}
+      <form id="arcadeRedeemForm" style="display:grid;gap:14px;margin-top:24px;">
+        <input id="arcadeCode" maxlength="9" autocomplete="off" placeholder="NF50-XXXX-XXXX" required style="width:100%;padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:inherit;font:inherit;text-transform:uppercase;">
+        <button class="btn primary" type="submit">Redeem 50% off</button>
+        <div id="redeemResult" role="status" aria-live="polite"></div>
+      </form>
+    {% endif %}
+    <div style="margin-top:28px;opacity:.7;font-size:.92rem;"><b>Important:</b> one Discord account can earn and redeem the arcade reward only once. Codes cannot be transferred to another Discord account.</div>
+  </div>
+</section>
+<script>
+document.getElementById('arcadeRedeemForm')?.addEventListener('submit',async(event)=>{
+  event.preventDefault();
+  const input=document.getElementById('arcadeCode'), result=document.getElementById('redeemResult');
+  const code=input.value.trim().toUpperCase();
+  result.textContent='Checking code…';
+  try{
+    const response=await fetch('/api/arcade/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    const data=await response.json();
+    result.textContent=data.ok?'✓ 50% Premium discount redeemed successfully.':'✕ '+(data.error||'Invalid code.');
+    if(data.ok) event.target.innerHTML='<strong>✓ Discount redeemed.</strong><p>Your 50% Premium discount is attached to this Discord account.</p>';
+  }catch(error){result.textContent='✕ Could not connect to the redemption system.';}
+});
+</script>
+{% endblock %}
