@@ -295,7 +295,22 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS site_notifications (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, read BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_scores (id BIGSERIAL PRIMARY KEY, discord_id TEXT NOT NULL, username TEXT NOT NULL, game TEXT NOT NULL, score INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS arcade_challenges (discord_id TEXT PRIMARY KEY, started_at DOUBLE PRECISION NOT NULL, hits INTEGER NOT NULL DEFAULT 0, completed BOOLEAN NOT NULL DEFAULT FALSE)")
-            cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
+            cur.execute("CREATE TABLE IF NOT EXISTS arcade_rewards (discord_id TEXT PRIMARY KEY, code TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), redeemed_at TIMESTAMPTZ NULL, redeemed_by TEXT NULL)")
+            # Migrate older reward tables created by previous versions. Older installs
+            # used code_hash, and code was accidentally UNIQUE even though each Discord
+            # account should receive its own account-bound copy of the same code.
+            columns = {row[0] for row in cur.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'arcade_rewards'"
+            ).fetchall()}
+            if "code" not in columns:
+                cur.execute("ALTER TABLE arcade_rewards ADD COLUMN code TEXT")
+                cur.execute("UPDATE arcade_rewards SET code=%s WHERE code IS NULL", (arcade_reward_code(),))
+            if "code_hash" in columns:
+                cur.execute("UPDATE arcade_rewards SET code=%s WHERE code IS NULL OR code=''", (arcade_reward_code(),))
+                cur.execute("ALTER TABLE arcade_rewards DROP COLUMN code_hash")
+            cur.execute("UPDATE arcade_rewards SET code=%s WHERE code IS NULL OR code=''", (arcade_reward_code(),))
+            cur.execute("ALTER TABLE arcade_rewards ALTER COLUMN code SET NOT NULL")
+            cur.execute("ALTER TABLE arcade_rewards DROP CONSTRAINT IF EXISTS arcade_rewards_code_key")
             cur.execute("CREATE TABLE IF NOT EXISTS site_settings (discord_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', theme TEXT NOT NULL DEFAULT 'default', title TEXT NOT NULL DEFAULT '')")
             cur.execute("CREATE TABLE IF NOT EXISTS site_achievements (discord_id TEXT NOT NULL, achievement TEXT NOT NULL, unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (discord_id, achievement))")
             cur.execute("CREATE TABLE IF NOT EXISTS site_reputation (discord_id TEXT PRIMARY KEY, score INTEGER NOT NULL DEFAULT 0)")
