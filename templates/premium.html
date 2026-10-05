@@ -49,6 +49,30 @@
     </article>
   </div>
 
+  {% if request.args.get("roblox_error") %}
+  <div class="card notice" role="alert">{{ request.args.get("roblox_error") }}</div>
+  {% endif %}
+  {% if request.args.get("roblox_connected") %}
+  <div class="card notice" role="status">Roblox account connected securely. Nightfall can now verify your Premium entitlement.</div>
+  {% endif %}
+
+  <div class="card premium-plan" id="robloxConnection">
+    <span class="eyebrow">ROBLOX CONNECTION</span>
+    <h2>Connect Roblox</h2>
+    {% if link and link.roblox_user_id %}
+      <p>Your Roblox account is connected to this Discord account. You do not need to enter your Roblox password on Nightfall.</p>
+      <div class="actions">
+        <span class="notice">✓ Roblox connected</span>
+      </div>
+    {% else %}
+      <p>Connect your Roblox account securely through Roblox OAuth. Nightfall only uses the account identity needed to link your Premium access.</p>
+      <div class="actions">
+        <a class="btn primary" href="{{ url_for('roblox_oauth_start') }}">Connect Roblox</a>
+      </div>
+      <p class="notice">Secure OAuth 2.0 + PKCE • Your Roblox password never goes to Nightfall.</p>
+    {% endif %}
+  </div>
+
   <div class="card premium-status-card">
     <div>
       <span class="eyebrow">YOUR STATUS</span>
