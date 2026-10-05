@@ -215,3 +215,103 @@ body.nightfall-space-page .nightfall-status-card,
 body.nightfall-space-page .nightfall-premium-coming{
   background:linear-gradient(145deg,#090b12d9,#05060ad9)!important;
 }
+
+
+/* ===== REAL PLANET PHOTOS + HOME COVER FIX =====
+   Use real spacecraft/satellite photography for the Solar System worlds.
+   Exoplanets do not have direct photographs, so their entries remain
+   scientifically styled visualizations rather than pretending a photo exists.
+*/
+
+/* The home page's old cinematic hero was the remaining full-screen cover. */
+body.nightfall-space-page .cinematic-intro{
+  display:none!important;
+}
+body.nightfall-space-page .home-page,
+body.nightfall-space-page .home-page:before,
+body.nightfall-space-page .home-page:after{
+  background:transparent!important;
+}
+body.nightfall-space-page .home-page:before{
+  display:none!important;
+}
+
+/* Real photo sources — NASA/JPL imagery mirrored through Wikimedia Commons
+   Special:FilePath so the browser can load the image directly. */
+body.nightfall-space-page .planet-earth{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/The%20Blue%20Marble%2C%20AS17-148-22727.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-mars{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/OSIRIS_Mars_true_color.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-jupiter{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Jupiter_New_Horizons.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-saturn{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Saturn_during_Equinox.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-uranus{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Uranus2.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-neptune{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Neptune_Full.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+body.nightfall-space-page .planet-pluto{
+  background-image:url("https://commons.wikimedia.org/wiki/Special:FilePath/Pluto-01_Stern_03.jpg")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+
+/* Remove the old painted planet textures from the photo-based worlds. */
+body.nightfall-space-page .planet-earth:before,
+body.nightfall-space-page .planet-mars:before,
+body.nightfall-space-page .planet-jupiter:before,
+body.nightfall-space-page .planet-uranus:before,
+body.nightfall-space-page .planet-neptune:before,
+body.nightfall-space-page .planet-pluto:before{
+  background:radial-gradient(circle at 32% 28%,transparent 0 48%,rgba(0,0,0,.08) 63%,rgba(0,0,0,.62) 100%)!important;
+  opacity:1!important;
+  filter:none!important;
+}
+
+/* Keep Saturn's real photograph, while preserving its physical rings. */
+body.nightfall-space-page .planet-saturn:before{
+  display:none!important;
+}
+body.nightfall-space-page .planet-saturn:after{
+  z-index:2!important;
+}
+
+/* Slight photographic treatment so the worlds still read clearly over stars. */
+body.nightfall-space-page .planet-earth,
+body.nightfall-space-page .planet-mars,
+body.nightfall-space-page .planet-jupiter,
+body.nightfall-space-page .planet-saturn,
+body.nightfall-space-page .planet-uranus,
+body.nightfall-space-page .planet-neptune,
+body.nightfall-space-page .planet-pluto{
+  background-color:#000!important;
+  box-shadow:inset -35px -30px 55px rgba(0,0,0,.5),0 0 42px rgba(255,255,255,.12)!important;
+}
+
+/* Exoplanets: no spacecraft has photographed their surfaces directly.
+   Keep them as clearly stylized visualizations rather than fake "photos". */
