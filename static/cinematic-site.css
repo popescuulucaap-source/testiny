@@ -253,3 +253,102 @@ body:before,body:after,.bg-grid{display:none!important}
   opacity:.30!important;
   animation:nf-stars-drift 300s linear infinite alternate!important;
 }
+
+
+/* NIGHTFALL CLASSIC SPACE — no real-photo planets, no star photo, no green image */
+.space-scene{background:#01030a!important}
+.space-scene:before{
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(38,61,110,.20),transparent 52%),
+    radial-gradient(ellipse at 12% 80%,rgba(53,25,100,.16),transparent 42%),
+    linear-gradient(180deg,#01030a 0%,#020612 52%,#010208 100%)!important;
+}
+.space-scene:after{
+  display:none!important;
+  content:none!important;
+  background:none!important;
+}
+.space-stars{display:none!important}
+.space-nebula-a{background:radial-gradient(ellipse,rgba(91,65,190,.28),transparent 70%)!important}
+.space-nebula-b{background:radial-gradient(ellipse,rgba(30,108,175,.20),transparent 70%)!important}
+
+/* Restore fictional/cinematic planets */
+.space-planet{
+  background-image:none!important;
+  background-size:auto!important;
+  box-shadow:0 0 42px rgba(180,210,255,.18),inset -28px -24px 42px rgba(0,0,0,.55)!important;
+}
+.space-planet:before{
+  content:""!important;
+  inset:0!important;
+  border-radius:50%!important;
+  background:radial-gradient(circle at 28% 24%,rgba(255,255,255,.18),transparent 17%),linear-gradient(135deg,rgba(255,255,255,.08),transparent 42%,rgba(0,0,0,.40) 100%)!important;
+  mix-blend-mode:screen!important;
+}
+.space-planet:after{content:none!important}
+
+/* Different fictional worlds */
+.planet-moon{background:radial-gradient(circle at 34% 28%,#f2f4f7 0 5%,#c5c8cf 27%,#858a94 56%,#454a53 79%,#11141a 100%)!important}
+.planet-orange{background:radial-gradient(circle at 32% 27%,#ffdca5 0 5%,#df884b 24%,#9b4634 50%,#421f27 77%,#09050b 100%)!important}
+.planet-blue{background:radial-gradient(circle at 31% 25%,#e6fbff 0 5%,#61c5e4 20%,#2b739f 45%,#123c61 72%,#030a14 100%)!important}
+.planet-purple{background:radial-gradient(circle at 32% 26%,#f4e7ff 0 5%,#b78be4 22%,#70499f 48%,#302044 75%,#07040c 100%)!important}
+.planet-ice{background:radial-gradient(circle at 30% 25%,#f4ffff 0 5%,#9ee7ee 21%,#4d91b1 47%,#21465f 74%,#050c12 100%)!important}
+.planet-red{background:radial-gradient(circle at 32% 26%,#ffd6cc 0 5%,#d56d63 21%,#873b43 48%,#3c1d2b 74%,#09050a 100%)!important}
+.planet-ringed{background:radial-gradient(circle at 31% 25%,#fff0c9 0 5%,#d2a765 22%,#91663e 47%,#4a332a 73%,#0a0709 100%)!important}
+.planet-green{background:radial-gradient(circle at 32% 26%,#e6ffe9 0 5%,#75c98b 22%,#397454 48%,#183c30 74%,#050b08 100%)!important}
+.planet-gold{background:radial-gradient(circle at 32% 25%,#fff0bd 0 5%,#d9b75c 22%,#91752f 48%,#4a3c1b 74%,#090805 100%)!important}
+
+/* Saturn-style fictional ring */
+.planet-ringed:after{
+  content:""!important;
+  display:block!important;
+  width:300px!important;height:70px!important;
+  left:-50px!important;top:65px!important;
+  border:8px solid rgba(220,205,170,.48)!important;
+  border-left-color:rgba(255,235,190,.70)!important;
+  border-right-color:rgba(110,85,60,.28)!important;
+  border-radius:50%!important;
+  transform:rotate(-17deg)!important;
+}
+
+/* Main hub sun — fictional cinematic sun, not a real photo */
+.space-sun{
+  background-image:none!important;
+  background:
+    radial-gradient(circle at 36% 30%,#fff9c7 0 4%,#ffd34d 13%,#ff8a18 34%,#e43d0b 58%,#6d1207 78%,#180301 100%)!important;
+  box-shadow:
+    0 0 55px 18px rgba(255,154,35,.42),
+    0 0 140px 55px rgba(255,112,0,.22),
+    0 0 260px 100px rgba(255,72,0,.12)!important;
+}
+
+/* All available Nightfall pages get their own planet */
+.page-index .planet-blue{display:block!important}
+.page-commands .planet-orange{display:block!important}
+.page-guidelines .planet-red{display:block!important}
+.page-rules .planet-red{display:block!important}
+.page-announcements .planet-purple{display:block!important}
+.page-updates .planet-purple{display:block!important}
+.page-suggestions .planet-ice{display:block!important}
+.page-suggestion .planet-ice{display:block!important}
+.page-redeem .planet-gold{display:block!important}
+.page-support .planet-green{display:block!important}
+.page-login .planet-ringed{display:block!important}
+.page-auth .planet-ringed{display:block!important}
+.page-secrets .planet-ringed{display:block!important}
+.page-profile .planet-moon{display:block!important}
+.page-notifications .planet-blue{display:block!important}
+.page-servers .planet-orange{display:block!important}
+.page-home .space-sun{display:block!important}
+.page-home .planet-moon{display:block!important}
+
+/* Slow cinematic movement */
+.page-index .planet-blue,.page-home .planet-moon{animation:nf-travel-a 180s ease-in-out infinite alternate!important}
+.page-commands .planet-orange{animation:nf-travel-b 170s ease-in-out infinite alternate!important}
+.page-guidelines .planet-red,.page-rules .planet-red{animation:nf-travel-c 195s ease-in-out infinite alternate!important}
+.page-announcements .planet-purple,.page-updates .planet-purple{animation:nf-travel-d 185s ease-in-out infinite alternate!important}
+.page-suggestions .planet-ice,.page-suggestion .planet-ice{animation:nf-travel-c 190s ease-in-out infinite alternate-reverse!important}
+.page-redeem .planet-gold{animation:nf-travel-a 188s ease-in-out infinite alternate!important}
+.page-support .planet-green{animation:nf-travel-d 178s ease-in-out infinite alternate-reverse!important}
+.page-login .planet-ringed,.page-auth .planet-ringed,.page-secrets .planet-ringed{animation:nf-travel-b 200s ease-in-out infinite alternate!important}
+.page-profile .planet-moon,.page-notifications .planet-blue,.page-servers .planet-orange{animation:nf-travel-c 185s ease-in-out infinite alternate!important}
