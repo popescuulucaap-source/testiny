@@ -37,3 +37,16 @@ footer:before{content:"";position:absolute;left:6%;right:6%;top:0;height:1px;bac
 @keyframes nf-moon-drift{0%,100%{transform:translateY(0) scale(1);opacity:.72}50%{transform:translateY(12px) scale(1.035);opacity:.9}}@keyframes nf-mist{to{transform:translateX(7%) scale(1.06)}}@keyframes nf-stars{to{background-position:157px 217px,300px 130px}}
 @media(max-width:700px){.night-moon{width:105px;height:105px;top:78px;right:4vw;opacity:.48}.night-mist{top:130px;height:120px}}
 @media(prefers-reduced-motion:reduce){.night-moon,.night-mist,.night-stars{animation:none}}
+
+/* ===== VISIBLE SITEWIDE MOON CINEMATIC ===== */
+body{background:
+ radial-gradient(circle at 82% 8%,rgba(190,185,255,.10),transparent 18%),
+ radial-gradient(circle at 18% 42%,rgba(92,67,170,.09),transparent 28%),
+ #05060b!important;}
+.night-moon{z-index:0!important;top:92px!important;right:7vw!important;width:210px!important;height:210px!important;opacity:.82!important;background:radial-gradient(circle at 38% 34%,#fff 0,#efeeff 30%,#c9c7e8 62%,#8d8aa8 100%)!important;box-shadow:0 0 45px rgba(220,218,255,.55),0 0 140px rgba(145,130,255,.22)!important}
+.night-stars{z-index:0!important;opacity:.55!important}
+.night-mist{z-index:0!important;opacity:.7!important}
+.nav,main,footer{position:relative;z-index:1}
+.nav{background:rgba(5,6,12,.66)!important}
+main:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,8,25,.08),transparent 30%,rgba(3,4,9,.18));z-index:-1}
+@media(max-width:700px){.night-moon{width:125px!important;height:125px!important;top:80px!important;right:3vw!important;opacity:.62!important}}
