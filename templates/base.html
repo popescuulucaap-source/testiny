@@ -15,20 +15,20 @@
 </head>
 <body class="nightfall-space-page page-{{ request.endpoint|default('home')|replace('_', '-') }}">
   <div class="space-scene" aria-hidden="true">
-    <div class="space-nebula space-nebula-a"></div>
-    <div class="space-nebula space-nebula-b"></div>
-    <div class="space-sun" aria-hidden="true"></div>
+    <div class="space-stars-photo"></div>
     <div class="space-stars space-stars-a"></div>
     <div class="space-stars space-stars-b"></div>
-    <div class="space-planet planet-moon"></div>
-    <div class="space-planet planet-orange"></div>
-    <div class="space-planet planet-blue"></div>
-    <div class="space-planet planet-purple"></div>
-    <div class="space-planet planet-ice"></div>
-    <div class="space-planet planet-red"></div>
-    <div class="space-planet planet-ringed"></div>
-    <div class="space-planet planet-green"></div>
-    <div class="space-planet planet-gold"></div>
+    <div class="space-planet planet-r136" title="R136a1"></div>
+    <div class="space-planet planet-earth" title="Earth"></div>
+    <div class="space-planet planet-mars" title="Mars"></div>
+    <div class="space-planet planet-jupiter" title="Jupiter"></div>
+    <div class="space-planet planet-saturn" title="Saturn"></div>
+    <div class="space-planet planet-uranus" title="Uranus"></div>
+    <div class="space-planet planet-neptune" title="Neptune"></div>
+    <div class="space-planet planet-pluto" title="Pluto"></div>
+    <div class="space-planet planet-kepler16b" title="Kepler-16b"></div>
+    <div class="space-planet planet-k218b" title="K2-18b"></div>
+    <div class="space-planet planet-kepler186f" title="Kepler-186f"></div>
   </div>
 {% if request.endpoint == 'index' %}<div id="nightfall-loader" class="site-loader" aria-hidden="true"><div class="loader-halo"></div><div class="loader-flight"><img class="loader-logo" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="loader-name">NIGHTFALL</div><div class="loader-status">A new night begins</div><div class="intro-progress"><span class="intro-progress-fill"></span></div><div class="intro-progress-label">0%</div><script>
 (function(){
