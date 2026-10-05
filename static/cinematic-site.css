@@ -15,13 +15,13 @@ radial-gradient(circle,rgba(255,255,255,.65) 0 2px,transparent 2.5px);
 background-size:53px 61px,97px 113px,181px 197px;
 background-position:13px 29px,47px 71px,91px 17px;
 opacity:.78;animation:nf-stars 95s linear infinite}
-.space-stars{position:absolute!important;inset:-20%!important;z-index:1}
+.space-stars{position:absolute!important;inset:-20%!important;z-index:10}
 .space-stars-a{opacity:.5!important;background-size:37px 43px,131px 149px!important}
 .space-stars-b{opacity:.38!important;background-size:211px 227px,307px 331px!important}
-.space-nebula{z-index:2!important;filter:blur(60px)!important;opacity:.75!important}
+.space-nebula{z-index:11!important;filter:blur(60px)!important;opacity:.75!important}
 .space-nebula-a{width:70vw!important;height:35vw!important;left:-16vw!important;top:14vh!important;background:radial-gradient(ellipse,rgba(100,55,210,.3),rgba(70,45,160,.08) 45%,transparent 72%)!important}
 .space-nebula-b{width:65vw!important;height:40vw!important;right:-18vw!important;bottom:5vh!important;background:radial-gradient(ellipse,rgba(25,105,190,.25),rgba(35,75,150,.06) 48%,transparent 74%)!important}
-.space-planet{z-index:3!important}
+.space-planet{z-index:12!important}
 .space-planet-moon{width:270px!important;height:270px!important;right:9vw!important;top:100px!important;background:
 radial-gradient(circle at 32% 27%,#fff 0 4%,#e8e8f2 18%,#bdbdca 48%,#777887 75%,#363741 100%)!important;
 box-shadow:0 0 45px rgba(225,225,255,.4),0 0 150px rgba(130,120,255,.2),inset -42px -35px 55px rgba(0,0,0,.65)!important}
