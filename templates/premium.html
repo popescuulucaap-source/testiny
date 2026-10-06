@@ -123,7 +123,7 @@
         <select id="serverSelect" class="vault-select">
           <option value="">Loading servers…</option>
         </select>
-        <button class="btn secondary" id="activateServer" type="button">Activate Premium for server</button>
+        
       </div>
     </div>
 
@@ -221,7 +221,7 @@
     }
   };
 
-  activateButton?.addEventListener('click', activateSelectedServer);
+  serverSelect?.addEventListener('change', activateSelectedServer);
 
   document.getElementById('runCommand')?.addEventListener('click', async () => {
     const guildId = serverSelect.value;
