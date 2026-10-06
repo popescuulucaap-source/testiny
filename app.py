@@ -1502,7 +1502,10 @@ def roblox_oauth_start():
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
-        # Roblox third-party OAuth examples currently use the plural prompts parameter.\n        "prompts": "login+consent",\n    }\n    return redirect(f"{ROBLOX_OAUTH_AUTHORIZE_URL}?{urlencode(params)}")
+        # Roblox third-party OAuth examples currently use the plural prompts parameter.
+        "prompts": "login+consent",
+    }
+    return redirect(f"{ROBLOX_OAUTH_AUTHORIZE_URL}?{urlencode(params)}")
 
 
 @app.get("/roblox/oauth/callback")
