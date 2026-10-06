@@ -1502,7 +1502,7 @@ def roblox_oauth_start():
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
-        "prompt": "login",
+        "prompt": "select_account",
     }
     return redirect(f"{ROBLOX_OAUTH_AUTHORIZE_URL}?{urlencode(params)}")
 
