@@ -17,7 +17,7 @@ import psycopg
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SESSION_SECRET", secrets.token_urlsafe(48))
+app.secret_key = (os.getenv("SESSION_SECRET") or os.getenv("ROBLOX_OAUTH_CLIENT_SECRET") or "").strip() or secrets.token_urlsafe(48)
 app.permanent_session_lifetime = timedelta(days=3650)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
@@ -1487,10 +1487,12 @@ def roblox_oauth_start():
         hashlib.sha256(code_verifier.encode("ascii")).digest()
     ).rstrip(b"=").decode("ascii")
 
+    session.permanent = True
     session["roblox_oauth"] = {
         "state": state,
         "code_verifier": code_verifier,
         "discord_id": str(discord_id),
+        "redirect_uri": ROBLOX_OAUTH_REDIRECT_URI,
     }
     params = {
         "client_id": ROBLOX_OAUTH_CLIENT_ID,
@@ -1535,7 +1537,7 @@ def roblox_oauth_callback():
                 "code": code,
                 "client_id": ROBLOX_OAUTH_CLIENT_ID,
                 "client_secret": ROBLOX_OAUTH_CLIENT_SECRET,
-                "redirect_uri": ROBLOX_OAUTH_REDIRECT_URI,
+                "redirect_uri": str(oauth.get("redirect_uri") or ROBLOX_OAUTH_REDIRECT_URI),
                 "code_verifier": oauth["code_verifier"],
             },
             timeout=12,
