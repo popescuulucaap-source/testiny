@@ -23,8 +23,13 @@
         <li>Premium rewards and extra arcade features</li>
         <li>Premium Vault access</li>
       </ul>
-      <a class="btn primary premium-buy" href="{{ premium_full_url }}" target="_blank" rel="noopener">Buy Premium • {{ premium_full_price }} Robux</a>
-      <p class="notice">The button opens Roblox's official purchase page. The website never asks for your Roblox password.</p>
+      {% if link and link.roblox_user_id %}
+        <a class="btn primary premium-buy" href="{{ premium_full_url }}" target="_blank" rel="noopener">Buy Premium • {{ premium_full_price }} Robux</a>
+        <p class="notice">Roblox is connected. The button opens Roblox's official purchase page. Nightfall never asks for your Roblox password.</p>
+      {% else %}
+        <a class="btn secondary premium-buy" href="#robloxConnection">Connect Roblox to unlock purchase</a>
+        <p class="notice">Connect Roblox first. Premium and Vault purchases stay locked until your Roblox account is linked.</p>
+      {% endif %}
     </article>
 
     <article class="card premium-plan premium-plan-offer">
@@ -40,7 +45,11 @@
           <li>8 Ball</li>
           <li>Premium Vault</li>
         </ul>
-        <a class="btn primary premium-buy" href="{{ premium_arcade_url }}" target="_blank" rel="noopener">Buy arcade offer • {{ premium_arcade_price }} Robux</a>
+        {% if link and link.roblox_user_id %}
+          <a class="btn primary premium-buy" href="{{ premium_arcade_url }}" target="_blank" rel="noopener">Buy arcade offer • {{ premium_arcade_price }} Robux</a>
+        {% else %}
+          <a class="btn secondary premium-buy" href="#robloxConnection">Connect Roblox to unlock purchase</a>
+        {% endif %}
       {% else %}
         <div class="premium-price premium-hidden-price"><strong>LOCKED</strong></div>
         <p>Complete the Nightfall arcade and redeem the reward code first. This offer stays hidden until the arcade reward is actually redeemed.</p>
@@ -110,9 +119,12 @@
         <h2>Control a selected server</h2>
         <p>Premium is activated per Discord server. Select a server below after buying Premium or redeeming <strong>started</strong>.</p>
       </div>
-      <select id="serverSelect" class="vault-select">
-        <option value="">Loading servers…</option>
-      </select>
+      <div class="actions">
+        <select id="serverSelect" class="vault-select">
+          <option value="">Loading servers…</option>
+        </select>
+        <button class="btn secondary" id="activateServer" type="button">Activate Premium for server</button>
+      </div>
     </div>
 
     <div class="vault-command-grid">
@@ -156,6 +168,32 @@
   const commandSelect = document.getElementById('commandSelect');
   const val = id => document.getElementById(id)?.value.trim() || '';
 
+  const activateButton = document.getElementById('activateServer');
+
+  const activateSelectedServer = async () => {
+    if (!serverSelect.value) {
+      result.textContent = 'Select a Discord server first.';
+      return;
+    }
+    result.textContent = 'Activating Premium for this server…';
+    activateButton.disabled = true;
+    try {
+      const r = await fetch('/api/premium/activate-guild', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({guild_id: serverSelect.value})
+      });
+      const body = await r.json();
+      if (!r.ok || !body.ok) throw new Error(body.error || 'Could not activate Premium.');
+      result.textContent = 'Premium is active for this server.';
+      await loadServers();
+    } catch (e) {
+      result.textContent = e.message || 'Could not activate Premium.';
+    } finally {
+      activateButton.disabled = false;
+    }
+  };
+
   const loadServers = async () => {
     try {
       const r = await fetch('/api/premium/servers');
@@ -170,31 +208,20 @@
       });
       if (!data.servers?.length) {
         serverSelect.innerHTML = '<option value="">No manageable Nightfall servers found</option>';
+        activateButton.disabled = true;
+        result.textContent = 'No manageable Nightfall servers found.';
       } else {
-        const activateServer = async () => {
-          if (!serverSelect.value) return;
-          result.textContent = 'Activating Premium for this server…';
-          try {
-            const r = await fetch('/api/premium/activate-guild', {
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({guild_id: serverSelect.value})
-            });
-            const body = await r.json();
-            if (!r.ok || !body.ok) throw new Error(body.error || 'Could not activate Premium.');
-            result.textContent = 'Premium is active for this server.';
-          } catch (e) {
-            result.textContent = e.message || 'Could not activate Premium.';
-          }
-        };
-        serverSelect.addEventListener('change', activateServer);
-        activateServer();
+        activateButton.disabled = false;
+        result.textContent = 'Select a server, then click Activate Premium for server.';
       }
     } catch (e) {
       serverSelect.innerHTML = '<option value="">Could not load servers</option>';
+      activateButton.disabled = true;
       result.textContent = e.message || 'Could not load servers.';
     }
   };
+
+  activateButton?.addEventListener('click', activateSelectedServer);
 
   document.getElementById('runCommand')?.addEventListener('click', async () => {
     const guildId = serverSelect.value;
