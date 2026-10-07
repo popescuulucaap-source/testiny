@@ -1648,6 +1648,33 @@ def roblox_link_claim():
         conn.commit()
     return jsonify({"ok": True, "discord_id": discord_id})
 
+@app.post("/api/roblox/premium-status")
+def roblox_premium_status():
+    if not ROBLOX_BRIDGE_SECRET:
+        return jsonify({"ok": False, "error": "Roblox bridge is not configured."}), 503
+    supplied = request.headers.get("X-Roblox-Bridge-Key", "")
+    if not compare_digest(supplied, ROBLOX_BRIDGE_SECRET):
+        return jsonify({"ok": False, "error": "Unauthorized"}), 401
+    payload = request.get_json(silent=True) or {}
+    roblox_user_id = str(payload.get("roblox_user_id") or "").strip()
+    if not roblox_user_id.isdigit():
+        return jsonify({"ok": False, "error": "Invalid Roblox user ID."}), 400
+    if not DATABASE_URL:
+        return jsonify({"ok": False, "error": "Shared database unavailable."}), 503
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT premium, premium_source, premium_expires_at FROM roblox_links WHERE roblox_user_id=%s",
+            (roblox_user_id,),
+        ).fetchone()
+    if not row:
+        return jsonify({"ok": True, "linked": False, "premium": False, "source": "none", "expires_at": 0})
+    premium = bool(row[0])
+    source = str(row[1] or "none")
+    expires_at = float(row[2] or 0)
+    if source == "started" and expires_at <= time.time():
+        premium = False
+    return jsonify({"ok": True, "linked": True, "premium": premium, "source": source, "expires_at": expires_at})
+
 @app.post("/api/roblox/premium-sync")
 def roblox_premium_sync():
     if not ROBLOX_BRIDGE_SECRET:
