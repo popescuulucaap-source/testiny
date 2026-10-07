@@ -85,18 +85,28 @@ CHANNEL_SETTINGS = {
     "command_channel_id", "vouch_channel_id", "feedback_channel_id",
     "proof_channel_id", "gamble_channel_id", "staff_application_channel_id",
     "jail_category_id", "jail_chat_channel_id", "jail_appeal_channel_id",
-    "autoreaction_channel_id",
+    "autoreaction_channel_id", "modlog_channel_id", "levelup_channel_id",
+    "analytics_channel_id", "automod_log_channel_id", "giveaway_channel_id"
 }
-ROLE_SETTINGS = {"staff_role_id", "autorole_id", "booster_role_id", "jail_role_id", "verified_role_id", "unverified_role_id"}
-TOGGLE_SETTINGS = {"anti_raid", "anti_nuke", "anti_link", "j4j", "j4j_dm", "jail_enabled"}
-TEXT_SETTINGS = {"prefix", "autoreaction_emoji", "appeal_invite_url"}
-EDITABLE_SETTINGS = CHANNEL_SETTINGS | ROLE_SETTINGS | TOGGLE_SETTINGS | TEXT_SETTINGS | {"appeal_server_id", "ticket_options", "ticket_questions"}
+ROLE_SETTINGS = {"staff_role_id", "autorole_id", "booster_role_id", "jail_role_id", "verified_role_id", "unverified_role_id", "muted_role_id"}
+TOGGLE_SETTINGS = {
+    "anti_raid", "anti_nuke", "anti_link", "j4j", "j4j_dm", "jail_enabled",
+    "automod_spam", "automod_flood", "automod_mentions", "automod_bad_words",
+    "xp_enabled", "economy_enabled", "analytics_enabled", "ai_memory_enabled",
+    "giveaway_require_role"
+}
+TEXT_SETTINGS = {"prefix", "autoreaction_emoji", "appeal_invite_url", "automod_punishment"}
+EDITABLE_SETTINGS = CHANNEL_SETTINGS | ROLE_SETTINGS | TOGGLE_SETTINGS | TEXT_SETTINGS | {
+    "appeal_server_id", "ticket_options", "ticket_questions", "automod_max_messages",
+    "automod_window_seconds", "automod_mention_limit", "xp_per_message",
+    "xp_cooldown_seconds", "daily_coins"
+}
 SETTING_GROUPS = [
-    ("general", "General", "Identity and moderation logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel ID", "id"), ("staff_role_id", "Staff role ID", "id")]),
-    ("community", "Community", "Welcome, feedback, invites, applications and more", [("welcome_channel_id", "Welcome channel ID", "id"), ("leave_channel_id", "Leave channel ID", "id"), ("autorole_id", "Auto role ID", "id"), ("vouch_channel_id", "Vouch channel ID", "id"), ("feedback_channel_id", "Feedback channel ID", "id"), ("proof_channel_id", "Proof channel ID", "id"), ("booster_role_id", "Booster role ID", "id"), ("staff_application_channel_id", "Applications channel ID", "id"), ("autoreaction_channel_id", "Auto reaction channel ID", "id"), ("autoreaction_emoji", "Auto reaction emoji", "text")]),
-    ("security", "Security", "Protection, verification and command access", [("anti_raid", "Anti raid protection", "toggle"), ("anti_nuke", "Anti nuke protection", "toggle"), ("anti_link", "Block links", "toggle"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel ID", "id"), ("command_channel_id", "Command only channel ID", "id")]),
-    ("tickets", "Tickets & appeals", "Ticket panel, categories and appeal routing", [("ticket_panel_channel_id", "Ticket panel channel ID", "id"), ("ticket_category_id", "Ticket category ID", "id"), ("ticket_options", "Ticket types (comma separated)", "list"), ("ticket_questions", "Ticket questions (JSON)", "json"), ("appeal_server_id", "Appeal server ID", "id"), ("appeal_invite_url", "Appeal invite URL", "text")]),
-    ("moderation", "Moderation & jail", "Jail roles, rooms and game channel", [("jail_role_id", "Jail role ID", "id"), ("jail_category_id", "Jail category ID", "id"), ("jail_chat_channel_id", "Jail chat channel ID", "id"), ("jail_appeal_channel_id", "Jail appeals channel ID", "id"), ("gamble_channel_id", "Games channel ID", "id")]),
+    ("general", "General", "Identity, prefix and logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel", "channel"), ("staff_role_id", "Staff role", "role")]),
+    ("community", "Community", "Welcome, roles, feedback, applications and XP", [("welcome_channel_id", "Welcome channel", "channel"), ("leave_channel_id", "Leave channel", "channel"), ("autorole_id", "Auto role", "role"), ("vouch_channel_id", "Vouch channel", "channel"), ("feedback_channel_id", "Feedback channel", "channel"), ("proof_channel_id", "Proof channel", "channel"), ("booster_role_id", "Booster role", "role"), ("staff_application_channel_id", "Applications channel", "channel"), ("autoreaction_channel_id", "Auto reaction channel", "channel"), ("autoreaction_emoji", "Auto reaction emoji", "text"), ("xp_enabled", "XP & levels", "toggle"), ("levelup_channel_id", "Level-up channel", "channel"), ("xp_per_message", "XP per message", "number"), ("xp_cooldown_seconds", "XP cooldown (seconds)", "number")]),
+    ("security", "Security & Auto-Mod", "Automatic protection and moderation", [("anti_raid", "Anti-raid protection", "toggle"), ("anti_nuke", "Anti-nuke protection", "toggle"), ("anti_link", "Block links", "toggle"), ("automod_spam", "Anti-spam", "toggle"), ("automod_flood", "Anti-flood", "toggle"), ("automod_mentions", "Mention protection", "toggle"), ("automod_bad_words", "Configured word filter", "toggle"), ("automod_punishment", "Auto-mod punishment", "text"), ("automod_max_messages", "Max messages in window", "number"), ("automod_window_seconds", "Spam window (seconds)", "number"), ("automod_mention_limit", "Mention limit", "number"), ("automod_log_channel_id", "Auto-mod log channel", "channel"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel", "channel"), ("command_channel_id", "Command-only channel", "channel")]),
+    ("tickets", "Tickets & appeals", "Ticket panel, categories, questions and appeals", [("ticket_panel_channel_id", "Ticket panel channel", "channel"), ("ticket_category_id", "Ticket category", "channel"), ("ticket_options", "Ticket types (comma separated)", "list"), ("ticket_questions", "Ticket questions (JSON)", "json"), ("appeal_server_id", "Appeal server ID", "number"), ("appeal_invite_url", "Appeal invite URL", "text")]),
+    ("moderation", "Moderation & jail", "Jail, giveaways and analytics", [("jail_role_id", "Jail role", "role"), ("jail_category_id", "Jail category", "channel"), ("jail_chat_channel_id", "Jail chat", "channel"), ("jail_appeal_channel_id", "Jail appeals", "channel"), ("giveaway_channel_id", "Giveaway channel", "channel"), ("giveaway_require_role", "Giveaways require role", "toggle"), ("analytics_enabled", "Server analytics", "toggle"), ("analytics_channel_id", "Analytics channel", "channel"), ("economy_enabled", "Community economy", "toggle"), ("daily_coins", "Daily coins", "number"), ("ai_memory_enabled", "AI channel memory", "toggle")]),
 ]
 
 
@@ -1345,6 +1355,33 @@ def dashboard(guild_id):
         setting_groups=SETTING_GROUPS,
         dashboard_stats=dashboard_stats,
     )
+
+
+@app.get("/api/dashboard/<guild_id>/resources")
+@login_required
+def dashboard_resources(guild_id):
+    """Return live Discord channels/roles for the setup dropdowns; no IDs need to be typed."""
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    try:
+        gid = str(guild_id)
+        channels_resp = requests.get(f"{DISCORD_API}/guilds/{gid}/channels", headers=discord_headers(), timeout=12)
+        roles_resp = requests.get(f"{DISCORD_API}/guilds/{gid}/roles", headers=discord_headers(), timeout=12)
+        if channels_resp.status_code != 200 or roles_resp.status_code != 200:
+            return jsonify({"ok": False, "error": "Discord did not return the server channels/roles."}), 502
+        channels = channels_resp.json()
+        roles = roles_resp.json()
+        channel_items = [
+            {"id": str(x["id"]), "name": x.get("name",""), "type": int(x.get("type",0)), "position": int(x.get("position",0))}
+            for x in channels if int(x.get("type",0)) in {0,2,4,5,13,15}
+        ]
+        role_items = [
+            {"id": str(x["id"]), "name": x.get("name",""), "position": int(x.get("position",0))}
+            for x in roles if str(x.get("id")) != str(guild_id)
+        ]
+        return jsonify({"ok": True, "channels": channel_items, "roles": role_items})
+    except (requests.RequestException, ValueError, TypeError):
+        return jsonify({"ok": False, "error": "Could not load Discord channels and roles."}), 502
 
 
 @app.post("/api/dashboard/<guild_id>/settings")
