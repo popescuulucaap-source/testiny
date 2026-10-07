@@ -11,8 +11,7 @@
     <span class="eyebrow">STARTED • 3 MONTHS</span>
     <h2>Redeem your free Premium time</h2>
     <p>Enter <strong>started</strong> here to receive 3 months of Premium. It can be redeemed only once per account.</p>
-    <form id="startedForm" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-top:20px;">
-      <input id="startedCode" type="text" maxlength="40" autocomplete="off" placeholder="Ready to redeem" required style="width:100%;padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:inherit;font:inherit;">
+    <form id="startedForm" style="margin-top:20px;">
       <button class="btn primary" type="submit">Redeem Premium</button>
     </form>
     <div id="startedResult" role="status" aria-live="polite" style="margin-top:12px;"></div>
@@ -35,12 +34,12 @@
 <script>
 document.getElementById('startedForm')?.addEventListener('submit',async(e)=>{
   e.preventDefault();
-  const result=document.getElementById('startedResult'), input=document.getElementById('startedCode');
+  const result=document.getElementById('startedResult');
   result.textContent='Checking code…';
   try{
-    const r=await fetch('/api/premium/redeem-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:input.value.trim()})});
+    const r=await fetch('/api/premium/redeem-started',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:'started'})});
     const data=await r.json();
-    result.textContent=data.ok?'✓ 3 months of Premium activated.':'✕ '+(data.error||'Invalid code.');
+    result.textContent=data.ok?'✓ Premium activated for 3 months.':'✕ '+(data.error||'Could not activate Premium.');
     if(data.ok) setTimeout(()=>location.reload(),700);
   }catch(err){result.textContent='✕ Could not connect to the redemption system.';}
 });
