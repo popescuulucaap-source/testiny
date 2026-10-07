@@ -120,11 +120,29 @@ local function getPremiumStatus(userId)
     if ownsPass(userId, DISCOUNT_PREMIUM_PASS_ID) then
         return true, "arcade_pass", 0
     end
+
     local data = getData(userId)
     local expiresAt = getTemporaryExpiry(data)
     if expiresAt > 0 then
         return true, "started", expiresAt
     end
+
+    -- Also read the website entitlement. This is what makes a website-redeemed
+    -- "started" reward available inside Roblox without requiring a second redemption.
+    local ok, response = websitePost("/api/roblox/premium-status", {
+        roblox_user_id = tostring(userId),
+    })
+    if ok and type(response) == "table" and response.premium == true then
+        local websiteExpiry = tonumber(response.expires_at) or 0
+        if websiteExpiry > 0 then
+            data = data or {}
+            data.premiumExpiresAt = websiteExpiry
+            data.premiumSource = tostring(response.source or "started")
+            cache[userId] = data
+        end
+        return true, tostring(response.source or "started"), websiteExpiry
+    end
+
     return false, "none", 0
 end
 
