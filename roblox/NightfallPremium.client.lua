@@ -12,6 +12,7 @@ local remotes = ReplicatedStorage:WaitForChild("NightfallPremium")
 local linkFunction = remotes:WaitForChild("LinkAccount")
 local statusFunction = remotes:WaitForChild("GetStatus")
 local redeemFunction = remotes:WaitForChild("RedeemCode")
+local dailyRewardFunction = remotes:WaitForChild("ClaimDailyReward")
 local purchaseEvent = remotes:WaitForChild("PremiumPurchase")
 
 local FULL_PREMIUM_PASS_ID = 1747241092
@@ -38,8 +39,8 @@ Instance.new("UICorner", open).CornerRadius = UDim.new(0, 12)
 
 local panel = Instance.new("Frame")
 panel.Name = "PremiumPanel"
-panel.Size = UDim2.fromOffset(430, 620)
-panel.Position = UDim2.new(1, 20, 0.5, -310)
+panel.Size = UDim2.fromOffset(430, 770)
+panel.Position = UDim2.new(1, 20, 0.5, -385)
 panel.BackgroundColor3 = Color3.fromRGB(9, 11, 18)
 panel.BackgroundTransparency = 0.02
 panel.BorderSizePixel = 0
@@ -107,13 +108,26 @@ local buyFull = makeButton("BuyPremium", "GET PREMIUM — 179 ROBUX", 112, 46)
 local buyOffer = makeButton("ArcadeOffer", "ARCADE OFFER — 70 ROBUX", 166, 46)
 buyOffer.Visible = false
 
+local badge = Instance.new("TextLabel")
+badge.Size = UDim2.fromOffset(118, 28)
+badge.Position = UDim2.new(1, -138, 0, 70)
+badge.BackgroundColor3 = Color3.fromRGB(104, 84, 255)
+badge.Text = "✦ PREMIUM"
+badge.TextColor3 = Color3.fromRGB(255,255,255)
+badge.TextSize = 11
+badge.Font = Enum.Font.GothamBold
+badge.BorderSizePixel = 0
+badge.Visible = false
+badge.Parent = panel
+Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 10)
+
 local features = Instance.new("TextLabel")
 features.Size = UDim2.new(1, -40, 0, 150)
 features.Position = UDim2.fromOffset(20, 222)
 features.BackgroundColor3 = Color3.fromRGB(18, 21, 32)
 features.BackgroundTransparency = 0.15
 features.BorderSizePixel = 0
-features.Text = "PREMIUM FEATURES\n\nCustomization  •  AI features  •  8 Ball\nPremium themes  •  Profile effects  •  UI colors\nPremium badge  •  Name/chat effects\nExclusive backgrounds  •  Daily rewards\nExtra arcade rewards  •  Titles  •  Early access\nVault access"
+features.Text = "PREMIUM VAULT UNLOCKS\n\n🎨 Custom themes + UI colors\n🤖 AI features + 8 Ball\n✦ Premium badge + name effects\n🌌 Space backgrounds + profile effects\n🎁 Daily rewards + extra arcade rewards\n🏆 Premium titles + leaderboard badge\n⚡ Early access + Premium Vault"
 features.TextColor3 = Color3.fromRGB(205,208,220)
 features.TextSize = 12
 features.Font = Enum.Font.Gotham
@@ -123,9 +137,13 @@ features.TextYAlignment = Enum.TextYAlignment.Top
 features.Parent = panel
 Instance.new("UICorner", features).CornerRadius = UDim.new(0, 14)
 
+local customize = makeButton("Customize", "OPEN CUSTOMIZATION", 384, 42)
+local daily = makeButton("DailyReward", "CLAIM DAILY REWARD", 434, 42)
+local eight = makeButton("EightBall", "ASK 8 BALL", 484, 42)
+
 local codeTitle = Instance.new("TextLabel")
 codeTitle.Size = UDim2.new(1, -40, 0, 24)
-codeTitle.Position = UDim2.fromOffset(20, 384)
+codeTitle.Position = UDim2.fromOffset(20, 538)
 codeTitle.BackgroundTransparency = 1
 codeTitle.Text = "REDEEM STARTED — 3 MONTHS FREE PREMIUM"
 codeTitle.TextColor3 = Color3.fromRGB(255,255,255)
@@ -136,7 +154,7 @@ codeTitle.Parent = panel
 
 local codeBox = Instance.new("TextBox")
 codeBox.Size = UDim2.new(1, -140, 0, 42)
-codeBox.Position = UDim2.fromOffset(20, 414)
+codeBox.Position = UDim2.fromOffset(20, 568)
 codeBox.BackgroundColor3 = Color3.fromRGB(22, 25, 37)
 codeBox.PlaceholderText = "Enter started"
 codeBox.Text = ""
@@ -149,13 +167,13 @@ codeBox.BorderSizePixel = 0
 codeBox.Parent = panel
 Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 11)
 
-local redeem = makeButton("Redeem", "REDEEM", 414, 42)
+local redeem = makeButton("Redeem", "REDEEM", 568, 42)
 redeem.Size = UDim2.fromOffset(100, 42)
-redeem.Position = UDim2.new(1, -120, 0, 414)
+redeem.Position = UDim2.new(1, -120, 0, 568)
 
 local linkBox = Instance.new("TextBox")
 linkBox.Size = UDim2.new(1, -140, 0, 42)
-linkBox.Position = UDim2.fromOffset(20, 472)
+linkBox.Position = UDim2.fromOffset(20, 618)
 linkBox.BackgroundColor3 = Color3.fromRGB(22, 25, 37)
 linkBox.PlaceholderText = "Website link code"
 linkBox.Text = ""
@@ -168,13 +186,13 @@ linkBox.BorderSizePixel = 0
 linkBox.Parent = panel
 Instance.new("UICorner", linkBox).CornerRadius = UDim.new(0, 11)
 
-local link = makeButton("Link", "LINK", 472, 42)
+local link = makeButton("Link", "LINK", 618, 42)
 link.Size = UDim2.fromOffset(100, 42)
-link.Position = UDim2.new(1, -120, 0, 472)
+link.Position = UDim2.new(1, -120, 0, 618)
 
 local hint = Instance.new("TextLabel")
 hint.Size = UDim2.new(1, -40, 0, 48)
-hint.Position = UDim2.fromOffset(20, 526)
+hint.Position = UDim2.fromOffset(20, 672)
 hint.BackgroundTransparency = 1
 hint.Text = "The 70 Robux offer stays hidden until the arcade reward has been unlocked.\nUse the website to generate your account-link code."
 hint.TextColor3 = Color3.fromRGB(125,130,145)
@@ -192,13 +210,13 @@ end
 local function showPanel()
 	panel.Visible = true
 	TweenService:Create(panel, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-		Position = UDim2.new(1, -450, 0.5, -310)
+		Position = UDim2.new(1, -450, 0.5, -385)
 	}):Play()
 end
 
 local function hidePanel()
 	TweenService:Create(panel, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-		Position = UDim2.new(1, 20, 0.5, -310)
+		Position = UDim2.new(1, 20, 0.5, -385)
 	}):Play()
 end
 
@@ -220,6 +238,10 @@ local function refresh()
 
 	local offerUnlocked = data.arcadeOfferUnlocked == true or player:GetAttribute("ArcadeRewardUnlocked") == true
 	buyOffer.Visible = offerUnlocked and not data.premium
+	badge.Visible = data.premium == true
+	daily.Visible = data.premium == true
+	eight.Visible = data.premium == true
+	customize.Visible = data.premium == true
 end
 
 buyFull.MouseButton1Click:Connect(function()
@@ -292,6 +314,46 @@ player:GetAttributeChangedSignal("ArcadeRewardUnlocked"):Connect(refresh)
 
 open.MouseButton1Click:Connect(showPanel)
 close.MouseButton1Click:Connect(hidePanel)
+
+customize.MouseButton1Click:Connect(function()
+	if not player:GetAttribute("NightfallPremium") then return end
+	local current = player:GetAttribute("NightfallPremiumTheme") or "Midnight"
+	local nextTheme = current == "Midnight" and "Nebula" or current == "Nebula" and "Solar" or "Midnight"
+	player:SetAttribute("NightfallPremiumTheme", nextTheme)
+	if nextTheme == "Nebula" then
+		panel.BackgroundColor3 = Color3.fromRGB(18, 10, 36)
+		stroke.Color = Color3.fromRGB(170, 90, 255)
+	elseif nextTheme == "Solar" then
+		panel.BackgroundColor3 = Color3.fromRGB(38, 24, 10)
+		stroke.Color = Color3.fromRGB(255, 170, 60)
+	else
+		panel.BackgroundColor3 = Color3.fromRGB(9, 11, 18)
+		stroke.Color = Color3.fromRGB(104, 84, 255)
+	end
+	setStatus("Premium theme changed to " .. nextTheme .. ".", true)
+end)
+
+daily.MouseButton1Click:Connect(function()
+	daily.Active = false
+	daily.Text = "CLAIMING..."
+	local ok, data = pcall(function() return dailyRewardFunction:InvokeServer() end)
+	if ok and type(data) == "table" and data.success then
+		setStatus(data.message or "Daily Premium reward claimed!", true)
+	else
+		setStatus((type(data) == "table" and data.error) or "Daily reward unavailable.", false)
+	end
+	daily.Active = true
+	daily.Text = "CLAIM DAILY REWARD"
+end)
+
+eight.MouseButton1Click:Connect(function()
+	if not player:GetAttribute("NightfallPremium") then return end
+	local answers = {
+		"Absolutely.", "Most likely.", "The stars say yes.", "Not yet.", "Ask again later.",
+		"Definitely.", "The Nightfall is uncertain.", "Yes — go for it.", "Probably not."
+	}
+	setStatus("8 Ball: " .. answers[math.random(1, #answers)], true)
+end)
 
 panel.Visible = false
 refresh()
