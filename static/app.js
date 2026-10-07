@@ -41,6 +41,34 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById(button.dataset.tab)?.classList.add('active');
   }));
 
+  // Live Discord setup selectors: channels/roles are loaded from the connected server.
+  const loadDashboardResources=async()=>{
+    const selectors=document.querySelectorAll('select[data-resource]');
+    if(!selectors.length||!window.NIGHTFALL_GUILD_ID)return;
+    try{
+      const response=await fetch(`/api/dashboard/${window.NIGHTFALL_GUILD_ID}/resources`);
+      const data=await response.json();
+      if(!response.ok||!data.ok)throw new Error(data.error||'Could not load Discord resources.');
+      selectors.forEach(select=>{
+        const kind=select.dataset.resource;
+        const items=kind==='role'?data.roles:data.channels;
+        const current=select.dataset.current||'';
+        select.innerHTML='';
+        const none=document.createElement('option');none.value='';none.textContent=kind==='role'?'Not configured':'Not configured';select.appendChild(none);
+        items.forEach(item=>{
+          const option=document.createElement('option');
+          option.value=item.id;
+          option.textContent=kind==='role'?`@${item.name}`:(item.type===4?`📁 ${item.name}`:`# ${item.name}`);
+          if(String(item.id)===String(current))option.selected=true;
+          select.appendChild(option);
+        });
+      });
+    }catch(error){
+      selectors.forEach(select=>{select.innerHTML='<option value="">Could not load options</option>';});
+    }
+  };
+  loadDashboardResources();
+
   document.querySelectorAll('.save-settings').forEach(button=>button.addEventListener('click',async()=>{
     const group=button.closest('.setting-group'),result=group.querySelector('.save-result'),payload={};
     try{
