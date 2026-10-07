@@ -54,6 +54,7 @@ local function getRemote(className, name)
 end
 
 local redeemFunction = getRemote("RemoteFunction", "RedeemCode")
+local dailyRewardFunction = getRemote("RemoteFunction", "ClaimDailyReward")
 local statusFunction = getRemote("RemoteFunction", "GetStatus")
 local linkFunction = getRemote("RemoteFunction", "LinkAccount")
 local purchaseEvent = getRemote("RemoteEvent", "PremiumPurchase")
@@ -100,6 +101,10 @@ local function getData(userId)
     local data = loadData(userId)
     if data then cache[userId] = data end
     return data
+end
+
+local function getUtcDay()
+    return math.floor(os.time() / 86400)
 end
 
 local function getTemporaryExpiry(data)
@@ -245,6 +250,37 @@ redeemFunction.OnServerInvoke = function(player, rawCode)
     }
 end
 
+dailyRewardFunction.OnServerInvoke = function(player)
+    local premium = select(1, getPremiumStatus(player.UserId))
+    if not premium then
+        return { success = false, error = "Premium is required for daily rewards." }
+    end
+
+    local data = getData(player.UserId)
+    if not data then
+        return { success = false, error = "Premium service is temporarily unavailable." }
+    end
+
+    local today = getUtcDay()
+    if tonumber(data.lastDailyRewardDay) == today then
+        return { success = false, error = "Today's Premium reward has already been claimed. Come back tomorrow." }
+    end
+
+    data.lastDailyRewardDay = today
+    data.dailyRewardCount = (tonumber(data.dailyRewardCount) or 0) + 1
+    if not saveData(player.UserId, data) then
+        return { success = false, error = "Could not save your daily reward. Try again." }
+    end
+
+    cache[player.UserId] = data
+    player:SetAttribute("NightfallPremiumDailyRewardCount", data.dailyRewardCount)
+    return {
+        success = true,
+        reward = "Nightfall Star",
+        message = "Daily Premium reward claimed: Nightfall Star #" .. tostring(data.dailyRewardCount) .. "!"
+    }
+end
+
 statusFunction.OnServerInvoke = function(player)
     local premium, source, expiresAt = refreshAndSync(player)
     local data = getData(player.UserId)
@@ -256,6 +292,8 @@ statusFunction.OnServerInvoke = function(player)
         vaultUnlocked = premium,
         arcadeOfferUnlocked = false,
         features = PREMIUM_FEATURES,
+        dailyRewardCount = data and tonumber(data.dailyRewardCount) or 0,
+        theme = player:GetAttribute("NightfallPremiumTheme") or "Midnight",
     }
 end
 
