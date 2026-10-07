@@ -64,9 +64,16 @@
             <span>{{ label }}</span>
             {% if field_type == 'toggle' %}
               <input type="checkbox" data-setting="{{ key }}" {% if settings.get(key, false) %}checked{% endif %}>
+            {% elif field_type == 'channel' %}
+              <select data-setting="{{ key }}" data-resource="channel" data-current="{{ settings.get(key, '') or '' }}"><option value="">Loading channels…</option></select>
+              <small class="field-help">Choose a channel from your server. No ID needed.</small>
+            {% elif field_type == 'role' %}
+              <select data-setting="{{ key }}" data-resource="role" data-current="{{ settings.get(key, '') or '' }}"><option value="">Loading roles…</option></select>
+              <small class="field-help">Choose a role from your server. No ID needed.</small>
+            {% elif field_type == 'number' %}
+              <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, '') }}" min="0" max="100000">
             {% elif field_type == 'id' %}
-              <input type="text" inputmode="numeric" autocomplete="off" data-setting="{{ key }}" placeholder="Paste a Discord ID" value="{{ settings.get(key, '') or '' }}" maxlength="22">
-              <small class="field-help">Turn on Developer Mode in Discord, then right-click the channel, role, or server and choose Copy ID.</small>
+              <input type="text" inputmode="numeric" autocomplete="off" data-setting="{{ key }}" placeholder="Discord server ID" value="{{ settings.get(key, '') or '' }}" maxlength="22">
             {% elif field_type == 'list' %}
               <input type="text" data-setting="{{ key }}" placeholder="support, purchase, claim, report" value="{{ (settings.get(key, ['support', 'purchase', 'claim', 'report', 'other']) | join(', ')) }}">
             {% elif field_type == 'json' %}
