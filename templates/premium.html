@@ -103,12 +103,15 @@
     <span class="eyebrow">WHAT YOU GET</span>
     <h2>Premium features</h2>
     <div class="premium-feature-grid">
-      <div><strong>Customization</strong><span>Premium themes, profile effects, UI colors and name effects.</span></div>
-      <div><strong>AI Studio</strong><span>Premium access to Nightfall's AI-powered tools.</span></div>
-      <div><strong>8 Ball</strong><span>Unlock the Premium 8 Ball feature.</span></div>
-      <div><strong>Rewards</strong><span>Premium daily rewards, exclusive rewards and extra arcade benefits.</span></div>
-      <div><strong>Vault</strong><span>Use the protected website control center for servers you manage.</span></div>
-      <div><strong>Early Access</strong><span>Premium features and selected Nightfall updates can arrive early.</span></div>
+      <div><strong>Customization</strong><span>Premium themes, UI colors, profile effects and name effects.</span></div>
+      <div><strong>AI Studio</strong><span>Premium access to Nightfall AI tools and creative commands.</span></div>
+      <div><strong>8 Ball</strong><span>A Premium-only Nightfall 8 Ball feature.</span></div>
+      <div><strong>Premium Badge</strong><span>Show your Premium status with special identity effects.</span></div>
+      <div><strong>Rewards</strong><span>Daily Premium rewards, exclusive rewards and extra arcade benefits.</span></div>
+      <div><strong>Space Themes</strong><span>Exclusive Nightfall space backgrounds and visual themes.</span></div>
+      <div><strong>Premium Titles</strong><span>Unlock special titles and leaderboard recognition.</span></div>
+      <div><strong>Early Access</strong><span>Get selected Nightfall features before the wider release.</span></div>
+      <div><strong>Premium Vault</strong><span>Manage supported Premium bot features for your selected Discord server.</span></div>
     </div>
   </div>
 
@@ -176,7 +179,7 @@
       return;
     }
     result.textContent = 'Activating Premium for this server…';
-    activateButton.disabled = true;
+    serverSelect.disabled = true;
     try {
       const r = await fetch('/api/premium/activate-guild', {
         method:'POST',
@@ -190,7 +193,7 @@
     } catch (e) {
       result.textContent = e.message || 'Could not activate Premium.';
     } finally {
-      activateButton.disabled = false;
+      serverSelect.disabled = false;
     }
   };
 
@@ -208,15 +211,15 @@
       });
       if (!data.servers?.length) {
         serverSelect.innerHTML = '<option value="">No manageable Nightfall servers found</option>';
-        activateButton.disabled = true;
+        serverSelect.disabled = true;
         result.textContent = 'No manageable Nightfall servers found.';
       } else {
-        activateButton.disabled = false;
-        result.textContent = 'Select a server, then click Activate Premium for server.';
+        serverSelect.disabled = false;
+        result.textContent = 'Select a server. Premium activates automatically.';
       }
     } catch (e) {
       serverSelect.innerHTML = '<option value="">Could not load servers</option>';
-      activateButton.disabled = true;
+      serverSelect.disabled = true;
       result.textContent = e.message || 'Could not load servers.';
     }
   };
