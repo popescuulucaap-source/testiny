@@ -1,49 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Nightfall — Discord, under control{% endblock %}
+{% block title %}Nightfall — your server, under control{% endblock %}
 {% block content %}
 <div class="landing">
-  <section class="hero-section section-wrap">
-    <div class="hero-copy">
-      <div class="eyebrow"><span class="live-dot"></span> YOUR SERVER, JUST A LITTLE SAFER</div>
-      <h1>Less chaos.<br><span>More community.</span></h1>
-      <p class="hero-description">Meet Nightfall — the Discord bot that takes care of moderation, protects your server, and keeps your community running smoothly while you focus on the people in it.</p>
-      <div class="hero-actions">
-        <a class="button button-light" href="{{ invite_url }}">Add Nightfall to Discord <span aria-hidden="true">↗</span></a>
-        <a class="button button-quiet" href="/commands">Explore commands <span aria-hidden="true">→</span></a>
+  <section class="nf-hero nf-shell">
+    <div class="nf-hero-copy">
+      <div class="nf-pill"><i></i> DISCORD COMMUNITY BOT</div>
+      <h1>Your server.<br><span>Under control.</span></h1>
+      <p>Meet Nightfall: the all-in-one Discord companion for smarter moderation, server protection, tickets, roles, and everyday community management.</p>
+      <div class="nf-hero-actions">
+        <a class="button button-light" href="{{ invite_url }}">Add Nightfall to Discord <span>↗</span></a>
+        <a class="button button-quiet" href="/commands">Explore commands <span>→</span></a>
       </div>
-      <div class="hero-proof"><span><i>✓</i> Moderation tools</span><span><i>✓</i> Server protection</span><span><i>✓</i> Community features</span></div>
+      <div class="nf-trust"><span><b>✓</b> Moderation tools</span><span><b>✓</b> Anti-raid protection</span><span><b>✓</b> Community features</span></div>
     </div>
-    <div class="product-preview" aria-label="Nightfall moderation dashboard preview">
-      <div class="preview-topbar"><div class="window-dots"><i></i><i></i><i></i></div><span>nightfall / overview</span><span class="preview-live"><i></i> ONLINE</span></div>
-      <div class="preview-body">
-        <aside class="preview-sidebar"><div class="preview-server-icon"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""></div><div class="preview-side-item selected"><span>⌂</span> Overview</div><div class="preview-side-item"><span>⌁</span> Moderation</div><div class="preview-side-item"><span>◈</span> Protection</div><div class="preview-side-item"><span>▤</span> Tickets</div><div class="preview-side-item"><span>⚙</span> Settings</div></aside>
-        <div class="preview-main">
-          <div class="preview-greeting"><div><small>SERVER OVERVIEW</small><h3>Welcome back, admin.</h3><p>Your community is looking good.</p></div><span class="server-chip"><i></i> All systems normal</span></div>
-          <div class="preview-stats"><div class="preview-stat"><span>Protection</span><b>Active</b><small><i></i> Monitoring enabled</small></div><div class="preview-stat"><span>Commands</span><b>{{ command_count }}</b><small>Ready when you are</small></div></div>
-          <div class="preview-panel"><div class="panel-heading"><b>Protection activity</b><span>Recent</span></div><div class="activity-row"><span class="activity-icon purple">⌁</span><div><b>Anti-raid protection</b><small>Watching for unusual joins</small></div><em>Enabled</em></div><div class="activity-row"><span class="activity-icon blue">✓</span><div><b>Auto moderation</b><small>Helping keep chat clean</small></div><em>Ready</em></div><div class="activity-row"><span class="activity-icon lilac">▤</span><div><b>Community tools</b><small>Tickets, welcomes and more</small></div><em>Ready</em></div></div>
-          <div class="preview-bottom-note"><span class="shield-mini">✦</span><span><b>Nightfall is on watch.</b><small>Your moderators stay in control.</small></span><span class="note-check">✓</span></div>
-        </div>
+    <aside class="nf-profile-card" aria-label="Nightfall bot profile">
+      <div class="nf-card-glow"></div>
+      <div class="nf-profile-top">
+        <div class="nf-profile-avatar"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bot avatar"></div>
+        <div><div class="nf-profile-name">Nightfall</div><div class="nf-profile-tag">Discord moderation & community bot</div><span class="nf-online"><i></i> Built for your server</span></div>
       </div>
-      <div class="preview-glow"></div>
+      <div class="nf-profile-stats">
+        <div class="nf-profile-stat"><strong>{{ command_count }}+</strong><span>Listed commands</span></div>
+        <div class="nf-profile-stat"><strong>24/7</strong><span>Ready to help</span></div>
+        <div class="nf-profile-stat"><strong>1</strong><span>Simple prefix: !</span></div>
+      </div>
+      <div class="nf-profile-note"><span class="nf-note-icon">✦</span><span><b>One bot. More control.</b><small>Configure your server with <code>!setup</code></small></span></div>
+    </aside>
+  </section>
+
+  <section class="nf-section nf-shell">
+    <div class="nf-section-head"><div><span class="eyebrow">THE TOOLKIT</span><h2>Everything your community needs.<br><span>Nothing you don't.</span></h2></div><p>Useful features, clearly organised. Set up the tools that fit your server and let your moderators stay in control.</p></div>
+    <div class="nf-feature-grid">
+      <article class="nf-feature"><div class="nf-feature-icon">⌁</div><h3>Moderation</h3><p>Ban, kick, warn, timeout, clean up messages, manage slowmode, and keep a record of moderation actions.</p><a href="/commands">Explore moderation ↗</a></article>
+      <article class="nf-feature"><div class="nf-feature-icon">◈</div><h3>Server protection</h3><p>Use anti-raid and anti-nuke protections, configurable filters, and channel controls to help protect your community.</p><a href="/commands">Explore protection ↗</a></article>
+      <article class="nf-feature"><div class="nf-feature-icon">▤</div><h3>Tickets & appeals</h3><p>Give members a clear way to contact staff, submit ticket questions, and find your configured appeal information.</p><a href="/commands">Explore tickets ↗</a></article>
+      <article class="nf-feature"><div class="nf-feature-icon">♙</div><h3>Roles & welcome</h3><p>Configure server roles, automatic reactions, welcome and leave channels, and other community workflows.</p><a href="/commands">Explore community ↗</a></article>
+      <article class="nf-feature"><div class="nf-feature-icon">✳</div><h3>Giveaways & activities</h3><p>Run giveaways, create polls, and give your members more ways to participate in the server.</p><a href="/commands">Explore activities ↗</a></article>
+      <article class="nf-feature"><div class="nf-feature-icon">✧</div><h3>Creative commands</h3><p>Try stories, riddles, quizzes, poems, jokes, captions, name ideas, and other creative commands.</p><a href="/commands">Explore all commands ↗</a></article>
     </div>
-    <div class="hero-bottom-note"><span class="scroll-mark">↓</span> BUILT FOR THE SERVERS THAT MATTER TO YOU <span class="hero-line"></span></div>
   </section>
 
-  <section class="features-section section-wrap" id="features">
-    <div class="section-heading"><div><span class="eyebrow">THE NIGHTFALL TOOLKIT</span><h2>Everything your server needs.<br><span>Nothing in your way.</span></h2></div><p>Powerful tools with a straightforward purpose: help your moderators, protect your members, and make everyday community management easier.</p></div>
-    <div class="feature-grid">
-      <article class="feature-card feature-card-large"><div class="feature-icon icon-purple">⌁</div><span class="feature-label">01 / MODERATION</span><h3>Keep the peace.</h3><p>Handle the tough moments with moderation commands for warnings, timeouts, kicks, bans, and channel controls.</p><a href="/commands">Explore moderation <span>↗</span></a><div class="feature-visual moderation-visual"><div class="mini-mod-row"><span class="mini-avatar">M</span><span><b>Message reviewed</b><small>Auto moderation</small></span><i>Handled</i></div><div class="mini-mod-row"><span class="mini-avatar avatar-two">N</span><span><b>Member warned</b><small>Moderator action</small></span><i>Logged</i></div></div></article>
-      <article class="feature-card"><div class="feature-icon icon-blue">◈</div><span class="feature-label">02 / PROTECTION</span><h3>Stay one step ahead.</h3><p>Anti-raid and anti-nuke tools help your staff react when your server needs protection.</p><div class="feature-orbit"><span>✦</span><i></i><b></b></div></article>
-      <article class="feature-card"><div class="feature-icon icon-mint">▤</div><span class="feature-label">03 / COMMUNITY</span><h3>Make people feel at home.</h3><p>Welcome flows, tickets, roles, giveaways, and useful community features in one bot.</p><div class="community-visual"><span>Welcome!</span><div class="community-avatar">N</div><div class="community-lines"><i></i><i></i></div></div></article>
-      <article class="feature-card feature-card-wide"><div><div class="feature-icon icon-amber">✳</div><span class="feature-label">04 / EASY SETUP</span><h3>Less configuring.<br>More getting things done.</h3><p>Start with <code>!setup</code> and configure supported features for your server. Your team stays in control of what gets enabled.</p><a href="/commands">See how it works <span>↗</span></a></div><div class="setup-visual"><div class="setup-title"><span>Nightfall setup</span><i>•••</i></div><div class="setup-option"><span class="setup-option-icon">#</span><span><b>Logs channel</b><small>Choose a channel</small></span><strong>Configured ✓</strong></div><div class="setup-option"><span class="setup-option-icon">♙</span><span><b>Staff role</b><small>Choose a role</small></span><strong>Configured ✓</strong></div><div class="setup-option"><span class="setup-option-icon">◈</span><span><b>Server protection</b><small>Review your settings</small></span><strong>Ready ✓</strong></div></div></article>
+  <section class="nf-section nf-shell">
+    <div class="nf-wide-panel">
+      <div><span class="eyebrow">QUICK START</span><h2>Get set up in a few steps.</h2><p>Invite Nightfall, run the setup command, and choose the channels and roles that match your server. Staff permissions are still important for moderation features.</p><div class="nf-hero-actions"><a class="button button-light" href="{{ invite_url }}">Invite Nightfall ↗</a><a class="button button-quiet" href="/guidelines">Read guidelines</a></div></div>
+      <div class="nf-code-stack">
+        <div class="nf-code-row"><span class="nf-code-mark">01</span><span><code>Invite Nightfall</code><small>Add the bot to your Discord server</small></span></div>
+        <div class="nf-code-row"><span class="nf-code-mark">02</span><span><code>!setup</code><small>Configure supported channels, roles and tools</small></span></div>
+        <div class="nf-code-row"><span class="nf-code-mark">03</span><span><code>!help</code><small>See commands available to your server</small></span></div>
+      </div>
     </div>
   </section>
 
-  <section class="workflow-section section-wrap">
-    <div class="workflow-copy"><span class="eyebrow">MADE FOR REAL COMMUNITIES</span><h2>Your server.<br><span>Your rules.</span></h2><p>Nightfall gives your team practical tools without taking away your control. Choose what fits your community and let your staff make the calls that matter.</p><a class="text-link" href="/guidelines">Read the guidelines <span>↗</span></a></div>
-    <div class="workflow-steps"><div class="workflow-step"><span class="step-number">01</span><div><h3>Invite Nightfall</h3><p>Add the bot to your Discord server with the permissions it needs.</p></div><span class="step-check">↗</span></div><div class="workflow-step"><span class="step-number">02</span><div><h3>Run setup</h3><p>Use <code>!setup</code> to configure supported server settings.</p></div><span class="step-check">⌘</span></div><div class="workflow-step"><span class="step-number">03</span><div><h3>Get back to your community</h3><p>Use the tools you need and adjust them as your server grows.</p></div><span class="step-check">✦</span></div></div>
+  <section class="nf-cta nf-shell">
+    <span class="eyebrow">READY WHEN YOU ARE</span>
+    <h2>Make room for <span>your community.</span></h2>
+    <p>Bring moderation, protection, and community tools together with Nightfall.</p>
+    <div class="nf-hero-actions"><a class="button button-light" href="{{ invite_url }}">Add Nightfall to Discord ↗</a><a class="button button-quiet" href="{{ support_url }}" target="_blank" rel="noopener">Join support server ↗</a></div>
   </section>
-
-  <section class="final-cta section-wrap"><div class="cta-stars" aria-hidden="true">✦　 ·　 ✧　　 ·　 ✦</div><span class="eyebrow">READY WHEN YOU ARE</span><h2>Let your community<br><span>shine after dark.</span></h2><p>Bring moderation, protection, and community tools together with Nightfall.</p><div class="hero-actions"><a class="button button-light" href="{{ invite_url }}">Add Nightfall to Discord <span aria-hidden="true">↗</span></a><a class="button button-quiet" href="/support">Need help? <span aria-hidden="true">→</span></a></div></section>
 </div>
 {% endblock %}
