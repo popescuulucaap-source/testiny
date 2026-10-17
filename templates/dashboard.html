@@ -13,7 +13,7 @@
 </section>
 
 {% if bot_error %}
-<div class="card notice error bot-connection-card"><span class="eyebrow">BOT CONNECTION</span><h2>Gargand can’t reach this server yet.</h2><p>{{ bot_error }}</p><ul><li>Confirm Gargand is online and in this Discord server.</li><li>On KataBump, set <code>GARGAND_WEBSITE_URL</code> to this site’s address.</li><li>Keep <code>GARGAND_BRIDGE_SECRET</code> identical in KataBump and Render, then restart the bot.</li></ul><p>After the bot checks in, refresh this dashboard to manage settings.</p></div>
+<div class="card notice error bot-connection-card"><span class="eyebrow">BOT CONNECTION</span><h2>Gargand can’t reach this server yet.</h2><p>{{ bot_error }}</p><ul><li>Confirm Gargand is online and in this Discord server.</li><li>On Fadehost, set <code>GARGAND_WEBSITE_URL</code> to <code>https://testiny-7wuu.onrender.com</code> (or keep the legacy <code>NIGHTFALL_WEBSITE_URL</code>).</li><li>Set the same <code>GARGAND_BRIDGE_SECRET</code> in Fadehost and Render, then restart the bot. The legacy <code>NIGHTFALL_BRIDGE_SECRET</code> is also supported.</li></ul><p>After the bot checks in, refresh this dashboard to manage settings.</p></div>
 {% else %}
 <div class="dashboard-metrics" aria-label="Live server statistics">
   <article class="dashboard-metric"><span>👥</span><div><small>MEMBERS</small><strong>{{ "{:,}".format(dashboard_stats.members) }}</strong></div></article>
