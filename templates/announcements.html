@@ -1,31 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Nightfall • Updates{% endblock %}
+{% block title %}Gargand • Announcements{% endblock %}
 {% block content %}
-<section class="page-head">
-  <span class="eyebrow">NIGHTFALL CHANGELOG</span>
-  <h1>Everything that changes. In one place.</h1>
-  <p>Website updates and Discord bot updates are tracked here automatically, and admins can publish their own announcements.</p>
-</section>
+<section class="page-head"><span class="eyebrow">GARGAND CHANGELOG</span><h1>Every update. One place.</h1><p>Read website announcements, bot releases, maintenance notes and feature updates from Gargand.</p></section>
 <section class="update-center">
-  <div class="update-center-head">
-    <div><span class="eyebrow">LIVE UPDATE CENTER</span><h2>Site &amp; Bot Updates</h2></div>
-    <span class="update-center-status">● TRACKING</span>
-  </div>
+  <div class="update-center-head"><div><span class="eyebrow">LIVE UPDATE CENTRE</span><h2>Announcements</h2></div><span class="update-center-status">● UPDATE FEED</span></div>
   <div class="update-columns">
-    <section class="update-column">
-      <div class="update-column-title"><span class="update-icon">◈</span><div><h3>Site Updates</h3><p>Website, dashboard and design changes.</p></div></div>
-      <div class="updates">
-        {% for a in site_updates %}<article class="update"><span>{{ a.date }} · SITE UPDATE</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>
-        {% else %}<article class="card"><h3>No site updates yet.</h3><p>New website changes will appear here.</p></article>{% endfor %}
-      </div>
-    </section>
-    <section class="update-column">
-      <div class="update-column-title"><span class="update-icon">✦</span><div><h3>Bot Updates</h3><p>Nightfall Discord bot changes and fixes.</p></div></div>
-      <div class="updates">
-        {% for a in bot_updates %}<article class="update"><span>{{ a.date }} · BOT UPDATE</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>
-        {% else %}<article class="card"><h3>No bot updates yet.</h3><p>New bot changes will appear here automatically.</p></article>{% endfor %}
-      </div>
-    </section>
+    <section class="update-column"><div class="update-column-title"><span class="update-icon">◈</span><div><h3>Website updates</h3><p>Website, dashboard and design changes.</p></div></div><div class="updates">
+      {% for a in site_updates %}<article class="update"><span>{{ a.date }} · WEBSITE</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No website updates yet</h3><p>New announcements will appear here.</p></article>{% endfor %}
+    </div></section>
+    <section class="update-column"><div class="update-column-title"><span class="update-icon">✦</span><div><h3>Bot updates</h3><p>New features, fixes and security improvements.</p></div></div><div class="updates">
+      {% for a in bot_updates %}<article class="update"><span>{{ a.date }} · BOT</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No bot updates yet</h3><p>New bot releases will appear here.</p></article>{% endfor %}
+    </div></section>
   </div>
 </section>
 {% endblock %}
