@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Support{% endblock %}
+{% block content %}
+<section class="page-head support-head"><span class="eyebrow">NIGHTFALL SUPPORT</span><h1>Need a hand?</h1><p>Talk to an admin for a real person, or ask the Nightfall AI assistant for quick answers.</p></section>
+<section class="support-choice-grid">
+  <button class="support-choice active" data-support-tab="ai"><span>✦</span><b>AI Assistant</b><small>Quick answers about Nightfall, setup, commands and features.</small></button>
+  <button class="support-choice" data-support-tab="admin"><span>☾</span><b>Talk to an Admin</b><small>Open a support ticket and continue the conversation from this browser.</small></button>
+</section>
+<section class="support-panel" id="supportAi">
+  <div class="support-panel-head"><div><span class="eyebrow">NIGHTFALL AI</span><h2>Ask the support assistant</h2></div></div>
+  <div class="support-chat" id="aiChat"><div class="support-msg assistant">Hey! I can help with commands, setup, tickets, moderation, Premium and website features.</div></div>
+  <form class="support-form" id="aiForm"><textarea name="message" maxlength="2000" required placeholder="What do you need help with?"></textarea><button class="btn primary">Ask AI →</button></form>
+</section>
+<section class="support-panel" id="supportAdmin" hidden>
+  <div class="support-panel-head"><div><span class="eyebrow">HUMAN SUPPORT</span><h2 id="adminTitle">Open a support ticket</h2></div></div>
+  <div id="ticketSetup">
+    <form class="support-form" id="ticketForm"><input name="name" maxlength="40" placeholder="Your name (optional)"><input name="subject" maxlength="120" placeholder="What do you need help with?" required><textarea name="message" maxlength="2000" required placeholder="Explain the problem…"></textarea><button class="btn primary">Send to an Admin →</button></form>
+  </div>
+  <div id="ticketChat" hidden><div class="support-chat" id="ticketMessages"></div><form class="support-form" id="ticketReply"><textarea name="message" maxlength="2000" required placeholder="Reply to the admin…"></textarea><button class="btn primary">Send reply →</button></form></div>
+  <p class="support-ticket-note" id="ticketNote">Your ticket ID will be saved in this browser so you can come back to the conversation.</p>
+</section>
+<script src="{{ url_for('static', filename='support.js') }}"></script>
+{% endblock %}
