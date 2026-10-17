@@ -1795,6 +1795,7 @@ def api_award_xp():
 
 COMMANDS = [
     ("!help", "Utility", "Show the bot's command help."),
+    ("!questions", "Utility", "Answer common questions about Gargand, setup, logging, security, tickets and the website dashboard."),
     ("!about", "Utility", "Show Nightfall's launch description: 1.0v LAUNCH."),
     ("!setup", "Admin tools", "Open the interactive server setup dashboard and configure features there."),
     ("!ban @member [reason]", "Moderation", "Ban a member. Staff only."),
