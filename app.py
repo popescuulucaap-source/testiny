@@ -886,6 +886,7 @@ def admin_support():
 @app.post("/admin/support/<int:ticket_id>/reply")
 def admin_support_reply(ticket_id):
     if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     message=(request.form.get("message") or "").strip()[:2000]
     if message:
         if DATABASE_URL:
@@ -1087,6 +1088,7 @@ def admin_community():
 def admin_community_video(video_id, action):
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
+    if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     if action not in {"approve","delete","strike"}:
         return "Unknown action.", 400
     if not DATABASE_URL:
@@ -1117,6 +1119,7 @@ def admin_community_video(video_id, action):
 @app.post("/admin/community/report/<int:report_id>/resolve")
 def admin_community_report(report_id):
     if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     with db_connect() as conn:
         conn.execute("UPDATE social_reports SET status='resolved' WHERE id=%s",(report_id,))
         conn.commit()
@@ -1125,6 +1128,7 @@ def admin_community_report(report_id):
 @app.post("/admin/support/<int:ticket_id>/close")
 def admin_support_close(ticket_id):
     if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     if DATABASE_URL:
         with db_connect() as conn:
             conn.execute("UPDATE support_tickets SET status='closed', updated_at=NOW() WHERE id=%s",(ticket_id,))
