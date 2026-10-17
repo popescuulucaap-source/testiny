@@ -79,13 +79,13 @@ def format_duration(value):
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://testiny-7wuu.onrender.com/oauth/callback")
-BOT_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
+BOT_BRIDGE_SECRET = (os.getenv("GARGAND_BRIDGE_SECRET") or os.getenv("NIGHTFALL_BRIDGE_SECRET") or "").strip()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_LOGIN_FAILURES = {}
 INVITE_URL = (os.getenv("INVITE_URL") or (f"https://discord.com/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&scope=bot%20applications.commands" if DISCORD_CLIENT_ID else "#")).strip()
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-NIGHTFALL_YOUTUBE_CHANNEL_ID = os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID", "").strip()
+NIGHTFALL_YOUTUBE_CHANNEL_ID = (os.getenv("GARGAND_YOUTUBE_CHANNEL_ID") or os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID") or "").strip()
 ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
 ROBLOX_OAUTH_CLIENT_ID = os.getenv("ROBLOX_OAUTH_CLIENT_ID", "").strip()
 ROBLOX_OAUTH_CLIENT_SECRET = os.getenv("ROBLOX_OAUTH_CLIENT_SECRET", "").strip()
@@ -440,7 +440,7 @@ def sync_repository_updates(force=False):
                 response = requests.get(
                     f"https://api.github.com/repos/{repo_name}/commits",
                     params={"per_page": 1},
-                    headers={"Accept": "application/vnd.github+json", "User-Agent": "Nightfall-Updates"},
+                    headers={"Accept": "application/vnd.github+json", "User-Agent": "Gargand-Updates"},
                     timeout=8,
                 )
                 if response.status_code != 200:
@@ -490,12 +490,12 @@ def init_db():
             cur.execute("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'website'")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_telemetry (id BIGSERIAL PRIMARY KEY, event_type TEXT NOT NULL, guild_id TEXT, guild_name TEXT, user_id TEXT, username TEXT, command_name TEXT, metadata TEXT NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE INDEX IF NOT EXISTS bot_telemetry_created_at_idx ON bot_telemetry(created_at DESC)")
-            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Nightfall Updates Center • Automatic tracking",))
+            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Gargand Updates Center • Automatic tracking",))
             if not cur.fetchone():
                 cur.execute(
                     "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
                     (
-                        "Nightfall Updates Center • Automatic tracking",
+                        "Gargand Updates Center • Automatic tracking",
                         "Website and bot changes are now tracked from their GitHub repositories. New commits can appear here automatically, and admins can publish their own site or bot updates from the Admin panel.",
                         "2026-10-05",
                         "website",
@@ -504,18 +504,18 @@ def init_db():
             # Seed the public bot release announcements once, without duplicating them.
             bot_releases = [
                 (
-                    "Nightfall v1.0 • Bot Update",
-                    "Nightfall v1.0 introduced the core Discord bot experience, moderation tools and server-management features.",
+                    "Gargand v1.0 • Bot Update",
+                    "Gargand v1.0 introduced the core Discord bot experience, moderation tools and server-management features.",
                     "2026-10-01",
                 ),
                 (
-                    "Nightfall v1.1 • Bot Update",
-                    "Nightfall v1.1 expanded the bot with additional server tools, protection features and quality-of-life improvements.",
+                    "Gargand v1.1 • Bot Update",
+                    "Gargand v1.1 expanded the bot with additional server tools, protection features and quality-of-life improvements.",
                     "2026-10-03",
                 ),
                 (
-                    "Nightfall v1.2 • Bot Update",
-                    "Nightfall v1.2 brought new bot improvements, expanded command support and stronger server-management features.",
+                    "Gargand v1.2 • Bot Update",
+                    "Gargand v1.2 brought new bot improvements, expanded command support and stronger server-management features.",
                     "2026-10-05",
                 ),
             ]
@@ -633,9 +633,9 @@ def index():
         ("🔐","Security","Anti-raid, anti-nuke, anti-link and verification."),
         ("🎫","Tickets","Interactive panels, questions, claims, proof and appeals."),
         ("👋","Server Tools","Welcome, leave, invites, vouches, feedback and boosters."),
-        ("⚙️","Dashboard","Manage Nightfall settings, security, tickets and server tools from the web."),
+        ("⚙️","Dashboard","Manage Gargand settings, security, tickets and server tools from the web."),
         ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
-        ("🎨","AI studio","Ask questions, create stories, jokes, poems, riddles, captions, names and quizzes with Nightfall AI."),
+        ("🎨","AI studio","Ask questions, create stories, jokes, poems, riddles, captions, names and quizzes with Gargand AI."),
     ]
     return render_template("index.html", features=features, command_count=len(COMMANDS))
 
@@ -823,7 +823,7 @@ def _support_ticket_row(row):
 def create_support_ticket():
     payload = request.get_json(silent=True) or {}
     name = str(payload.get("name") or "Anonymous").strip()[:40] or "Anonymous"
-    subject = str(payload.get("subject") or "Nightfall support").strip()[:120] or "Nightfall support"
+    subject = str(payload.get("subject") or "Gargand support").strip()[:120] or "Gargand support"
     message = str(payload.get("message") or "").strip()[:2000]
     if not message:
         return jsonify({"ok": False, "error": "Write a message first."}), 400
@@ -942,7 +942,7 @@ def _youtube_url(raw):
 
 
 def _official_youtube_videos(limit=15):
-    """Read the public Nightfall YouTube upload feed."""
+    """Read the public Gargand YouTube upload feed."""
     channel_id = NIGHTFALL_YOUTUBE_CHANNEL_ID
     if not channel_id:
         match = re.search(r"youtube\.com/channel/(UC[\w-]+)", "https://www.youtube.com/@nightfall-bot")
@@ -951,14 +951,14 @@ def _official_youtube_videos(limit=15):
         return []
     feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + channel_id
     try:
-        response = requests.get(feed_url, timeout=10, headers={"User-Agent": "Nightfall Community"})
+        response = requests.get(feed_url, timeout=10, headers={"User-Agent": "Gargand Community"})
         response.raise_for_status()
         root = ET.fromstring(response.content)
         ns = {"yt": "http://www.youtube.com/xml/schemas/2015", "media": "http://search.yahoo.com/mrss/"}
         videos = []
         for entry in root.findall("{http://www.w3.org/2005/Atom}entry")[:limit]:
             video_id = (entry.findtext("yt:videoId", default="", namespaces=ns) or "").strip()
-            title = (entry.findtext("{http://www.w3.org/2005/Atom}title", default="Nightfall upload") or "Nightfall upload").strip()
+            title = (entry.findtext("{http://www.w3.org/2005/Atom}title", default="Gargand upload") or "Gargand upload").strip()
             published = (entry.findtext("{http://www.w3.org/2005/Atom}published", default="") or "").strip()
             media_group = entry.find("media:group", ns)
             description = ""
@@ -969,7 +969,7 @@ def _official_youtube_videos(limit=15):
             videos.append({
                 "id": "youtube:" + video_id,
                 "discord_id": "",
-                "username": "Nightfall • YouTube",
+                "username": "Gargand • YouTube",
                 "avatar_url": "/static/nightfall-logo.svg",
                 "video_url": "https://www.youtube.com/watch?v=" + video_id,
                 "title": title,
@@ -981,7 +981,7 @@ def _official_youtube_videos(limit=15):
             })
         return videos
     except (requests.RequestException, ET.ParseError, ValueError) as exc:
-        app.logger.warning("Could not load Nightfall YouTube feed: %s", type(exc).__name__)
+        app.logger.warning("Could not load Gargand YouTube feed: %s", type(exc).__name__)
         return []
 
 
@@ -1078,7 +1078,7 @@ def social_report(video_id):
                 (video_id, viewer["id"], reason),
             )
         conn.commit()
-    return jsonify({"ok": True, "message": "Report sent to Nightfall moderators."})
+    return jsonify({"ok": True, "message": "Report sent to Gargand moderators."})
 
 
 @app.get("/admin/community")
@@ -1164,7 +1164,7 @@ def support_ai():
         return jsonify({"ok":True,"answer":"AI is not connected yet. You can still open Talk to an Admin and send a real support ticket."})
     model=os.getenv("OPENROUTER_TEXT_MODEL","openrouter/free")
     try:
-        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Nightfall Support"},json={"model":model,"messages":[{"role":"system","content":"You are Nightfall's website support assistant. Answer the user's actual question instead of giving a generic fallback. Help with Nightfall Discord commands, setup, moderation, tickets, website features, and troubleshooting. Be concise and honest. Never request passwords, tokens, API keys, or private credentials. If the issue requires admin access, explain that the user can open a human support ticket on the same Support page."},{"role":"user","content":message}]},timeout=20)
+        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Gargand Support"},json={"model":model,"messages":[{"role":"system","content":"You are Gargand's website support assistant. Answer the user's actual question instead of giving a generic fallback. Help with Gargand Discord commands, setup, moderation, tickets, website features, and troubleshooting. Be concise and honest. Never request passwords, tokens, API keys, or private credentials. If the issue requires admin access, explain that the user can open a human support ticket on the same Support page."},{"role":"user","content":message}]},timeout=20)
         data=r.json()
         answer=((data.get("choices") or [{}])[0].get("message") or {}).get("content")
         if not answer: raise ValueError("empty")
@@ -1358,7 +1358,7 @@ def servers():
             if icon_hash else ""
         )
 
-    bot_api_error = None if bot_online() else "Nightfall has not checked in with the website yet. Make sure the bot and bridge secret are configured."
+    bot_api_error = None if bot_online() else "Gargand has not checked in with the website yet. Make sure the bot and bridge secret are configured."
 
     return render_template(
         "servers.html",
@@ -1384,7 +1384,7 @@ def dashboard(guild_id):
     guild["icon_url"] = f"https://cdn.discordapp.com/icons/{guild_id}/{guild_icon_hash}.png?size=128" if guild_icon_hash else ""
     bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), None)
     settings = bot_guild.get("settings", {}) if bot_guild else {}
-    bot_error = None if bot_online() and bot_guild else "Nightfall is offline or is not connected to this server."
+    bot_error = None if bot_online() and bot_guild else "Gargand is offline or is not connected to this server."
 
     # Compact live server metrics for the control center.
     enabled_security = sum(bool(settings.get(key)) for key in ("anti_raid", "anti_nuke", "anti_link"))
@@ -1441,7 +1441,7 @@ def update_settings(guild_id):
     if not user_can_manage_guild(guild_id):
         return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
-        return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
+        return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict) or not payload:
         return jsonify({"ok": False, "error": "Choose at least one setting to update."}), 400
@@ -1495,7 +1495,7 @@ def dashboard_action(guild_id):
     if not user_can_manage_guild(guild_id):
         return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
-        return jsonify({"ok": False, "error": "Nightfall is offline or is not connected to this server."}), 503
+        return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
     allowed_actions = {"sync_setup", "post_ticket_panel", "post_verification_panel", "post_feedback_panel", "post_application_panel", "toggle_jail"}
     if payload.get("action") not in allowed_actions:
@@ -1526,15 +1526,15 @@ def redeem():
 
 @app.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "Nightfall Dashboard"})
+    return jsonify({"ok": True, "service": "Gargand Dashboard"})
 
 
 
 ACHIEVEMENTS = [
     ("first_steps", "🌱 First Steps", "Earn your first 100 XP.", 100),
     ("night_walker", "🌙 Night Walker", "Reach level 5.", 500),
-    ("veteran", "⭐ Nightfall Veteran", "Reach 10,000 XP.", 10000),
-    ("secret_hunter", "🥚 Secret Hunter", "Discover 10 Nightfall secrets.", 0),
+    ("veteran", "⭐ Gargand Veteran", "Reach 10,000 XP.", 10000),
+    ("secret_hunter", "🥚 Secret Hunter", "Discover 10 Gargand secrets.", 0),
     ("arcade_regular", "🎮 Arcade Regular", "Submit an Arcade score.", 0),
     ("social", "💬 Social Night", "Leave your first Community comment.", 0),
     ("popular", "👥 Night Circle", "Reach 5 followers.", 0),
@@ -1641,8 +1641,8 @@ def site_level(xp):
 def site_badges(xp):
     badges = []
     if xp >= 100: badges.append(("🌙", "Night Walker", "Reach 100 XP."))
-    if xp >= 500: badges.append(("⭐", "Nightfall Veteran", "Reach 500 XP."))
-    if xp >= 1000: badges.append(("👑", "Nightfall Legend", "Reach 1,000 XP."))
+    if xp >= 500: badges.append(("⭐", "Gargand Veteran", "Reach 500 XP."))
+    if xp >= 1000: badges.append(("👑", "Gargand Legend", "Reach 1,000 XP."))
     return badges
 
 def award_site_xp(action, amount=10):
@@ -1815,7 +1815,7 @@ def api_award_xp():
 COMMANDS = [
     ("!help", "Utility", "Show the bot's command help."),
     ("!questions", "Utility", "Answer common questions about Gargand, setup, logging, security, tickets and the website dashboard."),
-    ("!about", "Utility", "Show Nightfall's launch description: 1.0v LAUNCH."),
+    ("!about", "Utility", "Show Gargand's launch description: 1.0v LAUNCH."),
     ("!setup", "Admin tools", "Open the interactive server setup dashboard and configure features there."),
     ("!ban @member [reason]", "Moderation", "Ban a member. Staff only."),
     ("!kick @member [reason]", "Moderation", "Kick a member. Staff only."),
@@ -1832,15 +1832,15 @@ COMMANDS = [
     ("!announce #channel <message>", "Admin tools", "Post a server announcement."),
     ("!poll <question and options>", "Community", "Create a reaction poll."),
     ("!afk [reason]", "Utility", "Set your AFK status."),
-    ("!8ball <question>", "Fun", "Ask the Nightfall 8-Ball a question."),
+    ("!8ball <question>", "Fun", "Ask the Gargand 8-Ball a question."),
     ("!mommycount [@member]", "Fun", "Count how many times a member has said “mommy” in this server."),
     ("!swearcount [@member]", "Moderation", "Show the number of configured swear-word matches for a member."),
     ("!antiswear <on|off|status>", "Moderation", "Admins can enable or disable the server's configurable anti-swear filter."),
     ("!swearwords <add|remove|list> [word or phrase]", "Moderation", "Admins configure which words or phrases the anti-swear filter watches."),
-    ("!choose <option> | <option> ...", "Fun", "Let Nightfall pick one of up to 20 options."),
+    ("!choose <option> | <option> ...", "Fun", "Let Gargand pick one of up to 20 options."),
     ("!roll [NdM]", "Fun", "Roll a die, such as `!roll 20` or `!roll 3d8`."),
-    ("!rps <rock|paper|scissors>", "Fun", "Play rock, paper, scissors against Nightfall."),
-    ("!quote", "Fun", "Get a little Nightfall wisdom."),
+    ("!rps <rock|paper|scissors>", "Fun", "Play rock, paper, scissors against Gargand."),
+    ("!quote", "Fun", "Get a little Gargand wisdom."),
     ("!reverse <text>", "Fun", "Reverse a short line of text."),
     ("!mock <text>", "Fun", "mOcK a short line of text."),
     ("!color <hex>", "Utility", "Preview a six-digit color, such as `!color 8B5CF6`."),
@@ -1848,7 +1848,7 @@ COMMANDS = [
     ("!userinfo [@member]", "Utility", "Show account, server join, and role details."),
     ("!serverinfo", "Utility", "Show useful information about this server."),
     ("!aiimage <description>", "Creative AI", "Image generation is currently unavailable in the free AI setup. Alias: `!aiart`."),
-    ("!ask <question>", "Creative AI", "Ask Nightfall AI a general question and get a concise answer."),
+    ("!ask <question>", "Creative AI", "Ask Gargand AI a general question and get a concise answer."),
     ("!story <idea>", "Creative AI", "Create a short original story from your idea."),
     ("!roast [@member]", "Creative AI", "Give yourself or a member a gentle, playful roast."),
     ("!compliment [@member]", "Creative AI", "Generate a warm, upbeat compliment."),
@@ -1881,8 +1881,8 @@ COMMANDS = [
     ("!daily", "Games", "Claim your daily coins."),
     ("!balance [@member]", "Games", "Show your coin balance or another member's."),
     # Slash-command directory: keep every existing ! command above and also advertise the new / equivalents.
-    ("/help", "Utility", "Show Nightfall's command help as a Discord slash command."),
-    ("/about", "Utility", "Show Nightfall's launch information."),
+    ("/help", "Utility", "Show Gargand's command help as a Discord slash command."),
+    ("/about", "Utility", "Show Gargand's launch information."),
     ("/setup", "Admin tools", "Open the interactive server setup dashboard."),
     ("/ban @member [reason]", "Moderation", "Ban a member. Staff only."),
     ("/kick @member [reason]", "Moderation", "Kick a member. Staff only."),
@@ -1899,26 +1899,26 @@ COMMANDS = [
     ("/announce #channel <message>", "Admin tools", "Post a server announcement."),
     ("/poll <question and options>", "Community", "Create a reaction poll."),
     ("/afk [reason]", "Utility", "Set your AFK status."),
-    ("/8ball <question>", "Fun", "Ask the Nightfall 8-Ball a question."),
+    ("/8ball <question>", "Fun", "Ask the Gargand 8-Ball a question."),
     ("/mommycount [@member]", "Fun", "Count tracked uses of mommy in this server."),
     ("/swearcount [@member]", "Moderation", "Show configured swear-word match counts."),
     ("/antiswear <on|off|status>", "Moderation", "Manage the configurable anti-swear filter."),
     ("/swearwords <add|remove|list> [word or phrase]", "Moderation", "Configure filtered words or phrases."),
-    ("/choose <option> | <option> ...", "Fun", "Let Nightfall pick from up to 20 options."),
+    ("/choose <option> | <option> ...", "Fun", "Let Gargand pick from up to 20 options."),
     ("/roll [NdM]", "Fun", "Roll dice."),
     ("/rps <rock|paper|scissors>", "Fun", "Play rock, paper, scissors."),
-    ("/quote", "Fun", "Get a little Nightfall wisdom."),
+    ("/quote", "Fun", "Get a little Gargand wisdom."),
     ("/reverse <text>", "Fun", "Reverse a short line of text."),
     ("/mock <text>", "Fun", "Mock a short line of text."),
     ("/color <hex>", "Utility", "Preview a six-digit color."),
     ("/avatar [@member]", "Utility", "Show an avatar."),
     ("/userinfo [@member]", "Utility", "Show account and server details."),
     ("/serverinfo", "Utility", "Show server information."),
-    ("/ping", "Utility", "Show Nightfall latency and online status."),
+    ("/ping", "Utility", "Show Gargand latency and online status."),
     ("/membercount", "Utility", "Show total members, humans, and bots."),
     ("/roleinfo @role", "Roles", "Show useful information about a role."),
     ("/channelinfo [#channel]", "Utility", "Show useful information about a text channel."),
-    ("/ask <question>", "Creative AI", "Ask Nightfall AI a general question."),
+    ("/ask <question>", "Creative AI", "Ask Gargand AI a general question."),
     ("/story <idea>", "Creative AI", "Create a short original story."),
     ("/roast [@member]", "Creative AI", "Give a gentle playful roast."),
     ("/compliment [@member]", "Creative AI", "Generate a warm compliment."),
