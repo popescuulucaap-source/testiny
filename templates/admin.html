@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Gargand • Admin Control Room{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">PRIVATE CONTROL ROOM</span><h1>Gargand Admin</h1><p>Manage website command entries and publish announcements. These website-only command entries do not create new Discord bot functionality.</p><a class="gg-button gg-button-dark" href="/admin/logout">Log out ↗</a></section>
+<section class="gg-section">
+  <div class="gg-feature-grid">
+    <article class="gg-feature"><span class="gg-kicker">BOT STATUS</span><h3>{% if stats.bot_online %}Online{% else %}Waiting for heartbeat{% endif %}</h3><p>{{ stats.guild_count }} servers · {{ stats.member_count }} members</p></article>
+    <article class="gg-feature"><span class="gg-kicker">COMMAND LIBRARY</span><h3>{{ stats.command_count }} entries</h3><p>{{ stats.custom_command_count }} custom website entries</p></article>
+    <article class="gg-feature"><span class="gg-kicker">ANNOUNCEMENTS</span><h3>{{ stats.announcement_count }} posts</h3><p>Publish website or bot release notes.</p></article>
+  </div>
+</section>
+<section class="gg-section">
+  <div class="gg-section-head"><div><span class="gg-kicker">COMMAND LIBRARY</span><h2>Add a command entry</h2></div><p>Only commands actually implemented in the bot will run in Discord. This form updates the website list.</p></div>
+  <form class="gg-admin-form" method="post" action="/admin/command"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Command or syntax<input name="command" maxlength="120" placeholder="!example <argument>" required></label><label>Category<input name="category" maxlength="60" placeholder="Utility" required></label><label>Description<textarea name="description" maxlength="500" placeholder="Explain what the command does." required></textarea></label><button class="gg-button gg-button-bright" type="submit">Add command entry ↗</button></form>
+  <div class="gg-admin-list">{% for c in custom_commands %}<article><div><code>{{ c.command }}</code><p>{{ c.category }} · {{ c.description }}</p></div><form method="post" action="/admin/command/{{ c.id }}/delete"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="gg-button gg-button-dark" type="submit">Delete</button></form></article>{% else %}<p>No custom command entries yet.</p>{% endfor %}</div>
+</section>
+<section class="gg-section">
+  <div class="gg-section-head"><div><span class="gg-kicker">NEWS DESK</span><h2>Publish an announcement</h2></div><p>New posts will appear on the public Announcements page.</p></div>
+  <form class="gg-admin-form" method="post" action="/admin/announcement"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label>Title<input name="title" maxlength="150" placeholder="Gargand update" required></label><label>Type<select name="kind"><option value="website">Website update</option><option value="bot">Bot update</option></select></label><label>Announcement<textarea name="body" maxlength="4000" placeholder="What changed?" required></textarea></label><button class="gg-button gg-button-bright" type="submit">Publish announcement ↗</button></form>
+  <div class="gg-admin-list">{% for a in announcements %}<article><div><strong>{{ a.title }}</strong><p>{{ a.date }} · {{ a.kind }} · {{ a.body }}</p></div><form method="post" action="/admin/announcement/{{ a.id }}/delete"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="gg-button gg-button-dark" type="submit">Delete</button></form></article>{% else %}<p>No announcements published yet.</p>{% endfor %}</div>
+</section>
+{% endblock %}
