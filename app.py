@@ -1456,6 +1456,11 @@ def premium_vault():
     return redirect(url_for("index"))
 
 
+@app.get("/redeem")
+def redeem():
+    return redirect(url_for("index"))
+
+
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "service": "Nightfall Dashboard"})
