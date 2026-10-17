@@ -1,61 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Nightfall — your server, under control{% endblock %}
+{% block title %}Gargand — protection with presence{% endblock %}
 {% block content %}
-<div class="landing">
-  <section class="nf-hero nf-shell">
-    <div class="nf-hero-copy">
-      <div class="nf-pill"><i></i> DISCORD COMMUNITY BOT</div>
-      <h1>Your server.<br><span>Under control.</span></h1>
-      <p>Meet Nightfall: the all-in-one Discord companion for smarter moderation, server protection, tickets, roles, and everyday community management.</p>
-      <div class="nf-hero-actions">
-        <a class="button button-light" href="{{ invite_url }}">Add Nightfall to Discord <span>↗</span></a>
-        <a class="button button-quiet" href="/commands">Explore commands <span>→</span></a>
-      </div>
-      <div class="nf-trust"><span><b>✓</b> Moderation tools</span><span><b>✓</b> Anti-raid protection</span><span><b>✓</b> Community features</span></div>
-    </div>
-    <aside class="nf-profile-card" aria-label="Nightfall bot profile">
-      <div class="nf-card-glow"></div>
-      <div class="nf-profile-top">
-        <div class="nf-profile-avatar"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bot avatar"></div>
-        <div><div class="nf-profile-name">Nightfall</div><div class="nf-profile-tag">Discord moderation & community bot</div><span class="nf-online"><i></i> Built for your server</span></div>
-      </div>
-      <div class="nf-profile-stats">
-        <div class="nf-profile-stat"><strong>{{ command_count }}+</strong><span>Listed commands</span></div>
-        <div class="nf-profile-stat"><strong>24/7</strong><span>Ready to help</span></div>
-        <div class="nf-profile-stat"><strong>1</strong><span>Simple prefix: !</span></div>
-      </div>
-      <div class="nf-profile-note"><span class="nf-note-icon">✦</span><span><b>One bot. More control.</b><small>Configure your server with <code>!setup</code></small></span></div>
-    </aside>
-  </section>
-
-  <section class="nf-section nf-shell">
-    <div class="nf-section-head"><div><span class="eyebrow">THE TOOLKIT</span><h2>Everything your community needs.<br><span>Nothing you don't.</span></h2></div><p>Useful features, clearly organised. Set up the tools that fit your server and let your moderators stay in control.</p></div>
-    <div class="nf-feature-grid">
-      <article class="nf-feature"><div class="nf-feature-icon">⌁</div><h3>Moderation</h3><p>Ban, kick, warn, timeout, clean up messages, manage slowmode, and keep a record of moderation actions.</p><a href="/commands">Explore moderation ↗</a></article>
-      <article class="nf-feature"><div class="nf-feature-icon">◈</div><h3>Server protection</h3><p>Use anti-raid and anti-nuke protections, configurable filters, and channel controls to help protect your community.</p><a href="/commands">Explore protection ↗</a></article>
-      <article class="nf-feature"><div class="nf-feature-icon">▤</div><h3>Tickets & appeals</h3><p>Give members a clear way to contact staff, submit ticket questions, and find your configured appeal information.</p><a href="/commands">Explore tickets ↗</a></article>
-      <article class="nf-feature"><div class="nf-feature-icon">♙</div><h3>Roles & welcome</h3><p>Configure server roles, automatic reactions, welcome and leave channels, and other community workflows.</p><a href="/commands">Explore community ↗</a></article>
-      <article class="nf-feature"><div class="nf-feature-icon">✳</div><h3>Giveaways & activities</h3><p>Run giveaways, create polls, and give your members more ways to participate in the server.</p><a href="/commands">Explore activities ↗</a></article>
-      <article class="nf-feature"><div class="nf-feature-icon">✧</div><h3>Creative commands</h3><p>Try stories, riddles, quizzes, poems, jokes, captions, name ideas, and other creative commands.</p><a href="/commands">Explore all commands ↗</a></article>
-    </div>
-  </section>
-
-  <section class="nf-section nf-shell">
-    <div class="nf-wide-panel">
-      <div><span class="eyebrow">QUICK START</span><h2>Get set up in a few steps.</h2><p>Invite Nightfall, run the setup command, and choose the channels and roles that match your server. Staff permissions are still important for moderation features.</p><div class="nf-hero-actions"><a class="button button-light" href="{{ invite_url }}">Invite Nightfall ↗</a><a class="button button-quiet" href="/guidelines">Read guidelines</a></div></div>
-      <div class="nf-code-stack">
-        <div class="nf-code-row"><span class="nf-code-mark">01</span><span><code>Invite Nightfall</code><small>Add the bot to your Discord server</small></span></div>
-        <div class="nf-code-row"><span class="nf-code-mark">02</span><span><code>!setup</code><small>Configure supported channels, roles and tools</small></span></div>
-        <div class="nf-code-row"><span class="nf-code-mark">03</span><span><code>!help</code><small>See commands available to your server</small></span></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="nf-cta nf-shell">
-    <span class="eyebrow">READY WHEN YOU ARE</span>
-    <h2>Make room for <span>your community.</span></h2>
-    <p>Bring moderation, protection, and community tools together with Nightfall.</p>
-    <div class="nf-hero-actions"><a class="button button-light" href="{{ invite_url }}">Add Nightfall to Discord ↗</a><a class="button button-quiet" href="{{ support_url }}" target="_blank" rel="noopener">Join support server ↗</a></div>
-  </section>
-</div>
+<section class="gg-hero">
+  <div>
+    <span class="gg-kicker">◉ THE NEXT LEVEL OF DISCORD</span>
+    <h1>Your server.<br><span>Your rules.</span><br>Your Gargand.</h1>
+    <p>A powerful all-in-one Discord companion for moderation, anti-raid protection, tickets, community tools, and a dashboard designed to put your server in your hands.</p>
+    <div class="gg-hero-actions"><a class="gg-button gg-button-bright" href="{{ invite_url }}">Add Gargand to Discord ↗</a><a class="gg-button gg-button-dark" href="/commands">Explore commands ↓</a></div>
+    <div class="nf-trust"><span><b>✓</b> Smart moderation</span><span><b>✓</b> Server security</span><span><b>✓</b> Web dashboard</span></div>
+  </div>
+  <div class="gg-black-logo" role="img" aria-label="Gargand logo placeholder — currently black"></div>
+</section>
+<section class="gg-section">
+  <div class="gg-section-head"><div><span class="gg-kicker">BUILT FOR COMMUNITIES</span><h2>One bot. A whole command centre.</h2></div><p>Keep the tools your moderators need close at hand, with a green glow and a dashboard built around clear controls.</p></div>
+  <div class="gg-feature-grid">
+    <article class="gg-feature"><div class="gg-feature-icon">⌘</div><h3>Moderation & cases</h3><p>Ban, kick, warn, timeout, purge, lock channels and keep your moderation workflow organised.</p><a href="/commands">Browse moderation ↗</a></article>
+    <article class="gg-feature"><div class="gg-feature-icon">⬡</div><h3>Security & Auto-Mod</h3><p>Configure anti-raid, anti-nuke, spam, mention and link protections, with logs sent to the channel you choose.</p><a href="/commands">Explore protection ↗</a></article>
+    <article class="gg-feature"><div class="gg-feature-icon">▣</div><h3>Tickets & appeals</h3><p>Give members a dedicated support flow with ticket panels, questions, staff handling and appeal information.</p><a href="/support">Get support ↗</a></article>
+    <article class="gg-feature"><div class="gg-feature-icon">✳</div><h3>Levels & rewards</h3><p>Give your community a reason to participate with XP, levels, giveaways, polls and community features.</p><a href="/commands">See commands ↗</a></article>
+    <article class="gg-feature"><div class="gg-feature-icon">⌁</div><h3>Welcome & roles</h3><p>Manage welcome and leave messages, autoroles, verification channels, reactions and staff tools.</p><a href="/commands">Discover tools ↗</a></article>
+    <article class="gg-feature"><div class="gg-feature-icon">◈</div><h3>Website control room</h3><p>Sign in with Discord to configure supported server settings, or use the password-protected site admin to manage website commands and announcements.</p><a href="/servers">Open dashboard ↗</a></article>
+  </div>
+</section>
+<section class="gg-section">
+  <div class="gg-section-head"><div><span class="gg-kicker">START IN MINUTES</span><h2>Set up. Lock in. Let it run.</h2></div><p>Use the setup flow to choose channels and roles, then tune protection to fit your community.</p></div>
+  <div class="gg-command-preview"><code>!setup<br><small>Configure server features</small></code><code>!help<br><small>Browse available commands</small></code><code>!questions<br><small>Learn about Gargand</small></code></div>
+</section>
+<section class="gg-section">
+  <div class="gg-info-strip"><div><span class="gg-kicker">YOUR SERVER, YOUR SETTINGS</span><h2>Ready to bring order to the chaos?</h2><p>Invite Gargand, configure your server and explore the full command library.</p></div><a class="gg-button gg-button-bright" href="{{ invite_url }}">Get Gargand ↗</a></div>
+</section>
 {% endblock %}
