@@ -25,6 +25,9 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 APP_STARTED_AT = time.time()
 APP_REQUEST_COUNT = 0
 APP_METRICS_LOCK = threading.Lock()
+MEMORY_ANNOUNCEMENTS = []
+MEMORY_CUSTOM_COMMANDS = []
+MEMORY_CUSTOM_COMMAND_ID = 1
 
 
 @app.before_request
@@ -234,7 +237,7 @@ def bot_guild_snapshot():
 
 
 def require_bot_key():
-    supplied = request.headers.get("X-Nightfall-Bridge-Key", "")
+    supplied = request.headers.get("X-Gargand-Bridge-Key", "")
     if not BOT_BRIDGE_SECRET or not compare_digest(supplied, BOT_BRIDGE_SECRET):
         return jsonify({"ok": False, "error": "Unauthorized"}), 401
     return None
@@ -562,7 +565,7 @@ def init_db():
 def load_announcements():
     sync_repository_updates()
     if not DATABASE_URL:
-        return session.get("announcements", [])
+        return list(MEMORY_ANNOUNCEMENTS)
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, title, body, date, kind FROM announcements ORDER BY id DESC")
@@ -571,9 +574,7 @@ def load_announcements():
 def save_announcement(title, body, kind="website"):
     date=__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
     if not DATABASE_URL:
-        items=session.get("announcements", [])
-        items.insert(0,{"title":title,"body":body,"date":date})
-        session["announcements"]=items
+        MEMORY_ANNOUNCEMENTS.insert(0, {"id": len(MEMORY_ANNOUNCEMENTS) + 1, "title": title, "body": body, "date": date, "kind": kind})
         return
     with db_connect() as conn:
         with conn.cursor() as cur:
@@ -581,26 +582,34 @@ def save_announcement(title, body, kind="website"):
         conn.commit()
 
 def delete_announcement(announcement_id):
-    if not DATABASE_URL: return
+    if not DATABASE_URL:
+        MEMORY_ANNOUNCEMENTS[:] = [item for item in MEMORY_ANNOUNCEMENTS if int(item.get("id", 0)) != int(announcement_id)]
+        return
     with db_connect() as conn:
         with conn.cursor() as cur: cur.execute("DELETE FROM announcements WHERE id = %s",(announcement_id,))
         conn.commit()
 
 def load_custom_commands():
-    if not DATABASE_URL: return []
+    if not DATABASE_URL: return list(MEMORY_CUSTOM_COMMANDS)
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, command, category, description FROM custom_commands ORDER BY id DESC")
             return [{"id":r[0],"command":r[1],"category":r[2],"description":r[3]} for r in cur.fetchall()]
 
 def save_custom_command(command, category, description):
-    if not DATABASE_URL: return
+    global MEMORY_CUSTOM_COMMAND_ID
+    if not DATABASE_URL:
+        MEMORY_CUSTOM_COMMANDS.insert(0, {"id": MEMORY_CUSTOM_COMMAND_ID, "command": command, "category": category, "description": description})
+        MEMORY_CUSTOM_COMMAND_ID += 1
+        return
     with db_connect() as conn:
         with conn.cursor() as cur: cur.execute("INSERT INTO custom_commands (command, category, description) VALUES (%s, %s, %s)",(command,category,description))
         conn.commit()
 
 def delete_custom_command(command_id):
-    if not DATABASE_URL: return
+    if not DATABASE_URL:
+        MEMORY_CUSTOM_COMMANDS[:] = [item for item in MEMORY_CUSTOM_COMMANDS if int(item.get("id", 0)) != int(command_id)]
+        return
     with db_connect() as conn:
         with conn.cursor() as cur: cur.execute("DELETE FROM custom_commands WHERE id = %s",(command_id,))
         conn.commit()
