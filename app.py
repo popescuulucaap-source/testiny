@@ -506,17 +506,6 @@ def init_db():
                         "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
                         (title, body, date, "bot"),
                     )
-            premium_release = (
-                "Nightfall Premium • LIVE",
-                "Nightfall Premium is now live. Premium includes customization, AI features, 8 Ball, premium rewards, and Premium Vault access. The full-price pass is 179 Robux, and the special 70 Robux arcade offer unlocks after the arcade reward is redeemed.",
-                "2026-10-05",
-            )
-            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", (premium_release[0],))
-            if not cur.fetchone():
-                cur.execute(
-                    "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
-                    (*premium_release, "bot"),
-                )
             cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, suggestion TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
@@ -1115,7 +1104,7 @@ def support_ai():
         return jsonify({"ok":True,"answer":"AI is not connected yet. You can still open Talk to an Admin and send a real support ticket."})
     model=os.getenv("OPENROUTER_TEXT_MODEL","openrouter/free")
     try:
-        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Nightfall Support"},json={"model":model,"messages":[{"role":"system","content":"You are Nightfall's website support assistant. Answer the user's actual question instead of giving a generic fallback. Help with Nightfall Discord commands, setup, moderation, tickets, Premium, website features, and troubleshooting. Be concise and honest. Never request passwords, tokens, API keys, or private credentials. If the issue requires admin access, explain that the user can open a human support ticket on the same Support page."},{"role":"user","content":message}]},timeout=20)
+        r=requests.post("https://openrouter.ai/api/v1/chat/completions",headers={"Authorization":f"Bearer {key}","Content-Type":"application/json","HTTP-Referer":request.host_url,"X-Title":"Nightfall Support"},json={"model":model,"messages":[{"role":"system","content":"You are Nightfall's website support assistant. Answer the user's actual question instead of giving a generic fallback. Help with Nightfall Discord commands, setup, moderation, tickets, website features, and troubleshooting. Be concise and honest. Never request passwords, tokens, API keys, or private credentials. If the issue requires admin access, explain that the user can open a human support ticket on the same Support page."},{"role":"user","content":message}]},timeout=20)
         data=r.json()
         answer=((data.get("choices") or [{}])[0].get("message") or {}).get("content")
         if not answer: raise ValueError("empty")
@@ -1464,28 +1453,8 @@ def dashboard_action(guild_id):
 
 
 @app.get("/premium")
-@login_required
 def premium_vault():
-    discord_id = current_discord_user_id()
-    link = get_roblox_link(discord_id)
-    arcade_unlocked = False
-    arcade_redeemed = False
-    if DATABASE_URL and discord_id:
-        with db_connect() as conn:
-            reward = conn.execute("SELECT redeemed_at FROM arcade_rewards WHERE discord_id=%s", (discord_id,)).fetchone()
-            arcade_redeemed = bool(reward and reward[0])
-            arcade_unlocked = arcade_redeemed
-    return render_template(
-        "premium.html",
-        link=link,
-        premium_active=roblox_premium_active(link),
-        arcade_unlocked=arcade_unlocked,
-        arcade_redeemed=arcade_redeemed,
-        premium_full_price=PREMIUM_FULL_PRICE,
-        premium_arcade_price=PREMIUM_ARCADE_PRICE,
-        premium_full_url=ROBLOX_PREMIUM_PASS_URL,
-        premium_arcade_url=ROBLOX_ARCADE_OFFER_URL,
-    )
+    return redirect(url_for("index"))
 
 @app.post("/api/premium/redeem-started")
 @login_required
@@ -2152,20 +2121,8 @@ def arcade_reward_code():
 
 
 @app.get("/redeem")
-@login_required
 def redeem():
-    user = current_site_user()
-    reward = None
-    if DATABASE_URL:
-        try:
-            with db_connect() as conn:
-                reward = conn.execute(
-                    "SELECT redeemed_at FROM arcade_rewards WHERE discord_id=%s",
-                    (user["id"],),
-                ).fetchone()
-        except psycopg.Error as exc:
-            app.logger.warning("Could not load arcade reward: %s", type(exc).__name__)
-    return render_template("redeem.html", user=user, reward=reward)
+    return redirect(url_for("index"))
 
 @app.post("/api/arcade/start")
 def arcade_start():
