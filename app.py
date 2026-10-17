@@ -34,6 +34,21 @@ def count_site_request():
         APP_REQUEST_COUNT += 1
 
 
+@app.context_processor
+def inject_admin_csrf_token():
+    token = session.get("admin_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["admin_csrf_token"] = token
+    return {"csrf_token": token}
+
+
+def valid_admin_csrf():
+    expected = session.get("admin_csrf_token", "")
+    supplied = request.form.get("csrf_token", "")
+    return bool(expected and supplied and compare_digest(expected, supplied))
+
+
 @app.template_filter("datetimeformat")
 def format_timestamp(value):
     try:
@@ -154,11 +169,11 @@ def refresh_discord_session():
 @app.before_request
 def require_discord_for_site():
     # Public browsing is allowed. State-changing/private areas still require Discord.
-    public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support"}
+    public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support", "/terms", "/socials"}
     public_secret_api = set()
     public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull"}
     endpoint = request.endpoint or ""
-    if endpoint in {"login", "oauth_callback", "health"} or endpoint.startswith("static"):
+    if endpoint in {"login", "oauth_callback", "health"} or endpoint.startswith("static") or endpoint.startswith("admin"):
         return None
     if request.method in {"GET", "HEAD"} and request.path in public_get:
         return None
@@ -616,7 +631,9 @@ def admin_login():
     if session.get("admin"):
         return redirect(url_for("admin"))
     if request.method == "POST":
-        if ADMIN_PASSWORD and request.form.get("password") == ADMIN_PASSWORD:
+        if not valid_admin_csrf():
+            return render_template("admin_login.html", error="Session check failed. Refresh the page and try again."), 400
+        if ADMIN_PASSWORD and compare_digest(request.form.get("password", ""), ADMIN_PASSWORD):
             session["admin"] = True
             session.permanent = True
             return redirect(url_for("admin"))
@@ -703,6 +720,8 @@ def admin():
 def admin_command():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
+    if not valid_admin_csrf():
+        return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     cmd=(request.form.get("command") or "").strip()
     cat=(request.form.get("category") or "Other").strip()
     desc=(request.form.get("description") or "").strip()
@@ -715,6 +734,8 @@ def admin_command():
 def admin_announcement():
     if not session.get("admin"):
         return redirect(url_for("admin_login"))
+    if not valid_admin_csrf():
+        return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     title=(request.form.get("title") or "Update").strip()
     body=(request.form.get("body") or "").strip()
     kind=(request.form.get("kind") or "website").strip().lower()
@@ -725,12 +746,14 @@ def admin_announcement():
 @app.post("/admin/announcement/<int:announcement_id>/delete")
 def admin_delete_announcement(announcement_id):
     if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not valid_admin_csrf(): return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     delete_announcement(announcement_id)
     return redirect(url_for("admin"))
 
 @app.post("/admin/command/<int:command_id>/delete")
 def admin_delete_command(command_id):
     if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not valid_admin_csrf(): return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     delete_custom_command(command_id)
     return redirect(url_for("admin"))
 
@@ -746,6 +769,16 @@ def admin_logout():
 @app.route("/support")
 def support():
     return render_template("support.html")
+
+
+@app.get("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.get("/socials")
+def socials():
+    return render_template("socials.html")
 
 @app.route("/secrets")
 def secrets_page():
@@ -1197,7 +1230,9 @@ def bot_status():
 
 @app.get("/commands")
 def commands():
-    return render_template("commands.html", commands=all_commands())
+    listed = all_commands()
+    listed.extend((item["command"], item["category"], item["description"]) for item in load_custom_commands())
+    return render_template("commands.html", commands=listed)
 
 
 @app.get("/guidelines")
