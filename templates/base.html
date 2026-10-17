@@ -3,56 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#030611">
-  <meta name="description" content="Nightfall protects your Discord community with moderation, server safety, tickets, and community tools.">
-  <title>{% block title %}Nightfall — Discord, under control{% endblock %}</title>
+  <meta name="theme-color" content="#08090d">
+  <meta name="description" content="Nightfall is your all-in-one Discord bot for moderation, server protection, tickets, and community tools.">
+  <title>{% block title %}Nightfall — your server, under control{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='nightfall-logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='cinematic-site.css') }}?v=20261017">
   <link rel="stylesheet" href="{{ url_for('static', filename='fresh-start.css') }}?v=20261017">
   <link rel="stylesheet" href="{{ url_for('static', filename='fenrir-match.css') }}?v=20261017">
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-pages.css') }}?v=20261017">
+  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-rebuild.css') }}?v=20261017b">
 </head>
 <body class="nightfall-space-page">
   <div class="space-scene" aria-hidden="true">
-    <div class="space-stars-photo"></div>
-    <div class="space-stars space-stars-a"></div>
-    <div class="space-stars space-stars-b"></div>
-    <div class="space-planet planet-r136"></div>
-    <div class="space-planet planet-earth"></div>
-    <div class="space-planet planet-mars"></div>
-    <div class="space-planet planet-jupiter"></div>
-    <div class="space-planet planet-saturn"></div>
-    <div class="space-planet planet-uranus"></div>
-    <div class="space-planet planet-neptune"></div>
-    <div class="space-planet planet-pluto"></div>
-    <div class="space-planet planet-kepler16b"></div>
-    <div class="space-planet planet-k218b"></div>
-    <div class="space-planet planet-kepler186f"></div>
+    <div class="space-stars-photo"></div><div class="space-stars space-stars-a"></div><div class="space-stars space-stars-b"></div>
+    <div class="space-planet planet-r136"></div><div class="space-planet planet-earth"></div><div class="space-planet planet-mars"></div><div class="space-planet planet-jupiter"></div><div class="space-planet planet-saturn"></div><div class="space-planet planet-uranus"></div><div class="space-planet planet-neptune"></div><div class="space-planet planet-pluto"></div><div class="space-planet planet-kepler16b"></div><div class="space-planet planet-k218b"></div><div class="space-planet planet-kepler186f"></div>
   </div>
   <header class="site-header">
-    <a class="site-brand" href="/" aria-label="Nightfall home"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""><span>nightfall<span class="brand-period">.</span></span></a>
+    <a class="site-brand" href="/" aria-label="Nightfall home"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall logo"><span>nightfall<span class="brand-period">.</span></span></a>
     <nav class="site-nav" aria-label="Main navigation">
-      <a href="/commands">Commands</a>
-      <a href="/guidelines">Guidelines</a>
-      <a href="/announcements">Updates</a>
-      <a href="/support">Support</a>
+      <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="/support">Support</a>
     </nav>
     <div class="header-actions">
-      {% if session.get('user') %}<a class="header-login" href="/servers">Dashboard <span aria-hidden="true">↗</span></a>{% else %}<a class="header-login" href="/login">Log in</a>{% endif %}
-      <a class="button button-small button-light" href="{{ invite_url }}">Add to Discord <span aria-hidden="true">↗</span></a>
+      {% if session.get('user') %}<a class="header-login" href="/servers">Dashboard ↗</a>{% else %}<a class="header-login" href="/login">Log in</a>{% endif %}
+      <a class="button button-light button-small" href="{{ invite_url }}">Add bot <span aria-hidden="true">↗</span></a>
     </div>
-    <button class="mobile-menu" type="button" aria-label="Toggle navigation" aria-expanded="false" onclick="document.body.classList.toggle('menu-open');this.setAttribute('aria-expanded',document.body.classList.contains('menu-open'))"><span></span><span></span></button>
+    <button class="mobile-menu" type="button" aria-label="Toggle navigation" aria-expanded="false" onclick="document.body.classList.toggle('menu-open');this.setAttribute('aria-expanded',document.body.classList.contains('menu-open'))"><span></span><span></span><span></span></button>
   </header>
   <main id="main-content">{% block content %}{% endblock %}</main>
   <footer class="site-footer">
     <a class="site-brand footer-brand" href="/"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""><span>nightfall<span class="brand-period">.</span></span></a>
-    <p>Keep your community safe. Keep your time yours.</p>
+    <p>Moderation, protection, and community tools in one place.</p>
     <div class="footer-links"><a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support server ↗</a></div>
     <small>Not affiliated with Discord Inc.</small>
   </footer>
   <script src="{{ url_for('static', filename='app.js') }}?v=20261017"></script>
-  <script>
-  (function(){var menu=document.querySelector('.site-nav');if(!menu)return;document.querySelectorAll('.site-nav a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('menu-open');var b=document.querySelector('.mobile-menu');if(b)b.setAttribute('aria-expanded','false');});});})();
-  </script>
+  <script>(function(){var nav=document.querySelector('.site-nav');if(!nav)return;nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('menu-open');var b=document.querySelector('.mobile-menu');if(b)b.setAttribute('aria-expanded','false');});});})();</script>
 </body>
 </html>
