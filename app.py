@@ -18,7 +18,7 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 app = Flask(__name__)
 app.secret_key = (os.getenv("SESSION_SECRET") or os.getenv("ROBLOX_OAUTH_CLIENT_SECRET") or "").strip() or secrets.token_urlsafe(48)
-app.permanent_session_lifetime = timedelta(days=3650)
+app.permanent_session_lifetime = timedelta(days=7)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
@@ -80,6 +80,7 @@ DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://testiny-7wuu.onrender.com/oauth/callback")
 BOT_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+ADMIN_LOGIN_FAILURES = {}
 INVITE_URL = os.getenv("INVITE_URL", "#")
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
@@ -642,10 +643,21 @@ def admin_login():
     if request.method == "POST":
         if not valid_admin_csrf():
             return render_template("admin_login.html", error="Session check failed. Refresh the page and try again."), 400
+        client_key = request.remote_addr or "unknown"
+        now = time.time()
+        attempts = [stamp for stamp in ADMIN_LOGIN_FAILURES.get(client_key, []) if now - stamp < 900]
+        if len(attempts) >= 5:
+            ADMIN_LOGIN_FAILURES[client_key] = attempts
+            return render_template("admin_login.html", error="Too many attempts. Wait 15 minutes before trying again."), 429
         if ADMIN_PASSWORD and compare_digest(request.form.get("password", ""), ADMIN_PASSWORD):
+            ADMIN_LOGIN_FAILURES.pop(client_key, None)
             session["admin"] = True
+            session["admin_authenticated_at"] = now
+            session["admin_csrf_token"] = secrets.token_urlsafe(32)
             session.permanent = True
             return redirect(url_for("admin"))
+        attempts.append(now)
+        ADMIN_LOGIN_FAILURES[client_key] = attempts
         return render_template("admin_login.html", error="Incorrect admin password.")
     return render_template("admin_login.html")
 
