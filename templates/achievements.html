@@ -1,0 +1,3 @@
+{% extends "base.html" %}{% block title %}Nightfall • Achievements{% endblock %}{% block content %}
+<section class="page-head"><span class="eyebrow">ACHIEVEMENTS</span><h1>Earn your place in the night.</h1><p>Milestones, secrets and progression for your Nightfall account.</p></section>
+<section class="cards">{% for a in achievements %}<article class="card" style="opacity:{% if a.unlocked %}1{% else %}.5{% endif %}"><span class="eyebrow">{% if a.unlocked %}UNLOCKED{% else %}LOCKED{% endif %}</span><h2>{{ a.name }}</h2><p>{{ a.desc }}</p></article>{% endfor %}</section>{% endblock %}
