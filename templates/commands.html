@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Nightfall • Command Library{% endblock %}
+{% block title %}Gargand • Command Library{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">NIGHTFALL COMMAND LIBRARY</span><h1>Find your next command.</h1><p>Browse the commands currently listed for Nightfall. The default prefix is <code>!</code>. Use <code>!setup</code> to configure supported server features.</p></section>
+<section class="page-head"><span class="eyebrow">GARGAND COMMAND LIBRARY</span><h1>Find your next command.</h1><p>Browse the commands currently listed for Gargand. The default prefix is <code>!</code>. Use <code>!setup</code> to configure supported server features.</p></section>
 <section class="command-tools" aria-label="Find commands">
   <label class="command-search"><span>⌕</span><input id="commandSearch" type="search" placeholder="Search by command, category, or feature…" autocomplete="off" aria-label="Search commands"></label>
   <div class="command-filters" role="group" aria-label="Filter by category"><button class="command-filter active" type="button" data-category="all">All commands</button>{% for cat in commands|map(attribute=1)|unique|sort %}<button class="command-filter" type="button" data-category="{{ cat }}">{{ cat }}</button>{% endfor %}</div>
