@@ -1,63 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Nightfall • Discord Bot{% endblock %}
+{% block title %}Nightfall{% endblock %}
 {% block content %}
-<div class="home-page">
-  <div class="cinematic-intro" aria-label="Nightfall cinematic introduction">
-  <div class="cinematic-sky"><span class="cinematic-moon"></span><span class="cinematic-cloud cloud-a"></span><span class="cinematic-cloud cloud-b"></span><span class="cinematic-star cs-a">✦</span><span class="cinematic-star cs-b">✧</span><span class="cinematic-star cs-c">✦</span></div>
-  <div class="cinematic-vignette"></div>
-  <div class="cinematic-copy">
-    <span class="cinematic-kicker">NIGHTFALL PRESENTS</span>
-    <div class="cinematic-title">NIGHTFALL.<br><em>BUILT FOR THE NIGHT.</em></div>
-    <div class="cinematic-subtitles">
-      <span>When your server goes quiet…</span>
-      <span>Nightfall is still watching.</span>
-      <span>Moderation. Security. AI. All in one guardian.</span>
-    </div>
-    <div class="cinematic-progress"><i></i></div>
-  </div>
-  <div class="cinematic-credit">A NIGHTFALL CINEMATIC • DISCORD GUARDIAN</div>
-</div>
-  <section class="hero" id="hero">
-    <div class="hero-copy">
-      <div class="eyebrow home-eyebrow"><span class="signal-dot"></span> NIGHTFALL • 1.2v UPDATE</div>
-      <h1>Power your server.<br><span>After dark.</span></h1>
-      <p class="lead">🌙 Nightfall is your all-in-one Discord guardian: smooth moderation, smart server safety, tickets, invites, giveaways, AI tools, and a focused web dashboard. Set up your server with <code>!setup</code>, then let the night run smoother. ✨</p>
-      <div class="actions"><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a><a class="btn ghost" href="/commands">Explore commands <span aria-hidden="true">→</span></a></div>
-      <div class="trust-row"><span>✦ 1.2v UPDATE</span><span>✦ Admin controls</span><span>✦ {{ command_count }} commands</span></div>
-    </div>
-    <div class="hero-card home-visual" aria-label="Nightfall bird emblem">
-      <div class="visual-halo"></div><div class="visual-orbit visual-orbit-one"></div><div class="visual-orbit visual-orbit-two"></div>
-      <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span>
-      <img class="home-mark" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bird logo">
-      <div class="visual-caption"><span class="visual-caption-mark"><i></i></span><div><b>Nightfall</b><small>Your server, in good hands.</small></div><span class="visual-caption-tools">{{ command_count }} commands</span></div>
-    </div>
-  </section>
-
-
-  <section class="nightfall-status-card" aria-label="Nightfall status"><div class="status-dot" id="nightfallStatusDot"></div><div><span class="eyebrow">NIGHTFALL STATUS</span><h2 id="nightfallStatusTitle">Checking Nightfall…</h2><p id="nightfallStatusText">Checking the latest bot heartbeat.</p></div></section>
-  <section class="home-about" id="about">
-    <div class="about-wordmark-wrap"><img src="{{ url_for('static', filename='nightfall-wordmark.svg') }}" alt="Nightfall wordmark"><span>BUILT FOR DISCORD.</span></div>
-    <div class="about-copy"><span class="eyebrow">ABOUT • 1.2v UPDATE</span><p>🌙 Nightfall keeps the busywork out of your way with moderation, security, tickets, invites, AI tools and a focused dashboard—so your community can shine. ✨</p><div class="about-actions"><a class="about-copy-link" href="/commands">Explore all commands ↗</a></div></div>
-  </section>
-
-  <section class="home-ribbon" aria-label="Nightfall capabilities"><span>MODERATION</span><i>✦</i><span>SECURITY</span><i>✦</i><span>AI TOOLS</span><i>✦</i><span>TICKETS</span><i>✦</i><span>GIVEAWAYS</span><i>✦</i><span>GAMES</span></section>
-
-  <section class="section home-features" id="features">
-    <div class="section-heading"><span class="eyebrow">A BETTER NIGHT SHIFT</span><h2>All your essentials.<br><span class="heading-accent">One steady guardian.</span></h2><p>Powerful tools without the clutter. Choose what your server needs and manage it from Discord or the web dashboard.</p></div>
-    <div class="cards home-feature-grid">
-      {% for icon,title,text in features %}<article class="card home-feature-card"><div class="feature-card-head"><div class="card-icon">{{ icon }}</div><span class="feature-number">0{{ loop.index }}</span></div><h3>{{ title }}</h3><p>{{ text }}</p><a href="/commands">Explore {{ title|lower }} <span aria-hidden="true">↗</span></a><div class="feature-glow"></div></article>{% endfor %}
-    </div>
-  </section>
-
-  <section class="home-workflow" id="dashboard">
-    <div class="workflow-art"><div class="workflow-ring ring-a"></div><div class="workflow-ring ring-b"></div><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bird emblem"><span class="workflow-orbit-dot"></span></div>
-    <div class="workflow-copy"><span class="eyebrow">YOUR SERVER, IN SYNC</span><h2>Less tab-hopping.<br><span class="heading-accent">More time together.</span></h2><p>Connect your Discord account and manage Nightfall’s server settings from a focused control center. Publish panels, tune security and shape the way your community runs.</p><div class="workflow-points"><div><span>01</span><b>Connect your server</b></div><div><span>02</span><b>Set up the tools you need</b></div><div><span>03</span><b>Let Nightfall handle the busywork</b></div></div><a class="btn primary" href="/login">Open the dashboard <span aria-hidden="true">→</span></a></div>
-  </section>
-
-  <section class="home-command-band" id="commands"><div><span class="eyebrow">THE COMMAND LIBRARY</span><h2>Clear commands.<br>Quick answers.</h2><p>Browse {{ command_count }} tools, search by name or task, and copy a command format in one click.</p><a class="btn ghost" href="/commands">Find your command <span aria-hidden="true">↗</span></a></div><div class="command-stack" aria-hidden="true"><div class="command-line"><span>!</span> setup <i>SERVER CONFIGURATION</i></div><div class="command-line"><span>!</span> 8ball will it be a good night? <i>FUN</i></div><div class="command-line"><span>!</span> ask why is the sky blue? <i>AI STUDIO</i></div><div class="command-line"><span>!</span> ticket panel <i>COMMUNITY SUPPORT</i></div></div></section>
-
-  <section class="suggestion-hero" id="suggestions"><div><span class="eyebrow">SHAPE THE NIGHT</span><h2>Have an idea?</h2><p>Tell us what Nightfall should add, improve, or remove.</p></div><a class="btn primary" href="/suggestions">Suggest something <span aria-hidden="true">→</span></a></section>
-
-  <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
-</div>
+<!-- Fresh canvas: the new Nightfall website will be built here. -->
+<div class="fresh-canvas" aria-hidden="true"></div>
 {% endblock %}
