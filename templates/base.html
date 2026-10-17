@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#050806">
+  <meta name="theme-color" content="#080704">
   <meta name="description" content="Gargand is your all-in-one Discord bot for moderation, security, tickets, levels and community tools.">
   <title>{% block title %}Gargand — your server, protected{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='gargand-mark.svg') }}">
@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='fresh-start.css') }}?v=gargand1">
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-pages.css') }}?v=gargand1">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand.css') }}?v=20261017f">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-gold.css') }}?v=gold1">
 </head>
 <body class="gargand-site">
   <div class="gargand-ambient" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div>
   <header class="gg-header">
-    <a class="gg-brand" href="/" aria-label="Gargand home"><span class="gg-mark" aria-hidden="true"><img src="https://www.svgrepo.com/show/17505/lion-head.svg" alt=""></span><span>GARGAND<span class="gg-dot">.</span></span></a>
+    <a class="gg-brand" href="/" aria-label="Gargand home"><span class="gg-mark" aria-hidden="true"><img src="{{ url_for('static', filename='gargand-mark.svg') }}" alt=""></span><span>GARGAND<span class="gg-dot">.</span></span></a>
     <nav class="gg-nav" aria-label="Main navigation">
       <a href="/commands">Commands</a><a href="/support">Support</a><a href="/socials">Socials</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a>
     </nav>
