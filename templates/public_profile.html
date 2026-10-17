@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • {{ user.username }}{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">NIGHTFALL PROFILE</span><h1>{{ user.username }}</h1>{% if title %}<p>{{ title }}</p>{% endif %}</section>
+<section class="cards"><article class="card"><img src="{{ user.avatar_url }}" alt="" style="width:88px;height:88px;border-radius:50%"><h2>Level {{ level }}</h2><p>{{ xp }} XP</p>{% if bio %}<p>{{ bio }}</p>{% endif %}</article><article class="card"><span class="eyebrow">SOCIAL</span><h2>{{ followers }} / {{ following }}</h2><p>Followers / Following</p></article><article class="card"><span class="eyebrow">BADGES</span>{% for icon,name,desc in badges %}<p>{{ icon }} {{ name }}</p>{% else %}<p>No badges yet.</p>{% endfor %}</article></section>
+<section class="section"><div class="section-heading"><span class="eyebrow">ARCADE</span><h2>High scores</h2></div><div class="cards">{% for s in scores %}<article class="card"><h3>{{ s.game }}</h3><p>{{ s.score }} points</p></article>{% else %}<article class="card"><p>No Arcade scores yet.</p></article>{% endfor %}</div></section>
+{% endblock %}
