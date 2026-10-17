@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Notifications{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">NOTIFICATION CENTER</span><h1>Your alerts.</h1><p>Updates and activity connected to your Nightfall account.</p></section>
+<section class="cards">{% for n in notifications %}<article class="card"><span class="eyebrow">{% if not n.read %}NEW{% else %}SEEN{% endif %}</span><h2>{{ n.title }}</h2><p>{{ n.body }}</p></article>{% else %}<article class="card"><h2>All quiet. 🌙</h2><p>No notifications yet.</p></article>{% endfor %}</section>
+{% if notifications %}<button class="btn ghost" id="markRead">Mark all as read</button><script>document.getElementById('markRead').onclick=async()=>{await fetch('/api/notifications/read',{method:'POST'});location.reload()};</script>{% endif %}
+{% endblock %}
