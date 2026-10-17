@@ -3,40 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#08090d">
-  <meta name="description" content="Nightfall is your all-in-one Discord bot for moderation, server protection, tickets, and community tools.">
-  <title>{% block title %}Nightfall — your server, under control{% endblock %}</title>
+  <meta name="theme-color" content="#050806">
+  <meta name="description" content="Gargand is your all-in-one Discord bot for moderation, security, tickets, levels and community tools.">
+  <title>{% block title %}Gargand — your server, protected{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='nightfall-logo.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='cinematic-site.css') }}?v=20261017">
-  <link rel="stylesheet" href="{{ url_for('static', filename='fresh-start.css') }}?v=20261017">
-  <link rel="stylesheet" href="{{ url_for('static', filename='fenrir-match.css') }}?v=20261017">
-  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-pages.css') }}?v=20261017">
-  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-rebuild.css') }}?v=20261017b">
+  <link rel="stylesheet" href="{{ url_for('static', filename='cinematic-site.css') }}?v=gargand1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='fresh-start.css') }}?v=gargand1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-pages.css') }}?v=gargand1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gargand.css') }}?v=20261017a">
 </head>
-<body class="nightfall-space-page">
-  <div class="space-scene" aria-hidden="true">
-    <div class="space-stars-photo"></div><div class="space-stars space-stars-a"></div><div class="space-stars space-stars-b"></div>
-    <div class="space-planet planet-r136"></div><div class="space-planet planet-earth"></div><div class="space-planet planet-mars"></div><div class="space-planet planet-jupiter"></div><div class="space-planet planet-saturn"></div><div class="space-planet planet-uranus"></div><div class="space-planet planet-neptune"></div><div class="space-planet planet-pluto"></div><div class="space-planet planet-kepler16b"></div><div class="space-planet planet-k218b"></div><div class="space-planet planet-kepler186f"></div>
-  </div>
-  <header class="site-header">
-    <a class="site-brand" href="/" aria-label="Nightfall home"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall logo"><span>nightfall<span class="brand-period">.</span></span></a>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="/support">Support</a>
+<body class="gargand-site">
+  <div class="gargand-ambient" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div>
+  <header class="gg-header">
+    <a class="gg-brand" href="/" aria-label="Gargand home"><span class="gg-mark" aria-hidden="true"></span><span>GARGAND<span class="gg-dot">.</span></span></a>
+    <nav class="gg-nav" aria-label="Main navigation">
+      <a href="/commands">Commands</a><a href="/support">Support</a><a href="/socials">Socials</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a>
     </nav>
-    <div class="header-actions">
-      {% if session.get('user') %}<a class="header-login" href="/servers">Dashboard ↗</a>{% else %}<a class="header-login" href="/login">Log in</a>{% endif %}
-      <a class="button button-light button-small" href="{{ invite_url }}">Add bot <span aria-hidden="true">↗</span></a>
+    <div class="gg-actions">
+      <label class="gg-language-label" for="gargandLanguage">Language</label>
+      <select id="gargandLanguage" class="gg-language" aria-label="Translate website"><option value="">Translate…</option><option value="en">English</option><option value="ro">Română</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="it">Italiano</option><option value="pt">Português</option><option value="pl">Polski</option><option value="ru">Русский</option><option value="tr">Türkçe</option><option value="uk">Українська</option><option value="ar">العربية</option><option value="hi">हिन्दी</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="zh-CN">简体中文</option><option value="nl">Nederlands</option><option value="sv">Svenska</option><option value="da">Dansk</option><option value="no">Norsk</option><option value="fi">Suomi</option><option value="el">Ελληνικά</option><option value="cs">Čeština</option><option value="hu">Magyar</option><option value="th">ไทย</option><option value="vi">Tiếng Việt</option><option value="id">Bahasa Indonesia</option><option value="he">עברית</option><option value="bg">Български</option><option value="hr">Hrvatski</option><option value="sr">Српски</option><option value="sk">Slovenčina</option><option value="sl">Slovenščina</option><option value="lt">Lietuvių</option><option value="lv">Latviešu</option><option value="et">Eesti</option><option value="fa">فارسی</option><option value="bn">বাংলা</option><option value="ta">தமிழ்</option><option value="ur">اردو</option><option value="sw">Kiswahili</option><option value="af">Afrikaans</option><option value="sq">Shqip</option><option value="am">አማርኛ</option><option value="az">Azərbaycanca</option><option value="eu">Euskara</option><option value="be">Беларуская</option><option value="bs">Bosanski</option><option value="ca">Català</option><option value="ceb">Cebuano</option><option value="ny">Chichewa</option><option value="co">Corsu</option><option value="cy">Cymraeg</option><option value="eo">Esperanto</option><option value="tl">Filipino</option><option value="fy">Frysk</option><option value="ga">Gaeilge</option><option value="gd">Gàidhlig</option><option value="gl">Galego</option><option value="ka">ქართული</option><option value="gu">ગુજરાતી</option><option value="ht">Kreyòl Ayisyen</option><option value="ha">Hausa</option><option value="haw">ʻŌlelo Hawaiʻi</option><option value="is">Íslenska</option><option value="ig">Igbo</option><option value="jw">Basa Jawa</option><option value="kn">ಕನ್ನಡ</option><option value="kk">Қазақша</option><option value="km">ខ្មែរ</option><option value="ku">Kurdî</option><option value="ky">Кыргызча</option><option value="lo">ລາວ</option><option value="la">Latina</option><option value="lb">Lëtzebuergesch</option><option value="mk">Македонски</option><option value="mg">Malagasy</option><option value="ms">Bahasa Melayu</option><option value="ml">മലയാളം</option><option value="mt">Malti</option><option value="mi">Māori</option><option value="mr">मराठी</option><option value="mn">Монгол</option><option value="my">မြန်မာ</option><option value="ne">नेपाली</option><option value="ps">پښتو</option><option value="pa">ਪੰਜਾਬੀ</option><option value="sm">Gagana Samoa</option><option value="sn">chiShona</option><option value="sd">سنڌي</option><option value="si">සිංහල</option><option value="so">Soomaali</option><option value="su">Basa Sunda</option><option value="tg">Тоҷикӣ</option><option value="te">తెలుగు</option><option value="uz">Oʻzbekcha</option><option value="yi">ייִדיש</option><option value="yo">Yorùbá</option><option value="zu">isiZulu</option></select>
+      {% if session.get('user') %}<a class="gg-login" href="/servers">Dashboard ↗</a>{% else %}<a class="gg-login" href="/login">Log in</a>{% endif %}
+      <a class="gg-button gg-button-bright" href="{{ invite_url }}">Add bot <span>↗</span></a>
     </div>
-    <button class="mobile-menu" type="button" aria-label="Toggle navigation" aria-expanded="false" onclick="document.body.classList.toggle('menu-open');this.setAttribute('aria-expanded',document.body.classList.contains('menu-open'))"><span></span><span></span><span></span></button>
+    <button class="gg-menu" type="button" aria-label="Toggle navigation" aria-expanded="false" onclick="document.body.classList.toggle('gg-menu-open');this.setAttribute('aria-expanded',document.body.classList.contains('gg-menu-open'))"><span></span><span></span><span></span></button>
   </header>
+  <div id="google_translate_element" hidden></div>
   <main id="main-content">{% block content %}{% endblock %}</main>
-  <footer class="site-footer">
-    <a class="site-brand footer-brand" href="/"><img src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt=""><span>nightfall<span class="brand-period">.</span></span></a>
-    <p>Moderation, protection, and community tools in one place.</p>
-    <div class="footer-links"><a href="/commands">Commands</a><a href="/guidelines">Guidelines</a><a href="/announcements">Updates</a><a href="{{ support_url }}" target="_blank" rel="noopener">Support server ↗</a></div>
-    <small>Not affiliated with Discord Inc.</small>
+  <footer class="gg-footer">
+    <div class="gg-footer-top"><a class="gg-brand" href="/"><span class="gg-mark" aria-hidden="true"></span><span>GARGAND<span class="gg-dot">.</span></span></a><p>Less chaos. More control. One powerful Discord bot.</p><a class="gg-button gg-button-dark" href="/commands">Explore commands ↗</a></div>
+    <div class="gg-footer-bottom"><span>© Gargand · Built for communities</span><div><a href="/support">Support</a><a href="/socials">Socials</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a></div></div>
   </footer>
-  <script src="{{ url_for('static', filename='app.js') }}?v=20261017"></script>
-  <script>(function(){var nav=document.querySelector('.site-nav');if(!nav)return;nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('menu-open');var b=document.querySelector('.mobile-menu');if(b)b.setAttribute('aria-expanded','false');});});})();</script>
+  <script>
+    function googleTranslateElementInit(){new google.translate.TranslateElement({pageLanguage:'en',includedLanguages:'af,am,ar,az,be,bg,bn,bs,ca,ceb,co,cs,cy,da,de,el,en,eo,es,et,eu,fa,fi,fr,fy,ga,gd,gl,gu,ha,haw,he,hi,hr,ht,hu,hy,id,ig,is,it,ja,jw,ka,kk,km,kn,ko,ku,ky,la,lb,lo,lt,lv,mg,mi,mk,ml,mn,mr,ms,mt,my,ne,nl,no,ny,pa,pl,ps,pt,ro,ru,sd,si,sk,sl,sm,sn,so,sq,sr,su,sv,sw,ta,te,tg,th,tl,tr,uk,ur,uz,vi,yi,yo,zh-CN,zh-TW,zu',autoDisplay:false},'google_translate_element');}
+    document.addEventListener('DOMContentLoaded',function(){var s=document.getElementById('gargandLanguage');if(s)s.addEventListener('change',function(){var target=document.querySelector('.goog-te-combo');if(target){target.value=s.value;target.dispatchEvent(new Event('change'));}else if(s.value){window.__gargandTranslatePending=s.value;}});var nav=document.querySelector('.gg-nav');if(nav)nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('gg-menu-open');var b=document.querySelector('.gg-menu');if(b)b.setAttribute('aria-expanded','false');});});});
+  </script>
+  <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
 </body>
 </html>
