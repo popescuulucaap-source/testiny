@@ -27,7 +27,7 @@
     </div>
     <div class="hero-card home-visual" aria-label="Nightfall bird emblem">
       <div class="visual-halo"></div><div class="visual-orbit visual-orbit-one"></div><div class="visual-orbit visual-orbit-two"></div>
-      <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span><span class="visual-star star-three secret-star-visible" data-secret-star title="A quiet star" aria-label="Secret star">✦</span>
+      <span class="visual-star star-one">✦</span><span class="visual-star star-two">✧</span>
       <img class="home-mark" src="{{ url_for('static', filename='nightfall-logo.svg') }}" alt="Nightfall bird logo">
       <div class="visual-caption"><span class="visual-caption-mark"><i></i></span><div><b>Nightfall</b><small>Your server, in good hands.</small></div><span class="visual-caption-tools">{{ command_count }} commands</span></div>
     </div>
@@ -57,21 +57,6 @@
   <section class="home-command-band" id="commands"><div><span class="eyebrow">THE COMMAND LIBRARY</span><h2>Clear commands.<br>Quick answers.</h2><p>Browse {{ command_count }} tools, search by name or task, and copy a command format in one click.</p><a class="btn ghost" href="/commands">Find your command <span aria-hidden="true">↗</span></a></div><div class="command-stack" aria-hidden="true"><div class="command-line"><span>!</span> setup <i>SERVER CONFIGURATION</i></div><div class="command-line"><span>!</span> 8ball will it be a good night? <i>FUN</i></div><div class="command-line"><span>!</span> ask why is the sky blue? <i>AI STUDIO</i></div><div class="command-line"><span>!</span> ticket panel <i>COMMUNITY SUPPORT</i></div></div></section>
 
   <section class="suggestion-hero" id="suggestions"><div><span class="eyebrow">SHAPE THE NIGHT</span><h2>Have an idea?</h2><p>Tell us what Nightfall should add, improve, or remove.</p></div><a class="btn primary" href="/suggestions">Suggest something <span aria-hidden="true">→</span></a></section>
-
-  <section class="duck-game" id="duckGame" hidden aria-label="Nightfall secret mini-game">
-    <div class="duck-game-shell">
-      <div class="duck-game-head">
-        <div><span class="eyebrow">SECRET NIGHT • STARR PROTOCOL</span><h2>Duck Dash</h2><p>Hit 10 moving duck targets before the timer runs out. This is a stylized arcade challenge — no weapon simulation.</p></div>
-        <button class="duck-close" id="duckClose" type="button" aria-label="Close game">×</button>
-      </div>
-      <div class="duck-game-stats"><span>HITS <b id="duckHits">0</b>/10</span><span>TIME <b id="duckTime">30</b>s</span></div>
-      <div class="duck-field" id="duckField">
-  <div class="duck-stand-backdrop" aria-hidden="true"><div class="duck-booth-sign">NIGHTFALL DUCK RANGE</div><div class="duck-booth-lights">● ● ● ● ● ● ●</div></div>
-  <div class="duck-start" id="duckStart"><b>SECRET UNLOCKED</b><span>Hit 10 cardboard duck targets before time runs out.</span><button class="btn primary" id="duckStartBtn" type="button">Start challenge</button></div>
-</div>
-<div class="duck-result" id="duckResult" role="status" aria-live="polite"></div>
-    </div>
-  </section>
 
   <section class="cta home-cta" id="support"><div><h2>Make room for the good stuff.</h2><p>Bring your server essentials together with Nightfall.</p></div><a class="btn primary" href="{{ invite_url }}">Add Nightfall <span aria-hidden="true">↗</span></a></section>
 </div>
