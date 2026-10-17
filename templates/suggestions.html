@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Nightfall • Suggestions{% endblock %}
+{% block title %}Gargand • Suggestions{% endblock %}
 {% block content %}
 <section class="section suggestion-page">
-  <div class="section-heading"><span class="eyebrow">NIGHTFALL • COMMUNITY FEEDBACK</span><h1>What should we build next?</h1><p>Suggest a feature, command, improvement, or something you think Nightfall should remove.</p></div>
+  <div class="section-heading"><span class="eyebrow">GARGAND • COMMUNITY FEEDBACK</span><h1>What should we build next?</h1><p>Suggest a feature, command, improvement, or something you think Gargand should remove.</p></div>
   <div class="suggestion-public-badge"><span>✦</span> PUBLIC COMMUNITY BOARD <span>✦</span></div>
   <div class="suggestion-form card">
-    {% if submitted %}<div class="suggestion-success"><b>✓ Suggestion received.</b><span>Thanks for helping shape Nightfall.</span></div>
+    {% if submitted %}<div class="suggestion-success"><b>✓ Suggestion received.</b><span>Thanks for helping shape Gargand.</span></div>
     {% else %}
     {% if error %}<div class="save-result error">{{ error }}</div>{% endif %}
     <form method="post" action="/suggestions">
