@@ -1,0 +1,16 @@
+:root{color-scheme:dark;--gg-bg:#070604;--gg-panel:#120f07;--gg-panel2:#1d1709;--gg-line:#4a3810;--gg-text:#fffaf0;--gg-muted:#c2b795;--gg-green:#ffd34d;--gg-green2:#e6a900;--gg-glow:#ffcc3355}
+body.gargand-site{background:#070604!important;color:#fffaf0}
+body.gargand-site:before{background:radial-gradient(ellipse at 72% 0%,#e8ac241e,transparent 36%),radial-gradient(ellipse at 5% 70%,#ffce3510,transparent 38%),#070604}
+.gg-mark{position:relative;isolation:isolate;border-radius:13px;overflow:hidden;box-shadow:0 0 0 1px #ffd34d55,0 0 24px #ffca3028;animation:gg-lion-pulse 4s ease-in-out infinite}
+.gg-mark:after{content:"";position:absolute;inset:-50%;pointer-events:none;background:linear-gradient(115deg,transparent 42%,#fff4c655 50%,transparent 58%);transform:translateX(-90%);animation:gg-lion-sweep 5s ease-in-out infinite}
+.gg-mark img{width:100%;height:100%;object-fit:contain;filter:none}
+.gg-black-logo{border-color:#ffd34d55;box-shadow:0 0 85px #ffbd241b,0 30px 90px #0009}
+.gg-hero h1 span,.gg-kicker,.gg-eyebrow{color:#ffd34d}
+.gg-hero h1 span{text-shadow:0 0 35px #ffcb3b33}
+.gg-button:not(.gg-button-dark),.gg-button-primary{background:linear-gradient(135deg,#ffe58a,#e8a900)!important;color:#171006!important;border-color:#ffe27a!important;box-shadow:0 8px 26px #ffbb2230}
+.gg-button:not(.gg-button-dark):hover,.gg-button-primary:hover{filter:brightness(1.09);transform:translateY(-2px)}
+.gg-header{border-color:#ffd34d30;box-shadow:0 12px 48px #0009,0 1px #fff4c10b inset}
+.gg-card,.gg-feature,.gg-panel{border-color:#a47b2638}
+@keyframes gg-lion-pulse{0%,100%{box-shadow:0 0 0 1px #ffd34d38,0 0 18px #ffca3020}50%{box-shadow:0 0 0 1px #ffd34d80,0 0 32px #ffca3048}}
+@keyframes gg-lion-sweep{0%,20%{transform:translateX(-90%)}70%,100%{transform:translateX(90%)}}
+@media(prefers-reduced-motion:reduce){.gg-mark,.gg-mark:after{animation:none!important}}
