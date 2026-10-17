@@ -1865,10 +1865,6 @@ COMMANDS = [
     ("!proof <action>", "Community", "Use the configured proof workflow. Staff only."),
     ("!daily", "Games", "Claim your daily coins."),
     ("!balance [@member]", "Games", "Show your coin balance or another member's."),
-    ("!coinflip <bet> <heads|tails>", "Games", "Bet coins on a coin flip."),
-    ("!highlow <bet>", "Games", "Play High-Low with a coin bet."),
-    ("!blackjack <bet>", "Games", "Play Blackjack with a coin bet."),
-    ("!roulette <bet> <pick>", "Games", "Play Roulette with a coin bet."),
     # Slash-command directory: keep every existing ! command above and also advertise the new / equivalents.
     ("/help", "Utility", "Show Nightfall's command help as a Discord slash command."),
     ("/about", "Utility", "Show Nightfall's launch information."),
