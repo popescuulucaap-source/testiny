@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Nightfall • {{ guild.name }}{% endblock %}
+{% block title %}Gargand • {{ guild.name }}{% endblock %}
 {% block content %}
 <section class="dashboard-head">
   <div>
-    <span class="eyebrow">NIGHTFALL CONTROL CENTER</span>
+    <span class="eyebrow">GARGAND CONTROL CENTER</span>
     <div class="server-title">
       {% if guild.icon_url %}<img class="dashboard-server-icon" src="{{ guild.icon_url }}" alt="{{ guild.name }} icon">{% endif %}
-      <div><h1>{{ guild.name }}</h1><p>All your Nightfall systems, in one place.</p></div>
+      <div><h1>{{ guild.name }}</h1><p>All your Gargand systems, in one place.</p></div>
     </div>
   </div>
   <a class="btn ghost" href="/servers">← All servers</a>
 </section>
 
 {% if bot_error %}
-<div class="card notice error bot-connection-card"><span class="eyebrow">BOT CONNECTION</span><h2>Nightfall can’t reach this server yet.</h2><p>{{ bot_error }}</p><ul><li>Confirm Nightfall is online and in this Discord server.</li><li>On KataBump, set <code>NIGHTFALL_WEBSITE_URL</code> to this site’s address.</li><li>Keep <code>NIGHTFALL_BRIDGE_SECRET</code> identical in KataBump and Render, then restart the bot.</li></ul><p>After the bot checks in, refresh this dashboard to manage settings.</p></div>
+<div class="card notice error bot-connection-card"><span class="eyebrow">BOT CONNECTION</span><h2>Gargand can’t reach this server yet.</h2><p>{{ bot_error }}</p><ul><li>Confirm Gargand is online and in this Discord server.</li><li>On KataBump, set <code>GARGAND_WEBSITE_URL</code> to this site’s address.</li><li>Keep <code>GARGAND_BRIDGE_SECRET</code> identical in KataBump and Render, then restart the bot.</li></ul><p>After the bot checks in, refresh this dashboard to manage settings.</p></div>
 {% else %}
 <div class="dashboard-metrics" aria-label="Live server statistics">
   <article class="dashboard-metric"><span>👥</span><div><small>MEMBERS</small><strong>{{ "{:,}".format(dashboard_stats.members) }}</strong></div></article>
@@ -29,7 +29,7 @@
 
   <section class="dashboard-content">
     <div id="overview" class="tab-panel active">
-      <div class="card overview-card"><span class="eyebrow">CONNECTED</span><h2>Nightfall is ready</h2><p>Settings sync through the secure bot connection. Choose a section to configure your server, or publish a panel below.</p><div class="dashboard-actions">
+      <div class="card overview-card"><span class="eyebrow">CONNECTED</span><h2>Gargand is ready</h2><p>Settings sync through the secure bot connection. Choose a section to configure your server, or publish a panel below.</p><div class="dashboard-actions">
         <button class="btn primary bot-action" data-action="post_ticket_panel" type="button">🎫 Post ticket panel</button>
         <button class="btn ghost bot-action" data-action="post_verification_panel" type="button">🔐 Post verification</button>
         <button class="btn ghost bot-action" data-action="post_feedback_panel" type="button">💬 Post feedback panel</button>
@@ -43,13 +43,13 @@
         <article class="card"><span class="card-icon">🌙</span><h3>Community</h3><p>Welcome, roles, invites, feedback and applications.</p><a href="#" class="dashboard-jump" data-tab-jump="community">Configure community →</a></article>
       </div>
       <div class="dashboard-checklist card">
-        <span class="eyebrow">NIGHTFALL LAUNCH CHECK</span>
+        <span class="eyebrow">GARGAND LAUNCH CHECK</span>
         <h3>Build your server in a few clicks.</h3>
         <div class="checklist-grid">
           <div><b>01</b><span>Choose your staff role and logs.</span></div>
           <div><b>02</b><span>Turn on the security modules you need.</span></div>
           <div><b>03</b><span>Set ticket, welcome and verification channels.</span></div>
-          <div><b>04</b><span>Publish the panels and let Nightfall sync.</span></div>
+          <div><b>04</b><span>Publish the panels and let Gargand sync.</span></div>
         </div>
       </div>
     </div>
@@ -93,6 +93,6 @@
   </section>
 </div>
 {% endif %}
-<script>window.NIGHTFALL_GUILD_ID = {{ guild.id | tojson }};</script>
+<script>window.GARGAND_GUILD_ID = {{ guild.id | tojson }};</script>
 {% endblock %}
 
