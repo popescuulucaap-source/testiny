@@ -26,6 +26,7 @@ APP_STARTED_AT = time.time()
 APP_REQUEST_COUNT = 0
 APP_METRICS_LOCK = threading.Lock()
 MEMORY_ANNOUNCEMENTS = []
+MEMORY_ANNOUNCEMENT_ID = 1
 MEMORY_CUSTOM_COMMANDS = []
 MEMORY_CUSTOM_COMMAND_ID = 1
 
@@ -81,7 +82,7 @@ DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://testiny-7wuu.o
 BOT_BRIDGE_SECRET = os.getenv("NIGHTFALL_BRIDGE_SECRET", "").strip()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_LOGIN_FAILURES = {}
-INVITE_URL = os.getenv("INVITE_URL", "#")
+INVITE_URL = (os.getenv("INVITE_URL") or (f"https://discord.com/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&scope=bot%20applications.commands" if DISCORD_CLIENT_ID else "#")).strip()
 SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID", "").strip()
@@ -573,9 +574,11 @@ def load_announcements():
             return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3],"kind":r[4] or "website"} for r in cur.fetchall()]
 
 def save_announcement(title, body, kind="website"):
+    global MEMORY_ANNOUNCEMENT_ID
     date=__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
     if not DATABASE_URL:
-        MEMORY_ANNOUNCEMENTS.insert(0, {"id": len(MEMORY_ANNOUNCEMENTS) + 1, "title": title, "body": body, "date": date, "kind": kind})
+        MEMORY_ANNOUNCEMENTS.insert(0, {"id": MEMORY_ANNOUNCEMENT_ID, "title": title, "body": body, "date": date, "kind": kind})
+        MEMORY_ANNOUNCEMENT_ID += 1
         return
     with db_connect() as conn:
         with conn.cursor() as cur:
