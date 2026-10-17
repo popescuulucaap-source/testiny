@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Nightfall • Activity Audit{% endblock %}
+{% block content %}
+<section class="page-head"><span class="eyebrow">ADMIN • ACTIVITY AUDIT</span><h1>Nightfall activity.</h1><p>Recent bot telemetry, command usage, ticket events and form activity.</p></section>
+<section class="admin-feature-stats">
+ <article class="admin-stat admin-stat-feature"><span>COMMAND USES</span><b>{{ summary.commands }}</b><small>Recorded command invocations</small></article>
+ <article class="admin-stat admin-stat-feature"><span>MESSAGES</span><b>{{ summary.messages }}</b><small>Aggregate events only</small></article>
+ <article class="admin-stat admin-stat-feature"><span>TICKETS</span><b>{{ summary.tickets }}</b><small>Ticket creation events</small></article>
+ <article class="admin-stat admin-stat-feature"><span>FORMS</span><b>{{ summary.forms }}</b><small>Form submissions</small></article>
+</section>
+<div class="card admin-list"><h3>Recent events</h3>
+{% for e in events %}
+<div class="admin-row"><div><b>{{ e.event_type }}</b>{% if e.command_name %}<span> · /{{ e.command_name }}</span>{% endif %}<span> · {{ e.username or e.user_id or "Unknown user" }}</span><p>{{ e.guild_name or e.guild_id or "Unknown server" }} · {{ e.created_at }}</p></div><code>{{ e.metadata }}</code></div>
+{% else %}<p>No bot telemetry has arrived yet. Make sure the bot bridge is running.</p>{% endfor %}
+</div>
+<div class="card admin-list"><p><strong>Privacy:</strong> The audit does not store the full text of ordinary server messages. Ticket and form submissions can contain text users intentionally submit to those workflows.</p></div>
+{% endblock %}
