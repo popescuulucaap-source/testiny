@@ -1,4 +1,5 @@
 import os
+from io import BytesIO
 import json
 import secrets
 import base64
@@ -13,6 +14,7 @@ from urllib.parse import urlencode, urlparse
 from xml.etree import ElementTree as ET
 
 import requests
+from PIL import Image
 import psycopg
 from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
 
@@ -52,6 +54,28 @@ def gargand_lion_asset():
                 return Response(logo_file.read(), mimetype="image/svg+xml", headers={"Cache-Control": "public, max-age=86400"})
         except OSError:
             return "GARGAND image unavailable", 404
+
+
+@app.get("/gargand-lion-4k.jpg")
+def gargand_lion_4k_asset():
+    """Serve the same Gargand lion artwork upscaled to a 4096px square for high-resolution displays."""
+    image_path = os.path.join(app.root_path, "static", "gargand-pfp.jpg.b64")
+    try:
+        with open(image_path, "rb") as image_file:
+            image_bytes = base64.b64decode(image_file.read().strip(), validate=True)
+        with Image.open(BytesIO(image_bytes)) as source:
+            source = source.convert("RGB")
+            if source.size != (4096, 4096):
+                source = source.resize((4096, 4096), Image.Resampling.LANCZOS)
+            output = BytesIO()
+            source.save(output, format="JPEG", quality=94, optimize=True, progressive=True)
+        return Response(
+            output.getvalue(), mimetype="image/jpeg",
+            headers={"Cache-Control": "public, max-age=604800, immutable", "X-Content-Type-Options": "nosniff"},
+        )
+    except (OSError, ValueError) as exc:
+        app.logger.warning("Gargand 4K lion image unavailable: %s", exc)
+        return redirect(url_for("gargand_lion_asset"), code=302)
 
 @app.get("/gargand-bar.gif")
 def gargand_bar_asset():
