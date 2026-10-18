@@ -14,7 +14,7 @@ from xml.etree import ElementTree as ET
 
 import requests
 import psycopg
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
 app.secret_key = (os.getenv("SESSION_SECRET") or os.getenv("ROBLOX_OAUTH_CLIENT_SECRET") or "").strip() or secrets.token_urlsafe(48)
@@ -30,6 +30,24 @@ MEMORY_ANNOUNCEMENT_ID = 1
 MEMORY_CUSTOM_COMMANDS = []
 MEMORY_CUSTOM_COMMAND_ID = 1
 
+
+
+
+@app.get("/gargand-lion.jpg")
+def gargand_lion_asset():
+    """Serve the compressed GARGAND lion image for pages and Discord embeds."""
+    image_path = os.path.join(app.root_path, "static", "gargand-pfp.jpg.b64")
+    try:
+        with open(image_path, "rb") as image_file:
+            image_bytes = base64.b64decode(image_file.read().strip(), validate=True)
+        return Response(
+            image_bytes,
+            mimetype="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff"},
+        )
+    except (OSError, ValueError) as exc:
+        app.logger.warning("GARGAND lion asset unavailable: %s", type(exc).__name__)
+        return "GARGAND image unavailable", 404
 
 @app.before_request
 def count_site_request():
@@ -1817,6 +1835,7 @@ COMMANDS = [
     ("!questions", "Utility", "Answer common questions about Gargand, setup, logging, security, tickets and the website dashboard."),
     ("!about", "Utility", "Show Gargand's launch description: 1.0v LAUNCH."),
     ("!setup", "Admin tools", "Open the interactive server setup dashboard and configure features there."),
+    ("!setup templates", "Admin tools", "Choose a Community, Gaming, Creator, or Support server starter layout with ready-to-edit rules and channels."),
     ("!ban @member [reason]", "Moderation", "Ban a member. Staff only."),
     ("!kick @member [reason]", "Moderation", "Kick a member. Staff only."),
     ("!warn @member [reason]", "Moderation", "Warn a member. Staff only."),
