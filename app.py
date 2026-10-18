@@ -35,19 +35,23 @@ MEMORY_CUSTOM_COMMAND_ID = 1
 
 @app.get("/gargand-lion.jpg")
 def gargand_lion_asset():
-    """Serve the compressed GARGAND lion image for pages and Discord embeds."""
+    """Serve the GARGAND lion; prefer the compressed custom PFP if installed."""
     image_path = os.path.join(app.root_path, "static", "gargand-pfp.jpg.b64")
     try:
         with open(image_path, "rb") as image_file:
             image_bytes = base64.b64decode(image_file.read().strip(), validate=True)
         return Response(
-            image_bytes,
-            mimetype="image/jpeg",
+            image_bytes, mimetype="image/jpeg",
             headers={"Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff"},
         )
-    except (OSError, ValueError) as exc:
-        app.logger.warning("GARGAND lion asset unavailable: %s", type(exc).__name__)
-        return "GARGAND image unavailable", 404
+    except (OSError, ValueError):
+        # Existing checked-in lion mark keeps the site and embeds functional until the PFP is installed.
+        fallback = os.path.join(app.root_path, "static", "gargand-mark.svg")
+        try:
+            with open(fallback, "rb") as logo_file:
+                return Response(logo_file.read(), mimetype="image/svg+xml", headers={"Cache-Control": "public, max-age=86400"})
+        except OSError:
+            return "GARGAND image unavailable", 404
 
 @app.before_request
 def count_site_request():
