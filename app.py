@@ -145,7 +145,7 @@ BOT_BRIDGE_SECRET = (os.getenv("GARGAND_BRIDGE_SECRET") or os.getenv("NIGHTFALL_
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_LOGIN_FAILURES = {}
 INVITE_URL = (os.getenv("INVITE_URL") or (f"https://discord.com/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&scope=bot%20applications.commands" if DISCORD_CLIENT_ID else "#")).strip()
-SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/ddjhskT4VY").strip()
+SUPPORT_URL = (os.getenv("SUPPORT_URL") or os.getenv("SUPPORT_SERVER_URL") or os.getenv("SUPPORT_SERVER") or "https://discord.gg/AG2m6u9Ahm").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = (os.getenv("GARGAND_YOUTUBE_CHANNEL_ID") or os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID") or "").strip()
 ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
@@ -236,7 +236,7 @@ def refresh_discord_session():
 @app.before_request
 def require_discord_for_site():
     # Public browsing is allowed. State-changing/private areas still require Discord.
-    public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support", "/terms", "/socials", "/gargand-lion.jpg", "/gargand-bar.gif"}
+    public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support", "/terms", "/socials", "/gargand-lion.jpg", "/gargand-lion-4k.jpg", "/gargand-bar.gif"}
     public_secret_api = set()
     public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull"}
     endpoint = request.endpoint or ""
