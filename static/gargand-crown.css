@@ -1,0 +1,84 @@
+/* GARGAND gold-lion identity layer — built on the existing site theme. */
+:root {
+  --gg-gold: #ffd23f;
+  --gg-gold-hot: #fff0a0;
+  --gg-gold-deep: #a96c08;
+  --gg-black: #080704;
+}
+.gg-mark {
+  overflow: hidden;
+  border: 1px solid rgba(255, 210, 63, .68) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 0 3px rgba(255, 205, 54, .055), 0 0 24px rgba(255, 190, 25, .24) !important;
+  background: #090805;
+}
+.gg-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.gg-black-logo {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: clamp(280px, 37vw, 470px);
+}
+.gg-black-logo::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: min(78%, 390px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 209, 55, .65);
+  box-shadow: 0 0 28px rgba(255, 196, 30, .28), inset 0 0 32px rgba(255, 196, 30, .08);
+  animation: gargand-orbit-glow 4.6s ease-in-out infinite;
+}
+.gg-black-logo img {
+  width: min(72%, 360px) !important;
+  aspect-ratio: 1;
+  height: auto !important;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 213, 66, .82);
+  box-shadow: 0 0 0 8px rgba(255, 207, 44, .05), 0 0 34px rgba(255, 191, 22, .32);
+  animation: gargand-lion-float 5.5s ease-in-out infinite;
+}
+.gg-button-bright {
+  box-shadow: 0 0 24px rgba(255, 195, 32, .14);
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.gg-button-bright:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 32px rgba(255, 200, 35, .27);
+  filter: brightness(1.08);
+}
+.gg-feature {
+  transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease;
+}
+.gg-feature:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 210, 63, .32);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .25), 0 0 25px rgba(255, 195, 24, .055);
+}
+.gg-footer .gg-mark { width: 44px; height: 44px; display: inline-block; }
+.gg-footer .gg-mark img { width: 100%; height: 100%; }
+@keyframes gargand-orbit-glow {
+  0%, 100% { opacity: .68; transform: scale(.98) rotate(-2deg); }
+  50% { opacity: 1; transform: scale(1.025) rotate(2deg); }
+}
+@keyframes gargand-lion-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gg-black-logo::before, .gg-black-logo img { animation: none !important; }
+  .gg-feature, .gg-button-bright { transition: none !important; }
+}
+@media (max-width: 700px) {
+  .gg-black-logo { min-height: 250px; }
+  .gg-black-logo img { width: min(70%, 275px) !important; }
+}
