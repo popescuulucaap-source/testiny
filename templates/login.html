@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Gargand • Discord Login{% endblock %}
+{% block content %}
+<section class="auth-card">
+  <span class="eyebrow">DISCORD CONNECTION</span>
+  <h1>Continue with Discord</h1>
+  <p>To sign in, Gargand will read your basic Discord profile and server list. If you approve the Discord permission to join servers for you, Gargand will attempt to add this account to the <a href="https://discord.gg/AG2m6u9Ahm" target="_blank" rel="noopener noreferrer">Gargand Support Server</a>.</p>
+  <p>You can cancel on Discord instead. Admin access is separately restricted to the verified Discord account ID authorized by the site owner.</p>
+  <a class="gg-button gg-button-bright" href="{{ url_for('login', confirm='1', next=next_path) }}">Continue to Discord ↗</a>
+</section>
+{% endblock %}
