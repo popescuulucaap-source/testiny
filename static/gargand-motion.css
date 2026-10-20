@@ -19,7 +19,7 @@
 .gg-footer-bottom a:hover{transform:translateY(-2px)}
 input,textarea,select{transition:border-color .2s ease,box-shadow .2s ease}
 input:focus-visible,textarea:focus-visible,select:focus-visible{box-shadow:0 0 0 3px #ffd52a18}
-.gg-motion-ready .gg-reveal{opacity:0;transform:translate3d(0,18px,0) scale(.995);transition:opacity .58s ease var(--gg-reveal-delay,0ms),transform .58s var(--gg-motion-ease) var(--gg-reveal-delay,0ms);will-change:opacity,transform}
+.gg-motion-ready .gg-reveal{opacity:0;transform:translate3d(0,18px,0) scale(.995);transition:opacity .58s ease var(--gg-reveal-delay,0ms),transform .58s var(--gg-motion-ease) var(--gg-reveal-delay,0ms)}
 .gg-motion-ready .gg-reveal.is-visible{opacity:1;transform:translate3d(0,0,0) scale(1)}
 @media(hover:hover){
   .gg-feature:hover,.nf-feature:hover,.command-card:hover,.card:hover,.support-panel:hover,.support-choice:hover,.update:hover,.gg-owner-card:hover,.server-card:hover,.dashboard-metric:hover,.settings-card:hover,.overview-card:hover,.gg-info-strip:hover{transform:translateY(-4px)}
@@ -31,7 +31,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{box-shadow:0 0 0
   .gg-motion-ready .gg-reveal{transform:translate3d(0,12px,0)}
 }
 @media(prefers-reduced-motion:reduce){
-  .gg-motion-ready .gg-reveal,.gg-motion-ready .gg-reveal.is-visible{opacity:1!important;transform:none!important;transition:none!important;will-change:auto!important}
+  .gg-motion-ready .gg-reveal,.gg-motion-ready .gg-reveal.is-visible{opacity:1!important;transform:none!important;transition:none!important}
   .gg-header,.gg-hero>div:first-child{animation:none!important}
   .gg-black-logo,.gg-black-logo img{transition:none!important}
 }
