@@ -6,7 +6,7 @@
   .analytics-topline { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
   .analytics-period { display:flex; gap:.6rem; align-items:center; }
   .analytics-period select { min-height:2.7rem; padding:.55rem .8rem; border-radius:.7rem; }
-  .analytics-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1.25rem 0; }
+  .analytics-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin:1.25rem 0; }
   .analytics-kpi { padding:1.25rem; }
   .analytics-kpi small { display:block; opacity:.7; letter-spacing:.08em; }
   .analytics-kpi strong { display:block; font-size:2rem; margin-top:.3rem; }
@@ -47,6 +47,7 @@
     <article class="card analytics-kpi"><small>COMMANDS USED</small><strong>{{ "{:,}".format(summary.commands) }}</strong></article>
     <article class="card analytics-kpi"><small>TICKETS OPENED</small><strong>{{ "{:,}".format(summary.tickets) }}</strong></article>
     <article class="card analytics-kpi"><small>MEMBERS WHO USED GARGAND</small><strong>{{ "{:,}".format(summary.active_members) }}</strong></article>
+    <article class="card analytics-kpi"><small>MODERATION CASES</small><strong>{{ "{:,}".format(summary.moderation_cases) }}</strong></article>
   </div>
 
   <div class="analytics-tables">
@@ -83,7 +84,7 @@
       {% endif %}
     </section>
   </div>
-  <p class="analytics-note">This page currently counts bot commands and tickets. Other activity types can be added as the bot reports them.</p>
+  <p class="analytics-note">This page counts bot commands, tickets and moderation cases reported by Gargand.</p>
   {% endif %}
 </section>
 {% endblock %}
