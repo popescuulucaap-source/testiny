@@ -829,6 +829,14 @@ def load_developers():
         rows = conn.execute("SELECT discord_id, display_name, role FROM developers ORDER BY CASE WHEN LOWER(role)='owner' THEN 0 ELSE 1 END, display_name ASC").fetchall()
     return [{"discord_id": str(row[0]), "display_name": row[1], "role": row[2]} for row in rows]
 
+@app.context_processor
+def inject_developers():
+    try:
+        return {"developers": load_developers()}
+    except psycopg.Error as exc:
+        app.logger.warning("Could not load developer list: %s", type(exc).__name__)
+        return {"developers": list(MEMORY_DEVELOPERS)}
+
 def save_developer(discord_id, display_name, role):
     if not DATABASE_URL:
         for item in MEMORY_DEVELOPERS:
