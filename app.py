@@ -1480,7 +1480,7 @@ def guild_analytics(guild_id):
     period = f"{period_days} days"
     bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
     guild = {"id": str(guild_id), "name": bot_guild.get("name") or "Discord server"}
-    summary = {"commands": 0, "tickets": 0, "active_members": 0}
+    summary = {"commands": 0, "tickets": 0, "active_members": 0, "moderation_cases": 0}
     daily_activity = []
     top_commands = []
     analytics_error = None
@@ -1493,7 +1493,8 @@ def guild_analytics(guild_id):
                 row = conn.execute(
                     "SELECT COUNT(*) FILTER (WHERE event_type = 'command_used'), "
                     "COUNT(*) FILTER (WHERE event_type = 'ticket_created'), "
-                    "COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL AND user_id <> '') "
+                    "COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL AND user_id <> '' AND event_type IN ('command_used', 'ticket_created')), "
+                    "COUNT(*) FILTER (WHERE event_type = 'moderation_case') "
                     "FROM bot_telemetry WHERE guild_id = %s AND created_at >= NOW() - %s::interval",
                     (str(guild_id), period),
                 ).fetchone()
@@ -1501,11 +1502,13 @@ def guild_analytics(guild_id):
                     "commands": int(row[0] or 0),
                     "tickets": int(row[1] or 0),
                     "active_members": int(row[2] or 0),
+                    "moderation_cases": int(row[3] or 0),
                 }
                 rows = conn.execute(
                     "SELECT created_at::date AS activity_date, COUNT(*) AS total, "
                     "COUNT(*) FILTER (WHERE event_type = 'command_used') AS commands, "
-                    "COUNT(*) FILTER (WHERE event_type = 'ticket_created') AS tickets "
+                    "COUNT(*) FILTER (WHERE event_type = 'ticket_created') AS tickets, "
+                    "COUNT(*) FILTER (WHERE event_type = 'moderation_case') AS moderation_cases "
                     "FROM bot_telemetry WHERE guild_id = %s AND created_at >= NOW() - %s::interval "
                     "GROUP BY created_at::date ORDER BY activity_date",
                     (str(guild_id), period),
@@ -1517,6 +1520,7 @@ def guild_analytics(guild_id):
                         "total": int(item[1] or 0),
                         "commands": int(item[2] or 0),
                         "tickets": int(item[3] or 0),
+                        "moderation_cases": int(item[4] or 0),
                     }
                     for item in rows
                 ]
