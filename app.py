@@ -443,6 +443,7 @@ def bot_heartbeat():
                 "member_count": guild.get("member_count"),
                 "invite_url": str(guild.get("invite_url") or "").strip(),
                 "settings": guild.get("settings") if isinstance(guild.get("settings"), dict) else {},
+                "health": guild.get("health") if isinstance(guild.get("health"), dict) else {},
             }
     last_seen = time.time()
     guild_snapshot = list(normalized.values())
@@ -1536,6 +1537,7 @@ def dashboard(guild_id):
         "dashboard.html",
         guild=guild,
         settings=settings,
+        bot_health=bot_guild.get("health", {}) if bot_guild else {},
         bot_error=bot_error,
         setting_groups=SETTING_GROUPS,
         dashboard_stats=dashboard_stats,
