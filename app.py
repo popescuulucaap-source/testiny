@@ -677,6 +677,52 @@ def init_db():
                         "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
                         (title, body, date, "bot"),
                     )
+            # Publish the recent merged website and bot releases in the public Updates feed.
+            release_announcements = [
+                (
+                    "Guided setup & lion-led redesign • Website Update",
+                    "The homepage now features Gargand's gold lion identity, lighter motion, and a guided server setup flow. The setup health panel checks the bot's required permissions, configured channels, and role hierarchy so admins can spot setup issues sooner.",
+                    "2026-10-20",
+                    "website",
+                ),
+                (
+                    "Lion sound & security dashboard • Website Update",
+                    "The lion artwork now has opt-in ambient sound and a click-to-play roar. Server admins can review security incidents from the moderation dashboard and configure anti-nuke trusted roles, event windows, action thresholds, and optional responses.",
+                    "2026-10-20",
+                    "website",
+                ),
+                (
+                    "Verification hardening • Bot Update",
+                    "Member verification now uses a private four-word, three-digit challenge tied to the correct server and pending role. Cooldowns and temporary retry limits make repeated guessing harder, longer risk-based phrases stay readable, and the bot keeps the unverified role in place until verification succeeds.",
+                    "2026-10-20",
+                    "bot",
+                ),
+                (
+                    "Moderation cases, appeals & raid response • Bot Update",
+                    "Staff can track searchable moderation and security cases, while members can submit private appeals for eligible warning or timeout cases. Staged raid protection can apply a timed posting lockdown and restore saved channel permissions; join-risk signals inform verification without automatically banning new members.",
+                    "2026-10-20",
+                    "bot",
+                ),
+                (
+                    "Cleaner embeds & setup health • Bot Update",
+                    "Standard bot embeds no longer use the animated GIF divider. The bot also reports required permissions, configured channel access, and role hierarchy to the website setup health panel, helping admins catch configuration problems earlier.",
+                    "2026-10-20",
+                    "bot",
+                ),
+                (
+                    "Staged anti-nuke alerts & recovery • Bot Update",
+                    "Anti-nuke protection now watches channel and role deletions or monitored edits, checks Discord audit-log actors, and supports trusted roles and per-action thresholds. Optional temporary lockdown and automatic bans are off by default; administrators can inspect status with !antinuke and restore saved channel/role settings with !recover <case id>.",
+                    "2026-10-20",
+                    "bot",
+                ),
+            ]
+            for title, body, date, kind in release_announcements:
+                cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", (title,))
+                if not cur.fetchone():
+                    cur.execute(
+                        "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
+                        (title, body, date, kind),
+                    )
             cur.execute("CREATE TABLE IF NOT EXISTS suggestions (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, suggestion TEXT NOT NULL, date TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
