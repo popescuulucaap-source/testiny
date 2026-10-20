@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Gargand — Verification{% endblock %}
+{% block content %}
+<section class="page-head gg-legal-head">
+  <span class="eyebrow">GARGAND • VERIFICATION</span>
+  <h1>Quiet on the web. Stronger on Discord.</h1>
+  <p>Website visitors can browse normally. Gargand adds extra checks only where a form or a new Discord member needs protection.</p>
+</section>
+<section class="gg-section gg-legal-body">
+  <div class="gg-feature-grid">
+    <article class="gg-feature"><div class="gg-feature-icon">◉</div><h2>Website: no puzzle</h2><p>Normal form submissions receive a signed browser-session check and same-site request validation. Short request limits and hidden spam traps help reduce automated abuse. There is no CAPTCHA and visitors do not need to click a verification button.</p></article>
+    <article class="gg-feature"><div class="gg-feature-icon">🔐</div><h2>Discord: private challenge</h2><p>When server verification is configured, new members receive an Unverified role and complete a private, changing phrase challenge before Gargand grants Verified access.</p></article>
+    <article class="gg-feature"><div class="gg-feature-icon">⏱</div><h2>Abuse limits</h2><p>Discord challenges expire after five minutes. Three incorrect answers trigger a 15-minute cooldown, repeated challenge starts are slowed down, and very new accounts are flagged for staff review.</p></article>
+  </div>
+  <div class="gg-info-strip gg-security-note"><div><span class="gg-kicker">SERVER SETUP</span><h2>Configure a real access gate</h2><p>Run <code>!setup</code>, choose the verification channel, then confirm the bot’s role is above Unverified and Verified. Set Unverified to read-only in your regular channels; Gargand does not rewrite every existing room’s permissions.</p></div><a class="gg-button gg-button-bright" href="{{ support_url }}" target="_blank" rel="noopener noreferrer">Ask in support ↗</a></div>
+</section>
+<style>
+.gg-legal-head{max-width:1100px;margin:55px auto 18px;padding:42px 30px;border:1px solid #d1a62f33;border-radius:22px;background:radial-gradient(ellipse at 85% 10%,#d3a42718,transparent 44%),linear-gradient(135deg,#171206,#080704)}
+.gg-legal-head h1{font-size:clamp(42px,7vw,76px);margin:12px 0;color:#fff7dc}.gg-legal-head p{max-width:680px;color:#d0c29b}.gg-legal-body{max-width:1100px;margin:0 auto 90px}.gg-legal-body .gg-feature-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}.gg-legal-body .gg-feature h2{font-size:18px}.gg-security-note{margin-top:28px}
+@media(max-width:780px){.gg-legal-head{margin:32px 16px 14px;padding:30px 22px}.gg-legal-body{margin:0 16px 65px}}
+</style>
+{% endblock %}
