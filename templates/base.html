@@ -39,12 +39,11 @@
   <section class="gg-developers" aria-labelledby="gg-developers-title">
     <div class="gg-developers-heading"><span class="eyebrow">THE PEOPLE BEHIND GARGAND</span><h2 id="gg-developers-title">Developers &amp; owners</h2><p>Meet the owners of Gargand.</p></div>
     <div class="gg-owner-list">
-      <a class="gg-owner-card" href="https://discord.com/users/1418291387668893699" target="_blank" rel="noopener noreferrer">
-        <span class="gg-owner-role">OWNER</span><strong>Owner</strong><code>1418291387668893699</code><span>Open Discord profile ↗</span>
+      {% for developer in developers|default([{"discord_id":"1418291387668893699","display_name":"Owner","role":"Owner"},{"discord_id":"1242411642252431385","display_name":"Owner","role":"Owner"},{"discord_id":"1275463389941858346","display_name":"Developer","role":"Developer"}]) %}
+      <a class="gg-owner-card" href="https://discord.com/users/{{ developer.discord_id }}" target="_blank" rel="noopener noreferrer">
+        <span class="gg-owner-role">{{ developer.role|upper }}</span><strong>{{ developer.display_name }}</strong><code>{{ developer.discord_id }}</code><span>Open Discord profile ↗</span>
       </a>
-      <a class="gg-owner-card" href="https://discord.com/users/1242411642252431385" target="_blank" rel="noopener noreferrer">
-        <span class="gg-owner-role">OWNER</span><strong>Owner</strong><code>1242411642252431385</code><span>Open Discord profile ↗</span>
-      </a>
+      {% endfor %}
     </div>
   </section>
     <div class="gg-footer-bottom"><span>© Gargand · Built for communities</span><div><a href="/support">Support</a><a href="/socials">Socials</a><a href="/security">Security</a><a href="/verification">Verification</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a></div></div>
