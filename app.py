@@ -1594,6 +1594,8 @@ def login():
     # Only accept a local path; never let OAuth become an open redirect.
     if requested_next.startswith("/") and not requested_next.startswith("//"):
         session["oauth_next"] = requested_next
+    if request.args.get("confirm") != "1":
+        return render_template("login.html", next_path=session.get("oauth_next", ""))
     params = {
         "client_id": DISCORD_CLIENT_ID,
         "redirect_uri": DISCORD_REDIRECT_URI,
