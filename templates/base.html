@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080704">
   <meta name="description" content="Gargand is your all-in-one Discord bot for moderation, security, tickets, levels and community tools.">
+  <meta name="gargand-browser-verification" content="{{ browser_verification_token }}">
   <title>{% block title %}Gargand — your server, protected{% endblock %}</title>
-  <link rel="icon" href="{{ url_for('gargand_lion_4k_asset') }}?v=lion202610">
+  <link rel="icon" href="{{ url_for('gargand_lion_asset') }}?v=lion202610">
   <link rel="stylesheet" href="{{ url_for('static', filename='cinematic-site.css') }}?v=gargand1">
   <link rel="stylesheet" href="{{ url_for('static', filename='fresh-start.css') }}?v=gargand1">
   <link rel="stylesheet" href="{{ url_for('static', filename='nightfall-pages.css') }}?v=gargand1">
@@ -18,9 +19,9 @@
 <body class="gargand-site">
   <div class="gargand-ambient" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div>
   <header class="gg-header">
-    <a class="gg-brand" href="/" aria-label="Gargand home"><span class="gg-mark" aria-hidden="true"><img src="{{ url_for('gargand_lion_4k_asset') }}?v=lion202610" alt=""></span><span>GARGAND<span class="gg-dot">.</span></span></a>
+    <a class="gg-brand" href="/" aria-label="Gargand home"><span class="gg-mark" aria-hidden="true"><img src="{{ url_for('gargand_lion_asset') }}?v=lion202610" alt=""></span><span>GARGAND<span class="gg-dot">.</span></span></a>
     <nav class="gg-nav" aria-label="Main navigation">
-      <a href="/commands">Commands</a><a href="/support">Support</a><a href="/socials">Socials</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a>
+      <a href="/commands">Commands</a><a href="/security">Security</a><a href="/verification">Verification</a><a href="/support">Support</a><a href="/socials">Socials</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a>
     </nav>
     <div class="gg-actions">
       <label class="gg-language-label" for="gargandLanguage">Language</label>
@@ -45,21 +46,50 @@
       </a>
     </div>
   </section>
-    <div class="gg-footer-bottom"><span>© Gargand · Built for communities</span><div><a href="/support">Support</a><a href="/socials">Socials</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a></div></div>
+    <div class="gg-footer-bottom"><span>© Gargand · Built for communities</span><div><a href="/support">Support</a><a href="/socials">Socials</a><a href="/security">Security</a><a href="/verification">Verification</a><a href="/terms">Terms</a><a href="/announcements">Announcements</a><a href="/admin">Admin</a></div></div>
   </footer>
   <script>
+    (function(){
+      var meta=document.querySelector('meta[name="gargand-browser-verification"]');
+      var token=meta&&meta.content;
+      if(!token||!window.fetch)return;
+      var originalFetch=window.fetch.bind(window);
+      window.fetch=function(resource,options){
+        var isRequest=typeof Request!=='undefined'&&resource instanceof Request;
+        var method=(options&&options.method)||(isRequest?resource.method:'GET');
+        if(!/^(GET|HEAD|OPTIONS)$/i.test(method)){
+          try{
+            var target=(typeof resource==='string'||(typeof URL!=='undefined'&&resource instanceof URL))?resource:(resource&&resource.url);
+            var url=new URL(target,window.location.href);
+            if(url.origin===window.location.origin){
+              var headers=new Headers(isRequest?resource.headers:undefined);
+              if(options&&options.headers)new Headers(options.headers).forEach(function(value,key){headers.set(key,value);});
+              headers.set('X-Gargand-Browser-Check',token);
+              options=Object.assign({},options||{},{headers:headers,credentials:(options&&options.credentials)||'same-origin'});
+            }
+          }catch(_){}
+        }
+        return originalFetch(resource,options);
+      };
+    })();
     function googleTranslateElementInit(){new google.translate.TranslateElement({pageLanguage:'en',includedLanguages:'af,am,ar,az,be,bg,bn,bs,ca,ceb,co,cs,cy,da,de,el,en,eo,es,et,eu,fa,fi,fr,fy,ga,gd,gl,gu,ha,haw,he,hi,hr,ht,hu,hy,id,ig,is,it,ja,jw,ka,kk,km,kn,ko,ku,ky,la,lb,lo,lt,lv,mg,mi,mk,ml,mn,mr,ms,mt,my,ne,nl,no,ny,pa,pl,ps,pt,ro,ru,sd,si,sk,sl,sm,sn,so,sq,sr,su,sv,sw,ta,te,tg,th,tl,tr,uk,ur,uz,vi,yi,yo,zh-CN,zh-TW,zu',autoDisplay:false},'google_translate_element');window.setTimeout(function(){var combo=document.querySelector('.goog-te-combo');var choice=document.getElementById('gargandLanguage');if(combo&&choice&&choice.value){combo.value=choice.value;combo.dispatchEvent(new Event('change'));}},700);}
     document.addEventListener('DOMContentLoaded',function(){
       var select=document.getElementById('gargandLanguage');
       if(select)select.addEventListener('change',function(){
         var target=document.querySelector('.goog-te-combo');
-        if(target){target.value=select.value;target.dispatchEvent(new Event('change'));}
+        if(target){target.value=select.value;target.dispatchEvent(new Event('change'));return;}
+        if(select.value&&!window.__gargandTranslateLoading){
+          window.__gargandTranslateLoading=true;
+          var script=document.createElement('script');
+          script.src='https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+          script.async=true;
+          document.head.appendChild(script);
+        }
       });
       var nav=document.querySelector('.gg-nav');
       if(nav)nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('gg-menu-open');var b=document.querySelector('.gg-menu');if(b)b.setAttribute('aria-expanded','false');});});
     });
   </script>
-  <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
   <script src="{{ url_for('static', filename='dashboard.js') }}?v=20261017b" defer></script>
 </body>
 </html>
