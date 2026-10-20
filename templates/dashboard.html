@@ -36,12 +36,14 @@
         <button class="btn ghost bot-action" data-action="post_feedback_panel" type="button">💬 Post feedback panel</button>
         <button class="btn ghost bot-action" data-action="post_application_panel" type="button">📋 Post applications</button>
         <button class="btn ghost bot-action" data-action="toggle_jail" type="button">🔒 Toggle jail system</button>
+        <button class="btn danger bot-action" data-action="raid_lockdown" data-confirm="Start a 10-minute server-wide posting lockdown? Gargand will save and restore the current @everyone channel permissions." type="button">🚨 Start 10-minute raid lockdown</button>
+        <button class="btn ghost bot-action" data-action="raid_release" data-confirm="Restore the saved channel permissions and end the active raid lockdown?" type="button">🟢 End raid lockdown</button>
         <button class="btn ghost bot-action" data-action="sync_setup" type="button">↻ Refresh Discord setup panel</button>
         <a class="btn ghost" href="/dashboard/{{ guild.id }}/analytics">📊 Server activity</a>
         <a class="btn ghost" href="/dashboard/{{ guild.id }}/moderation">🛡️ Moderation cases</a>
       </div><p id="actionResult" class="notice" aria-live="polite">Choose a bot action to queue it.</p></div>
       <div class="dashboard-highlights">
-        <article class="card"><span class="card-icon">🛡️</span><h3>Protect</h3><p>Anti-raid, anti-nuke, anti-link and verification controls.</p><a href="#" class="dashboard-jump" data-tab-jump="security">Configure security →</a></article>
+        <article class="card"><span class="card-icon">🛡️</span><h3>Protect</h3><p>Moderation case IDs, staged raid watch, optional automatic lockdown and risk-based verification.</p><a href="#" class="dashboard-jump" data-tab-jump="security">Configure security →</a></article>
         <article class="card"><span class="card-icon">🎫</span><h3>Support</h3><p>Ticket panels, questions, appeals and jail workflows.</p><a href="#" class="dashboard-jump" data-tab-jump="tickets">Configure support →</a></article>
         <article class="card"><span class="card-icon">🌙</span><h3>Community</h3><p>Welcome, roles, invites, feedback and applications.</p><a href="#" class="dashboard-jump" data-tab-jump="community">Configure community →</a></article>
       </div>
@@ -84,6 +86,7 @@
             <span>{{ label }}</span>
             {% if field_type == 'toggle' %}
               <input type="checkbox" data-setting="{{ key }}" {% if settings.get(key, false) %}checked{% endif %}>
+              {% if key == 'raid_auto_lockdown' %}<small class="field-help">Requires Anti-raid protection. At a severe join surge, Gargand temporarily pauses @everyone posting and restores saved channel permissions after 10 minutes.</small>{% endif %}
             {% elif field_type == 'channel' %}
               <select data-setting="{{ key }}" data-resource="channel" data-current="{{ settings.get(key, '') or '' }}"><option value="">Loading channels…</option></select>
               <small class="field-help">Choose a channel from your server. No ID needed.</small>

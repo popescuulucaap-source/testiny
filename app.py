@@ -234,7 +234,7 @@ CHANNEL_SETTINGS = {
 }
 ROLE_SETTINGS = {"staff_role_id", "autorole_id", "booster_role_id", "jail_role_id", "verified_role_id", "unverified_role_id", "muted_role_id"}
 TOGGLE_SETTINGS = {
-    "anti_raid", "anti_nuke", "anti_link", "j4j", "j4j_dm", "jail_enabled",
+    "anti_raid", "raid_auto_lockdown", "anti_nuke", "anti_link", "j4j", "j4j_dm", "jail_enabled",
     "automod_spam", "automod_flood", "automod_mentions", "automod_bad_words",
     "xp_enabled", "economy_enabled", "analytics_enabled", "ai_memory_enabled",
     "giveaway_require_role"
@@ -248,7 +248,7 @@ EDITABLE_SETTINGS = CHANNEL_SETTINGS | ROLE_SETTINGS | TOGGLE_SETTINGS | TEXT_SE
 SETTING_GROUPS = [
     ("general", "General", "Identity, prefix and logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel", "channel"), ("staff_role_id", "Staff role", "role")]),
     ("community", "Community", "Welcome, roles, feedback, applications and XP", [("welcome_channel_id", "Welcome channel", "channel"), ("leave_channel_id", "Leave channel", "channel"), ("autorole_id", "Auto role", "role"), ("vouch_channel_id", "Vouch channel", "channel"), ("feedback_channel_id", "Feedback channel", "channel"), ("proof_channel_id", "Proof channel", "channel"), ("booster_role_id", "Booster role", "role"), ("staff_application_channel_id", "Applications channel", "channel"), ("autoreaction_channel_id", "Auto reaction channel", "channel"), ("autoreaction_emoji", "Auto reaction emoji", "text"), ("xp_enabled", "XP & levels", "toggle"), ("levelup_channel_id", "Level-up channel", "channel"), ("xp_per_message", "XP per message", "number"), ("xp_cooldown_seconds", "XP cooldown (seconds)", "number")]),
-    ("security", "Security & Auto-Mod", "Automatic protection and moderation", [("anti_raid", "Anti-raid protection", "toggle"), ("anti_nuke", "Anti-nuke protection", "toggle"), ("anti_link", "Block links", "toggle"), ("automod_spam", "Anti-spam", "toggle"), ("automod_flood", "Anti-flood", "toggle"), ("automod_mentions", "Mention protection", "toggle"), ("automod_bad_words", "Configured word filter", "toggle"), ("automod_punishment", "Auto-mod punishment", "text"), ("automod_max_messages", "Max messages in window", "number"), ("automod_window_seconds", "Spam window (seconds)", "number"), ("automod_mention_limit", "Mention limit", "number"), ("automod_log_channel_id", "Auto-mod log channel", "channel"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel", "channel"), ("command_channel_id", "Command-only channel", "channel")]),
+    ("security", "Security & Auto-Mod", "Automatic protection and moderation", [("anti_raid", "Anti-raid protection", "toggle"), ("raid_auto_lockdown", "Auto-lock channels during a join surge", "toggle"), ("anti_nuke", "Anti-nuke protection", "toggle"), ("anti_link", "Block links", "toggle"), ("automod_spam", "Anti-spam", "toggle"), ("automod_flood", "Anti-flood", "toggle"), ("automod_mentions", "Mention protection", "toggle"), ("automod_bad_words", "Configured word filter", "toggle"), ("automod_punishment", "Auto-mod punishment", "text"), ("automod_max_messages", "Max messages in window", "number"), ("automod_window_seconds", "Spam window (seconds)", "number"), ("automod_mention_limit", "Mention limit", "number"), ("automod_log_channel_id", "Auto-mod log channel", "channel"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel", "channel"), ("command_channel_id", "Command-only channel", "channel")]),
     ("tickets", "Tickets & appeals", "Ticket panel, categories, questions and appeals", [("ticket_panel_channel_id", "Ticket panel channel", "channel"), ("ticket_category_id", "Ticket category", "channel"), ("ticket_options", "Ticket types (comma separated)", "list"), ("ticket_questions", "Ticket questions (JSON)", "json"), ("appeal_server_id", "Appeal server ID", "number"), ("appeal_invite_url", "Appeal invite URL", "text")]),
     ("moderation", "Moderation & jail", "Jail, giveaways and analytics", [("jail_role_id", "Jail role", "role"), ("jail_category_id", "Jail category", "channel"), ("jail_chat_channel_id", "Jail chat", "channel"), ("jail_appeal_channel_id", "Jail appeals", "channel"), ("giveaway_channel_id", "Giveaway channel", "channel"), ("giveaway_require_role", "Giveaways require role", "toggle"), ("analytics_enabled", "Server analytics", "toggle"), ("analytics_channel_id", "Analytics channel", "channel"), ("economy_enabled", "Community economy", "toggle"), ("daily_coins", "Daily coins", "number"), ("ai_memory_enabled", "AI channel memory", "toggle")]),
 ]
@@ -491,6 +491,20 @@ def user_can_manage_guild(guild_id):
             return False
         permissions = int(guild.get("permissions", "0"))
         return bool((permissions & MANAGE_GUILD) == MANAGE_GUILD or (permissions & ADMINISTRATOR) == ADMINISTRATOR)
+    except (requests.RequestException, ValueError, TypeError):
+        return False
+
+
+def user_is_guild_admin(guild_id):
+    try:
+        response = requests.get(f"{DISCORD_API}/users/@me/guilds", headers=discord_headers(), timeout=12)
+        if response.status_code != 200:
+            return False
+        guild = next((item for item in response.json() if str(item.get("id")) == str(guild_id)), None)
+        if not guild:
+            return False
+        permissions = int(guild.get("permissions", "0"))
+        return (permissions & ADMINISTRATOR) == ADMINISTRATOR
     except (requests.RequestException, ValueError, TypeError):
         return False
 
@@ -1643,8 +1657,8 @@ def guild_moderation(guild_id):
         try:
             with db_connect() as conn:
                 rows = conn.execute(
-                    "SELECT id, created_at, username, user_id, command_name, metadata "
-                    "FROM bot_telemetry WHERE guild_id = %s AND event_type = 'moderation_case' "
+                    "SELECT id, created_at, username, user_id, command_name, metadata, event_type "
+                    "FROM bot_telemetry WHERE guild_id = %s AND event_type IN ('moderation_case','security_incident') "
                     "ORDER BY created_at DESC, id DESC LIMIT 100",
                     (str(guild_id),),
                 ).fetchall()
@@ -1662,11 +1676,13 @@ def guild_moderation(guild_id):
                     "actor": str(row[2] or "Unknown staff member"),
                     "actor_id": str(row[3] or ""),
                     "action": str(metadata.get("action") or row[4] or "moderation"),
+                    "record_type": str(metadata.get("record_type") or ("incident" if row[6] == "security_incident" else "case")),
                     "target_id": str(metadata.get("target_id") or ""),
                     "target_name": str(metadata.get("target_name") or "—"),
                     "reason": str(metadata.get("reason") or "No reason provided"),
                     "outcome": str(metadata.get("outcome") or "success"),
                     "details": str(metadata.get("details") or ""),
+                    "expires_at": format_timestamp(metadata["expires_at"]) if str(metadata.get("expires_at") or "").isdigit() else None,
                 })
         except psycopg.Error as exc:
             app.logger.warning("Could not load guild moderation history: %s", type(exc).__name__)
@@ -1769,9 +1785,11 @@ def dashboard_action(guild_id):
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
         return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
-    allowed_actions = {"sync_setup", "post_ticket_panel", "post_verification_panel", "post_feedback_panel", "post_application_panel", "toggle_jail"}
+    allowed_actions = {"sync_setup", "post_ticket_panel", "post_verification_panel", "post_feedback_panel", "post_application_panel", "toggle_jail", "raid_lockdown", "raid_release"}
     if payload.get("action") not in allowed_actions:
         return jsonify({"ok": False, "error": "Unknown action."}), 400
+    if payload.get("action") in {"raid_lockdown", "raid_release"} and not user_is_guild_admin(guild_id):
+        return jsonify({"ok": False, "error": "Administrator permission is required for raid lockdown controls."}), 403
     guild_snapshot = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
     settings = guild_snapshot.get("settings", {})
     required = {
@@ -2097,8 +2115,12 @@ COMMANDS = [
     ("!warnings @member", "Moderation", "Show a member's warning record. Alias: !warns."),
     ("!clearwarnings @member", "Moderation", "Clear a member's warning record. Alias: !resetwarnings."),
     ("!timeout @member <duration> [reason]", "Moderation", "Temporarily timeout a member."),
+    ("!case <id>", "Moderation", "Look up a saved moderation case or security incident."),
+    ("!cases [@member]", "Moderation", "List recent cases, optionally filtered to one member."),
     ("!lock", "Moderation", "Lock the current channel."),
     ("!unlock", "Moderation", "Unlock the current channel."),
+    ("!raidlockdown [duration]", "Security", "Admin-only, temporary server posting lockdown with automatic permission restore; maximum one hour."),
+    ("!raidrelease", "Security", "Restore the saved channel permissions and end a Gargand raid lockdown."),
     ("!slowmode <seconds>", "Moderation", "Set channel slowmode. Alias: !slow."),
     ("!jail @member [reason]", "Moderation", "Jail a member using the configured jail system."),
     ("!unjail @member [reason]", "Moderation", "Release a jailed member."),
@@ -2135,6 +2157,7 @@ COMMANDS = [
     ("!ticket panel", "Tickets", "Post the configured ticket panel."),
     ("!ticket questions <type> <questions>", "Tickets", "Set questions for a ticket type."),
     ("!appeal server", "Tickets", "Show or set the appeal server information."),
+    ("!appeal case <id> <statement>", "Tickets", "Appeal your own warning or timeout case through a private review ticket."),
     ("!appeal_server", "Tickets", "Show appeal server information. Also accepts !appealserver."),
     ("!autoreaction #channel <emoji>", "Community", "Set automatic reactions for a channel."),
     ("!role give <member|everyone> @role", "Roles", "Give a role to a member or eligible members."),
@@ -2164,8 +2187,12 @@ COMMANDS = [
     ("/warnings @member", "Moderation", "Show a member's warning record."),
     ("/clearwarnings @member", "Moderation", "Clear a member's warning record."),
     ("/timeout @member <duration> [reason]", "Moderation", "Temporarily timeout a member."),
+    ("/case <id>", "Moderation", "Look up a saved moderation case or security incident."),
+    ("/cases [@member]", "Moderation", "List recent cases, optionally filtered to one member."),
     ("/lock", "Moderation", "Lock the current channel."),
     ("/unlock", "Moderation", "Unlock the current channel."),
+    ("/raidlockdown [duration]", "Security", "Admin-only temporary posting lockdown with automatic permission restore."),
+    ("/raidrelease", "Security", "Restore permissions and end a Gargand raid lockdown."),
     ("/slowmode <seconds>", "Moderation", "Set channel slowmode."),
     ("/jail @member [reason]", "Moderation", "Jail a member using the configured jail system."),
     ("/unjail @member [reason]", "Moderation", "Release a jailed member."),
@@ -2206,6 +2233,7 @@ COMMANDS = [
     ("/ticket panel", "Tickets", "Post the configured ticket panel."),
     ("/ticket questions <type> <questions>", "Tickets", "Set questions for a ticket type."),
     ("/appeal server", "Tickets", "Show or set the appeal server information."),
+    ("/appeal case <id> <statement>", "Tickets", "Appeal your own warning or timeout case through a private review ticket."),
     ("/appeal_server", "Tickets", "Show appeal server information."),
     ("/autoreaction #channel <emoji>", "Community", "Set automatic reactions for a channel."),
     ("/role give <member|everyone> @role", "Roles", "Give a role to a member or eligible members."),

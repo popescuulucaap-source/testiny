@@ -91,6 +91,7 @@
     finally { button.disabled = false; button.textContent = "Save " + (card?.querySelector("h2")?.textContent || "settings"); }
   }));
   document.querySelectorAll(".bot-action").forEach(button => button.addEventListener("click", async () => {
+    if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
     const result = document.getElementById("actionResult");
     const original = button.textContent;
     button.disabled = true; button.textContent = "Working…";
