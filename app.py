@@ -1900,28 +1900,41 @@ def review_security_incident(guild_id, case_id):
 @app.get("/api/dashboard/<guild_id>/resources")
 @login_required
 def dashboard_resources(guild_id):
-    """Return live Discord channels/roles for the setup dropdowns; no IDs need to be typed."""
+    """Return bot-authorized guild resources from the signed bridge heartbeat."""
     if not user_can_manage_guild(guild_id):
         return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
     try:
-        gid = str(guild_id)
-        channels_resp = requests.get(f"{DISCORD_API}/guilds/{gid}/channels", headers=discord_headers(), timeout=12)
-        roles_resp = requests.get(f"{DISCORD_API}/guilds/{gid}/roles", headers=discord_headers(), timeout=12)
-        if channels_resp.status_code != 200 or roles_resp.status_code != 200:
-            return jsonify({"ok": False, "error": "Discord did not return the server channels/roles."}), 502
-        channels = channels_resp.json()
-        roles = roles_resp.json()
+        guild = next(
+            (item for item in bot_guild_snapshot() if str(item.get("id")) == str(guild_id)),
+            None,
+        )
+        if not guild:
+            return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server. Refresh after the bot checks in."}), 503
+        # Discord's guild channels/roles endpoints require bot authorization. The website's
+        # OAuth token only grants access to the user's profile and guild list, so use the
+        # channels/roles supplied by the bot over the authenticated heartbeat instead.
+        if "channels" not in guild or "roles" not in guild:
+            return jsonify({"ok": False, "error": "The bot is online, but its resource list is outdated. Wait for the latest bot deployment and refresh this page."}), 503
         channel_items = [
-            {"id": str(x["id"]), "name": x.get("name",""), "type": int(x.get("type",0)), "position": int(x.get("position",0))}
-            for x in channels if int(x.get("type",0)) in {0,2,4,5,13,15}
+            {"id": str(item.get("id", "")), "name": str(item.get("name", "")),
+             "type": int(item.get("type", 0)), "position": int(item.get("position", 0))}
+            for item in guild.get("channels", [])
+            if isinstance(item, dict) and str(item.get("id", "")).isdigit()
+            and int(item.get("type", 0)) in {0, 2, 4, 5, 13, 15}
         ]
         role_items = [
-            {"id": str(x["id"]), "name": x.get("name",""), "position": int(x.get("position",0))}
-            for x in roles if str(x.get("id")) != str(guild_id)
+            {"id": str(item.get("id", "")), "name": str(item.get("name", "")),
+             "position": int(item.get("position", 0))}
+            for item in guild.get("roles", [])
+            if isinstance(item, dict) and str(item.get("id", "")).isdigit()
+            and str(item.get("id")) != str(guild_id)
         ]
+        channel_items.sort(key=lambda item: (item["position"], item["name"].casefold()))
+        role_items.sort(key=lambda item: (-item["position"], item["name"].casefold()))
         return jsonify({"ok": True, "channels": channel_items, "roles": role_items})
-    except (requests.RequestException, ValueError, TypeError):
-        return jsonify({"ok": False, "error": "Could not load Discord channels and roles."}), 502
+    except (ValueError, TypeError, psycopg.Error) as exc:
+        app.logger.warning("Could not load dashboard resources: %s", type(exc).__name__)
+        return jsonify({"ok": False, "error": "Could not load Discord channels and roles. Try refreshing after the bot checks in."}), 503
 
 
 @app.post("/api/dashboard/<guild_id>/settings")
