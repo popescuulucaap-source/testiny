@@ -19,13 +19,18 @@
   .case-record-type{display:inline-block;margin-right:.45rem;padding:.16rem .42rem;border:1px solid rgba(255,213,42,.25);border-radius:99px;color:#ffd52a;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em}
   .moderation-table td strong{display:block;font-weight:650}
   .moderation-empty{text-align:center;padding:2rem}
+  .incident-review{display:grid;gap:.45rem;margin-top:.55rem}
+  .incident-review small{opacity:.75}
+  .incident-review .btn{width:max-content;min-height:2rem;padding:.35rem .65rem;font-size:.78rem}
+  .review-filter{display:flex;align-items:center;gap:.45rem;opacity:.85;font-size:.9rem}
 </style>
-<section class="guild-moderation">
+<section class="guild-moderation" data-csrf="{{ csrf_token }}">
   <div class="moderation-heading">
     <div><span class="eyebrow">GARGAND CASE &amp; INCIDENT CENTER</span><h1>{{ guild.name }}</h1><p class="moderation-note">Moderation actions, verification risk signals and raid response stages recorded by Gargand. Visible to server managers.</p></div>
     <div class="moderation-tools">
       <a class="btn ghost" href="{{ url_for('dashboard', guild_id=guild.id) }}">← Dashboard</a>
       <input id="caseSearch" class="moderation-search" type="search" placeholder="Search staff, member, action or reason" aria-label="Search moderation cases">
+      <label class="review-filter"><input id="unreviewedOnly" type="checkbox"> Unreviewed incidents only</label>
     </div>
   </div>
   {% if moderation_error %}
@@ -36,13 +41,29 @@
         <thead><tr><th>RECORD / TIME</th><th>ACTION</th><th>STAFF / SYSTEM</th><th>MEMBER / DETAILS</th><th>REASON</th><th>RESULT</th></tr></thead>
         <tbody id="caseRows">
           {% for case in cases %}
-          <tr data-case-row>
+          <tr data-case-row data-reviewed="{{ 'true' if case.reviewed else 'false' }}">
             <td><code>#{{ case.case_id }}</code><small><time datetime="{{ case.created_at.isoformat() }}">{{ case.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</time></small></td>
             <td><span class="case-record-type">{{ case.record_type|title }}</span><strong>{{ case.action|replace("_", " ")|title }}</strong>{% if case.expires_at %}<small>Expires {{ case.expires_at }}</small>{% endif %}</td>
             <td>{{ case.actor }}{% if case.actor_id %}<small><code>{{ case.actor_id }}</code></small>{% endif %}</td>
             <td>{% if case.target_id %}<a href="https://discord.com/users/{{ case.target_id }}" target="_blank" rel="noopener noreferrer">{{ case.target_name }}</a><small><code>{{ case.target_id }}</code></small>{% else %}{{ case.target_name }}{% endif %}{% if case.details %}<small>{{ case.details }}</small>{% endif %}</td>
             <td>{{ case.reason }}</td>
-            <td><span class="case-outcome {% if case.outcome != 'success' %}failed{% endif %}">{{ case.outcome|replace("_", " ")|title }}</span></td>
+            <td>
+              <span class="case-outcome {% if case.outcome not in ['success', 'watch', 'threshold', 'logged'] %}failed{% endif %}">{{ case.outcome|replace("_", " ")|title }}</span>
+              {% if case.record_type|lower == 'incident' %}
+              <div class="incident-review" data-review-state>
+                {% if case.reviewed %}
+                  <small>Reviewed by {{ case.reviewer_name }}{% if case.reviewed_at %} · {{ case.reviewed_at.strftime("%Y-%m-%d %H:%M UTC") }}{% endif %}</small>
+                {% elif case.reviewable and can_review_incidents %}
+                  <button class="btn ghost review-incident" type="button" data-review-url="{{ url_for('review_security_incident', guild_id=guild.id, case_id=case.case_id) }}">Mark reviewed</button>
+                  <small aria-live="polite"></small>
+                {% elif case.reviewable %}
+                  <small>Only Discord server administrators can acknowledge incidents.</small>
+                {% else %}
+                  <small>This older incident cannot be reviewed from the dashboard.</small>
+                {% endif %}
+              </div>
+              {% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -51,12 +72,27 @@
     </div>
     <script>
       document.addEventListener("DOMContentLoaded",function(){
-        var search=document.getElementById("caseSearch"),rows=Array.from(document.querySelectorAll("[data-case-row]")),result=document.getElementById("caseSearchResult");
+        var search=document.getElementById("caseSearch"),rows=Array.from(document.querySelectorAll("[data-case-row]")),result=document.getElementById("caseSearchResult"),unreviewed=document.getElementById("unreviewedOnly"),section=document.querySelector(".guild-moderation");
         if(!search)return;
-        search.addEventListener("input",function(){
-          var query=search.value.trim().toLocaleLowerCase(),visible=0;
-          rows.forEach(function(row){var match=row.textContent.toLocaleLowerCase().includes(query);row.hidden=!match;if(match)visible++;});
-          result.textContent="Showing "+visible+" of "+rows.length+" cases.";
+        function filterRows(){
+          var query=search.value.trim().toLocaleLowerCase(),onlyOpen=!!(unreviewed&&unreviewed.checked),visible=0;
+          rows.forEach(function(row){var matchesText=row.textContent.toLocaleLowerCase().includes(query),matchesReview=!onlyOpen||(row.dataset.reviewed!=="true"&&!!row.querySelector("[data-review-state]")),show=matchesText&&matchesReview;row.hidden=!show;if(show)visible++;});
+          result.textContent="Showing "+visible+" of "+rows.length+(onlyOpen?" unreviewed incident(s).":" records.");
+        }
+        search.addEventListener("input",filterRows);
+        if(unreviewed)unreviewed.addEventListener("change",filterRows);
+        section.querySelectorAll(".review-incident").forEach(function(button){
+          button.addEventListener("click",async function(){
+            var original=button.textContent,body=new URLSearchParams();
+            body.set("csrf_token",section.dataset.csrf||"");button.disabled=true;button.textContent="Saving…";
+            try{
+              var response=await fetch(button.dataset.reviewUrl,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/x-www-form-urlencoded","Accept":"application/json"},body:body.toString()}),data={};
+              try{data=await response.json()}catch(_){}
+              if(!response.ok||!data.ok)throw new Error(data.error||"Could not save the review.");
+              var row=button.closest("[data-case-row]"),state=button.closest("[data-review-state]"),label=document.createElement("small");
+              label.textContent="Reviewed by "+data.reviewer_name+" · just now";state.replaceChildren(label);row.dataset.reviewed="true";filterRows();
+            }catch(error){button.disabled=false;button.textContent=original;var status=button.parentElement.querySelector("small");if(status)status.textContent=error.message;}
+          });
         });
       });
     </script>

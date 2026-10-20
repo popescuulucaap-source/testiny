@@ -234,7 +234,7 @@ CHANNEL_SETTINGS = {
 }
 ROLE_SETTINGS = {"staff_role_id", "autorole_id", "booster_role_id", "jail_role_id", "verified_role_id", "unverified_role_id", "muted_role_id"}
 TOGGLE_SETTINGS = {
-    "anti_raid", "raid_auto_lockdown", "anti_nuke", "anti_link", "j4j", "j4j_dm", "jail_enabled",
+    "anti_raid", "raid_auto_lockdown", "anti_nuke", "anti_nuke_auto_lockdown", "anti_nuke_auto_ban", "anti_link", "j4j", "j4j_dm", "jail_enabled",
     "automod_spam", "automod_flood", "automod_mentions", "automod_bad_words",
     "xp_enabled", "economy_enabled", "analytics_enabled", "ai_memory_enabled",
     "giveaway_require_role"
@@ -244,11 +244,22 @@ EDITABLE_SETTINGS = CHANNEL_SETTINGS | ROLE_SETTINGS | TOGGLE_SETTINGS | TEXT_SE
     "appeal_server_id", "ticket_options", "ticket_questions", "automod_max_messages",
     "automod_window_seconds", "automod_mention_limit", "xp_per_message",
     "xp_cooldown_seconds", "daily_coins"
+} | {
+    "anti_nuke_trusted_role_ids", "anti_nuke_window_seconds",
+    "anti_nuke_threshold_channel_delete", "anti_nuke_threshold_role_delete",
+    "anti_nuke_threshold_channel_update", "anti_nuke_threshold_role_update",
+}
+ANTI_NUKE_NUMERIC_RANGES = {
+    "anti_nuke_window_seconds": (5, 60),
+    "anti_nuke_threshold_channel_delete": (2, 10),
+    "anti_nuke_threshold_role_delete": (2, 10),
+    "anti_nuke_threshold_channel_update": (2, 10),
+    "anti_nuke_threshold_role_update": (2, 10),
 }
 SETTING_GROUPS = [
     ("general", "General", "Identity, prefix and logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel", "channel"), ("staff_role_id", "Staff role", "role")]),
     ("community", "Community", "Welcome, roles, feedback, applications and XP", [("welcome_channel_id", "Welcome channel", "channel"), ("leave_channel_id", "Leave channel", "channel"), ("autorole_id", "Auto role", "role"), ("vouch_channel_id", "Vouch channel", "channel"), ("feedback_channel_id", "Feedback channel", "channel"), ("proof_channel_id", "Proof channel", "channel"), ("booster_role_id", "Booster role", "role"), ("staff_application_channel_id", "Applications channel", "channel"), ("autoreaction_channel_id", "Auto reaction channel", "channel"), ("autoreaction_emoji", "Auto reaction emoji", "text"), ("xp_enabled", "XP & levels", "toggle"), ("levelup_channel_id", "Level-up channel", "channel"), ("xp_per_message", "XP per message", "number"), ("xp_cooldown_seconds", "XP cooldown (seconds)", "number")]),
-    ("security", "Security & Auto-Mod", "Automatic protection and moderation", [("anti_raid", "Anti-raid protection", "toggle"), ("raid_auto_lockdown", "Auto-lock channels during a join surge", "toggle"), ("anti_nuke", "Anti-nuke protection", "toggle"), ("anti_link", "Block links", "toggle"), ("automod_spam", "Anti-spam", "toggle"), ("automod_flood", "Anti-flood", "toggle"), ("automod_mentions", "Mention protection", "toggle"), ("automod_bad_words", "Configured word filter", "toggle"), ("automod_punishment", "Auto-mod punishment", "text"), ("automod_max_messages", "Max messages in window", "number"), ("automod_window_seconds", "Spam window (seconds)", "number"), ("automod_mention_limit", "Mention limit", "number"), ("automod_log_channel_id", "Auto-mod log channel", "channel"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel", "channel"), ("command_channel_id", "Command-only channel", "channel")]),
+    ("security", "Security & Auto-Mod", "Automatic protection and moderation", [("anti_raid", "Anti-raid protection", "toggle"), ("raid_auto_lockdown", "Auto-lock channels during a join surge", "toggle"), ("anti_nuke", "Anti-nuke protection", "toggle"), ("anti_nuke_trusted_role_ids", "Trusted anti-nuke roles", "roles"), ("anti_nuke_window_seconds", "Anti-nuke event window (seconds)", "number"), ("anti_nuke_threshold_channel_delete", "Channel deletions before alert", "number"), ("anti_nuke_threshold_role_delete", "Role deletions before alert", "number"), ("anti_nuke_threshold_channel_update", "Channel edits before alert", "number"), ("anti_nuke_threshold_role_update", "Role edits before alert", "number"), ("anti_nuke_auto_lockdown", "Temporarily lock channels at threshold", "toggle"), ("anti_nuke_auto_ban", "Ban actor at threshold", "toggle"), ("anti_link", "Block links", "toggle"), ("automod_spam", "Anti-spam", "toggle"), ("automod_flood", "Anti-flood", "toggle"), ("automod_mentions", "Mention protection", "toggle"), ("automod_bad_words", "Configured word filter", "toggle"), ("automod_punishment", "Auto-mod punishment", "text"), ("automod_max_messages", "Max messages in window", "number"), ("automod_window_seconds", "Spam window (seconds)", "number"), ("automod_mention_limit", "Mention limit", "number"), ("automod_log_channel_id", "Auto-mod log channel", "channel"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel", "channel"), ("command_channel_id", "Command-only channel", "channel")]),
     ("tickets", "Tickets & appeals", "Ticket panel, categories, questions and appeals", [("ticket_panel_channel_id", "Ticket panel channel", "channel"), ("ticket_category_id", "Ticket category", "channel"), ("ticket_options", "Ticket types (comma separated)", "list"), ("ticket_questions", "Ticket questions (JSON)", "json"), ("appeal_server_id", "Appeal server ID", "number"), ("appeal_invite_url", "Appeal invite URL", "text")]),
     ("moderation", "Moderation & jail", "Jail, giveaways and analytics", [("jail_role_id", "Jail role", "role"), ("jail_category_id", "Jail category", "channel"), ("jail_chat_channel_id", "Jail chat", "channel"), ("jail_appeal_channel_id", "Jail appeals", "channel"), ("giveaway_channel_id", "Giveaway channel", "channel"), ("giveaway_require_role", "Giveaways require role", "toggle"), ("analytics_enabled", "Server analytics", "toggle"), ("analytics_channel_id", "Analytics channel", "channel"), ("economy_enabled", "Community economy", "toggle"), ("daily_coins", "Daily coins", "number"), ("ai_memory_enabled", "AI channel memory", "toggle")]),
 ]
@@ -629,6 +640,7 @@ def init_db():
             cur.execute("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'website'")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_telemetry (id BIGSERIAL PRIMARY KEY, event_type TEXT NOT NULL, guild_id TEXT, guild_name TEXT, user_id TEXT, username TEXT, command_name TEXT, metadata TEXT NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE INDEX IF NOT EXISTS bot_telemetry_created_at_idx ON bot_telemetry(created_at DESC)")
+            cur.execute("CREATE TABLE IF NOT EXISTS security_incident_reviews (guild_id TEXT NOT NULL, case_id TEXT NOT NULL, reviewed_by TEXT NOT NULL, reviewer_name TEXT NOT NULL, reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), note TEXT NOT NULL DEFAULT '', PRIMARY KEY (guild_id, case_id))")
             cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Gargand Updates Center • Automatic tracking",))
             if not cur.fetchone():
                 cur.execute(
@@ -1645,6 +1657,7 @@ def guild_analytics(guild_id):
 def guild_moderation(guild_id):
     if not user_can_manage_guild(guild_id):
         return "You do not have permission to manage this server.", 403
+    can_review_incidents = user_is_guild_admin(guild_id)
 
     bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
     guild = {"id": str(guild_id), "name": bot_guild.get("name") or "Discord server"}
@@ -1662,6 +1675,10 @@ def guild_moderation(guild_id):
                     "ORDER BY created_at DESC, id DESC LIMIT 100",
                     (str(guild_id),),
                 ).fetchall()
+                review_rows = conn.execute(
+                    "SELECT case_id,reviewed_by,reviewer_name,reviewed_at FROM security_incident_reviews WHERE guild_id=%s",
+                    (str(guild_id),),
+                ).fetchall()
             for row in rows:
                 try:
                     metadata = json.loads(row[5] or "{}")
@@ -1677,6 +1694,7 @@ def guild_moderation(guild_id):
                     "actor_id": str(row[3] or ""),
                     "action": str(metadata.get("action") or row[4] or "moderation"),
                     "record_type": str(metadata.get("record_type") or ("incident" if row[6] == "security_incident" else "case")),
+                    "reviewable": str(metadata.get("case_id") or "").isdigit(),
                     "target_id": str(metadata.get("target_id") or ""),
                     "target_name": str(metadata.get("target_name") or "—"),
                     "reason": str(metadata.get("reason") or "No reason provided"),
@@ -1684,6 +1702,15 @@ def guild_moderation(guild_id):
                     "details": str(metadata.get("details") or ""),
                     "expires_at": format_timestamp(metadata["expires_at"]) if str(metadata.get("expires_at") or "").isdigit() else None,
                 })
+            review_by_case = {
+                str(row[0]): {"reviewed_by": str(row[1]), "reviewer_name": str(row[2]), "reviewed_at": row[3]}
+                for row in review_rows
+            }
+            for case in cases:
+                review = review_by_case.get(case["case_id"])
+                case["reviewed"] = bool(review)
+                case["reviewer_name"] = review["reviewer_name"] if review else ""
+                case["reviewed_at"] = review["reviewed_at"] if review else None
         except psycopg.Error as exc:
             app.logger.warning("Could not load guild moderation history: %s", type(exc).__name__)
             moderation_error = "Moderation history is temporarily unavailable."
@@ -1693,7 +1720,53 @@ def guild_moderation(guild_id):
         guild=guild,
         cases=cases,
         moderation_error=moderation_error,
+        can_review_incidents=can_review_incidents,
     )
+
+
+@app.post("/api/dashboard/<guild_id>/incidents/<case_id>/review")
+@login_required
+def review_security_incident(guild_id, case_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not user_is_guild_admin(guild_id):
+        return jsonify({"ok": False, "error": "Administrator permission is required to review security incidents."}), 403
+    if not valid_admin_csrf():
+        return jsonify({"ok": False, "error": "Refresh the page and try again."}), 400
+    if not DATABASE_URL or not case_id.isdigit() or len(case_id) > 22:
+        return jsonify({"ok": False, "error": "That security incident could not be found."}), 404
+    try:
+        with db_connect() as conn:
+            incident_rows = conn.execute(
+                "SELECT metadata FROM bot_telemetry WHERE guild_id=%s AND event_type='security_incident' ORDER BY id DESC LIMIT 500",
+                (str(guild_id),),
+            ).fetchall()
+            exists = False
+            for row in incident_rows:
+                try:
+                    metadata = json.loads(row[0] or "{}")
+                except (TypeError, ValueError):
+                    continue
+                if isinstance(metadata, dict) and str(metadata.get("case_id") or "") == case_id:
+                    exists = True
+                    break
+            if not exists:
+                return jsonify({"ok": False, "error": "That security incident could not be found."}), 404
+            user = session.get("user") or {}
+            reviewer_id = current_discord_user_id()
+            reviewer_name = str(user.get("global_name") or user.get("username") or "Server administrator")[:100]
+            note = str(request.form.get("note") or "").strip()[:500]
+            row = conn.execute(
+                "INSERT INTO security_incident_reviews(guild_id,case_id,reviewed_by,reviewer_name,note) VALUES(%s,%s,%s,%s,%s) "
+                "ON CONFLICT(guild_id,case_id) DO UPDATE SET reviewed_by=EXCLUDED.reviewed_by,reviewer_name=EXCLUDED.reviewer_name,reviewed_at=NOW(),note=EXCLUDED.note "
+                "RETURNING reviewed_at",
+                (str(guild_id), case_id, reviewer_id, reviewer_name, note),
+            ).fetchone()
+        reviewed_at = row[0].isoformat() if row and row[0] else ""
+        return jsonify({"ok": True, "reviewed": True, "reviewer_name": reviewer_name, "reviewed_at": reviewed_at})
+    except psycopg.Error as exc:
+        app.logger.warning("Could not record security incident review: %s", type(exc).__name__)
+        return jsonify({"ok": False, "error": "The review could not be saved right now."}), 503
 
 
 @app.get("/api/dashboard/<guild_id>/resources")
@@ -1734,10 +1807,65 @@ def update_settings(guild_id):
     if not isinstance(payload, dict) or not payload:
         return jsonify({"ok": False, "error": "Choose at least one setting to update."}), 400
     clean = {}
+    guild_settings = next((item.get("settings", {}) for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {}) or {}
+    anti_nuke_defaults = {
+        "anti_nuke": False,
+        "anti_nuke_auto_lockdown": False,
+        "anti_nuke_auto_ban": False,
+        "anti_nuke_trusted_role_ids": [],
+        "anti_nuke_window_seconds": 10,
+        "anti_nuke_threshold_channel_delete": 3,
+        "anti_nuke_threshold_role_delete": 3,
+        "anti_nuke_threshold_channel_update": 4,
+        "anti_nuke_threshold_role_update": 4,
+    }
+    anti_nuke_changed = False
+    for key, value in payload.items():
+        if not key.startswith("anti_nuke"):
+            continue
+        current = guild_settings.get(key, anti_nuke_defaults.get(key))
+        if key == "anti_nuke_trusted_role_ids":
+            current = sorted(str(item) for item in current) if isinstance(current, (list, tuple, set)) else []
+            submitted = sorted(str(item) for item in value) if isinstance(value, list) else value
+        elif key in ANTI_NUKE_NUMERIC_RANGES:
+            try:
+                current = int(current)
+            except (TypeError, ValueError):
+                current = anti_nuke_defaults[key]
+            submitted = value
+        else:
+            current = bool(current)
+            submitted = value
+        if submitted != current:
+            anti_nuke_changed = True
+            break
+    if anti_nuke_changed and not user_is_guild_admin(guild_id):
+        return jsonify({"ok": False, "error": "Administrator permission is required to change anti-nuke settings."}), 403
     for key, value in payload.items():
         if key not in EDITABLE_SETTINGS:
             return jsonify({"ok": False, "error": f"Unsupported setting: {key}."}), 400
-        if key in CHANNEL_SETTINGS | ROLE_SETTINGS | {"appeal_server_id"}:
+        if key == "anti_nuke_trusted_role_ids":
+            if not isinstance(value, list) or len(value) > 20:
+                return jsonify({"ok": False, "error": "Choose up to 20 trusted roles."}), 400
+            role_ids = list(dict.fromkeys(str(item).strip() for item in value))
+            if any(not item.isdigit() or len(item) > 22 for item in role_ids):
+                return jsonify({"ok": False, "error": "Trusted roles must be selected from this server."}), 400
+            try:
+                roles_response = requests.get(f"{DISCORD_API}/guilds/{guild_id}/roles", headers=discord_headers(), timeout=12)
+                if roles_response.status_code != 200:
+                    return jsonify({"ok": False, "error": "Discord could not verify the selected trusted roles."}), 502
+                valid_role_ids = {str(role.get("id")) for role in roles_response.json() if isinstance(role, dict) and str(role.get("id")) != str(guild_id)}
+                if any(item not in valid_role_ids for item in role_ids):
+                    return jsonify({"ok": False, "error": "One or more trusted roles do not belong to this server."}), 400
+            except (requests.RequestException, ValueError, TypeError):
+                return jsonify({"ok": False, "error": "Discord could not verify the selected trusted roles."}), 502
+            clean[key] = role_ids
+        elif key in ANTI_NUKE_NUMERIC_RANGES:
+            minimum, maximum = ANTI_NUKE_NUMERIC_RANGES[key]
+            if type(value) is not int or not minimum <= value <= maximum:
+                return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be between {minimum} and {maximum}."}), 400
+            clean[key] = value
+        elif key in CHANNEL_SETTINGS | ROLE_SETTINGS | {"appeal_server_id"}:
             raw = str(value or "").strip()
             if raw and (not raw.isdigit() or len(raw) > 22):
                 return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be a numeric Discord ID."}), 400
