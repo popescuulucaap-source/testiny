@@ -7,7 +7,7 @@ import hashlib
 import threading
 import time
 from datetime import timedelta
-from collections import deque
+from collections import defaultdict, deque
 from hmac import compare_digest
 from functools import wraps
 from urllib.parse import urlencode, urlparse
@@ -31,6 +31,14 @@ MEMORY_ANNOUNCEMENTS = []
 MEMORY_ANNOUNCEMENT_ID = 1
 MEMORY_CUSTOM_COMMANDS = []
 MEMORY_CUSTOM_COMMAND_ID = 1
+BROWSER_ACTIONS = defaultdict(deque)
+BROWSER_ACTIONS_LOCK = threading.Lock()
+PASSIVE_VERIFICATION_ENDPOINTS = {
+    "create_support_ticket", "add_support_message", "support_ai", "suggestions",
+    "social_submit_video", "social_follow", "social_report", "post_review",
+    "claim_daily", "update_profile", "social_like", "social_comment",
+    "mark_notifications_read", "api_award_xp",
+}
 
 
 
@@ -58,24 +66,8 @@ def gargand_lion_asset():
 
 @app.get("/gargand-lion-4k.jpg")
 def gargand_lion_4k_asset():
-    """Serve the same Gargand lion artwork upscaled to a 4096px square for high-resolution displays."""
-    image_path = os.path.join(app.root_path, "static", "gargand-pfp.jpg.b64")
-    try:
-        with open(image_path, "rb") as image_file:
-            image_bytes = base64.b64decode(image_file.read().strip(), validate=True)
-        with Image.open(BytesIO(image_bytes)) as source:
-            source = source.convert("RGB")
-            if source.size != (4096, 4096):
-                source = source.resize((4096, 4096), Image.Resampling.LANCZOS)
-            output = BytesIO()
-            source.save(output, format="JPEG", quality=94, optimize=True, progressive=True)
-        return Response(
-            output.getvalue(), mimetype="image/jpeg",
-            headers={"Cache-Control": "public, max-age=604800, immutable", "X-Content-Type-Options": "nosniff"},
-        )
-    except (OSError, ValueError) as exc:
-        app.logger.warning("Gargand 4K lion image unavailable: %s", exc)
-        return redirect(url_for("gargand_lion_asset"), code=302)
+    """Keep the legacy image URL fast by serving the original 1024px source."""
+    return gargand_lion_asset()
 
 @app.get("/gargand-bar.gif")
 def gargand_bar_asset():
@@ -100,13 +92,83 @@ def count_site_request():
         APP_REQUEST_COUNT += 1
 
 
+@app.before_request
+def verify_passive_browser_actions():
+    """Quietly protect browser form/API writes without showing a CAPTCHA."""
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+    if request.endpoint not in PASSIVE_VERIFICATION_ENDPOINTS:
+        return None
+
+    if request.headers.get("Sec-Fetch-Site", "").lower() == "cross-site":
+        return jsonify({"ok": False, "error": "Refresh the page and try again."}), 403
+    origin = request.headers.get("Origin")
+    if origin:
+        parsed_origin = urlparse(origin)
+        if parsed_origin.scheme not in {"http", "https"} or parsed_origin.netloc.lower() != request.host.lower():
+            return jsonify({"ok": False, "error": "Refresh the page and try again."}), 403
+
+    expected = str(session.get("browser_verification_token") or "")
+    issued_at = session.get("browser_verification_issued_at", 0)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        payload = {}
+    supplied = (
+        request.headers.get("X-Gargand-Browser-Check")
+        or request.form.get("browser_check")
+        or payload.get("browser_check")
+    )
+    honeypot = request.form.get("company_website") or payload.get("company_website")
+    if str(honeypot or "").strip():
+        return jsonify({"ok": False, "error": "The request could not be verified."}), 400
+    try:
+        issued_at = float(issued_at)
+    except (TypeError, ValueError):
+        issued_at = 0
+    if (
+        not expected
+        or not supplied
+        or not compare_digest(expected, str(supplied))
+        or time.time() - issued_at > 86400
+        or issued_at > time.time() + 60
+    ):
+        return jsonify({"ok": False, "error": "Refresh the page and try again."}), 403
+
+    session_key = hashlib.sha256(expected.encode("utf-8")).hexdigest()[:24]
+    bucket_key = (session_key, request.endpoint)
+    now = time.monotonic()
+    limit = 6 if request.endpoint == "support_ai" else 10
+    with BROWSER_ACTIONS_LOCK:
+        bucket = BROWSER_ACTIONS[bucket_key]
+        while bucket and now - bucket[0] > 60:
+            bucket.popleft()
+        if len(bucket) >= limit:
+            return jsonify({"ok": False, "error": "Please wait a moment before trying again."}), 429
+        bucket.append(now)
+        if len(BROWSER_ACTIONS) > 5000:
+            for stale_key in list(BROWSER_ACTIONS)[:1000]:
+                BROWSER_ACTIONS.pop(stale_key, None)
+    return None
+
+
 @app.context_processor
 def inject_admin_csrf_token():
     token = session.get("admin_csrf_token")
     if not token:
         token = secrets.token_urlsafe(32)
         session["admin_csrf_token"] = token
-    return {"csrf_token": token}
+
+    browser_token = session.get("browser_verification_token")
+    issued_at = session.get("browser_verification_issued_at", 0)
+    try:
+        token_expired = time.time() - float(issued_at) > 86400
+    except (TypeError, ValueError):
+        token_expired = True
+    if not browser_token or token_expired:
+        browser_token = secrets.token_urlsafe(32)
+        session["browser_verification_token"] = browser_token
+        session["browser_verification_issued_at"] = time.time()
+    return {"csrf_token": token, "browser_verification_token": browser_token}
 
 
 def valid_admin_csrf():
@@ -860,6 +922,16 @@ def support():
 @app.get("/terms")
 def terms():
     return render_template("terms.html")
+
+
+@app.get("/security")
+def security():
+    return render_template("security.html")
+
+
+@app.get("/verification")
+def verification():
+    return render_template("verification.html")
 
 
 @app.get("/socials")
