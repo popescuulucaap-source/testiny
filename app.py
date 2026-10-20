@@ -614,14 +614,16 @@ def sync_repository_updates(force=False):
                 if row[0] == sha:
                     conn.execute("UPDATE repository_updates SET checked_at=NOW() WHERE repo_kind=%s", (repo_kind,))
                     continue
+                announcement_title = f"{label} • {message[:120]}"
+                announcement_body = f"Automatically detected from GitHub commit {sha[:7]}. {message}"
+                announcement_kind = "bot" if repo_kind == "bot" else "website"
                 conn.execute(
                     "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
-                    (
-                        f"{label} • {message[:120]}",
-                        f"Automatically detected from GitHub commit {sha[:7]}. {message}",
-                        __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d"),
-                        "bot" if repo_kind == "bot" else "website",
-                    ),
+                    (announcement_title, announcement_body, __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d"), announcement_kind),
+                )
+                conn.execute(
+                    "INSERT INTO bot_jobs (guild_id, kind, payload) VALUES (%s,%s,%s)",
+                    (OFFICIAL_GUILD_ID, "official_announcement", json.dumps({"title": announcement_title, "body": announcement_body, "kind": announcement_kind, "url": "https://testiny-7wuu.onrender.com/announcements"})),
                 )
                 conn.execute(
                     "UPDATE repository_updates SET commit_sha=%s, checked_at=NOW() WHERE repo_kind=%s",
