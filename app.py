@@ -210,6 +210,8 @@ ADMIN_LOGIN_FAILURES = {}
 INVITE_URL = (os.getenv("INVITE_URL") or (f"https://discord.com/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&scope=bot%20applications.commands" if DISCORD_CLIENT_ID else "#")).strip()
 SUPPORT_URL = "https://discord.gg/AG2m6u9Ahm"  # Official Gargand support invite; do not override with stale deployment env vars.
 OFFICIAL_GUILD_ID = "1561076743236747387"
+ADMIN_DISCORD_USER_ID = "1275463389941858346"
+GARGAND_BOT_TOKEN = (os.getenv("GARGAND_BOT_TOKEN") or os.getenv("DISCORD_BOT_TOKEN") or os.getenv("DISCORD_TOKEN") or "").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = (os.getenv("GARGAND_YOUTUBE_CHANNEL_ID") or os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID") or "").strip()
 ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
@@ -269,6 +271,32 @@ SETTING_GROUPS = [
 
 def discord_headers():
     return {"Authorization": f"Bearer {session['access_token']}"}
+
+
+def is_admin():
+    """Admin access requires a Discord OAuth session for the explicitly allowed user."""
+    user = session.get("user") or {}
+    return bool(session.get("admin") and str(user.get("id", "")) == ADMIN_DISCORD_USER_ID)
+
+
+def add_user_to_support_server(user_id, user_access_token):
+    """Join users only after Discord OAuth explicitly grants the guilds.join scope."""
+    if not GARGAND_BOT_TOKEN:
+        app.logger.warning("Support auto-join skipped: configure GARGAND_BOT_TOKEN on the website service.")
+        return False
+    try:
+        response = requests.put(
+            f"{DISCORD_API}/guilds/{OFFICIAL_GUILD_ID}/members/{user_id}",
+            headers={"Authorization": f"Bot {GARGAND_BOT_TOKEN}", "Content-Type": "application/json"},
+            json={"access_token": user_access_token},
+            timeout=12,
+        )
+        if response.status_code in (201, 204):
+            return True
+        app.logger.warning("Support auto-join failed for user %s: Discord returned HTTP %s", user_id, response.status_code)
+    except requests.RequestException as exc:
+        app.logger.warning("Support auto-join request failed: %s", type(exc).__name__)
+    return False
 
 
 def login_required(fn):
@@ -424,7 +452,7 @@ def bot_events():
 
 @app.get("/admin/audit")
 def admin_audit():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     events = []
     summary = {"commands": 0, "messages": 0, "tickets": 0, "forms": 0}
@@ -878,34 +906,24 @@ def index():
     ]
     return render_template("index.html", features=features, command_count=len(COMMANDS), developers=load_developers())
 
-@app.route("/admin", methods=["GET","POST"])
+@app.route("/admin", methods=["GET", "POST"])
 def admin_login():
-    if session.get("admin"):
+    # A password alone is never sufficient; Discord OAuth must verify the exact allowlisted ID.
+    user = session.get("user") or {}
+    if is_admin():
         return redirect(url_for("admin"))
-    if request.method == "POST":
-        if not valid_admin_csrf():
-            return render_template("admin_login.html", error="Session check failed. Refresh the page and try again."), 400
-        client_key = request.remote_addr or "unknown"
-        now = time.time()
-        attempts = [stamp for stamp in ADMIN_LOGIN_FAILURES.get(client_key, []) if now - stamp < 900]
-        if len(attempts) >= 5:
-            ADMIN_LOGIN_FAILURES[client_key] = attempts
-            return render_template("admin_login.html", error="Too many attempts. Wait 15 minutes before trying again."), 429
-        if ADMIN_PASSWORD and compare_digest(request.form.get("password", ""), ADMIN_PASSWORD):
-            ADMIN_LOGIN_FAILURES.pop(client_key, None)
-            session["admin"] = True
-            session["admin_authenticated_at"] = now
-            session["admin_csrf_token"] = secrets.token_urlsafe(32)
-            session.permanent = True
-            return redirect(url_for("admin"))
-        attempts.append(now)
-        ADMIN_LOGIN_FAILURES[client_key] = attempts
-        return render_template("admin_login.html", error="Incorrect admin password.")
-    return render_template("admin_login.html")
+    if str(user.get("id", "")) == ADMIN_DISCORD_USER_ID:
+        session["admin"] = True
+        session["admin_authenticated_at"] = time.time()
+        session["admin_csrf_token"] = secrets.token_urlsafe(32)
+        return redirect(url_for("admin"))
+    if session.get("access_token"):
+        return "Access denied. The admin panel is restricted to the verified Gargand developer account.", 403
+    return redirect(url_for("login", next="/admin/panel"))
 
 @app.get("/admin/panel")
 def admin():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     session.permanent = True
     announcements = load_announcements()
@@ -981,7 +999,7 @@ def admin():
 
 @app.post("/admin/developer")
 def admin_developer():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if not valid_admin_csrf():
         return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
@@ -997,7 +1015,7 @@ def admin_developer():
 
 @app.post("/admin/developer/<discord_id>/delete")
 def admin_developer_delete(discord_id):
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if not valid_admin_csrf():
         return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
@@ -1007,7 +1025,7 @@ def admin_developer_delete(discord_id):
 
 @app.post("/admin/command")
 def admin_command():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if not valid_admin_csrf():
         return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
@@ -1021,7 +1039,7 @@ def admin_command():
 
 @app.post("/admin/announcement")
 def admin_announcement():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if not valid_admin_csrf():
         return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
@@ -1034,14 +1052,14 @@ def admin_announcement():
 
 @app.post("/admin/announcement/<int:announcement_id>/delete")
 def admin_delete_announcement(announcement_id):
-    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not is_admin(): return redirect(url_for("admin_login"))
     if not valid_admin_csrf(): return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     delete_announcement(announcement_id)
     return redirect(url_for("admin"))
 
 @app.post("/admin/command/<int:command_id>/delete")
 def admin_delete_command(command_id):
-    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not is_admin(): return redirect(url_for("admin_login"))
     if not valid_admin_csrf(): return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     delete_custom_command(command_id)
     return redirect(url_for("admin"))
@@ -1160,7 +1178,7 @@ def add_support_message(token):
 
 @app.get("/admin/support")
 def admin_support():
-    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not is_admin(): return redirect(url_for("admin_login"))
     if DATABASE_URL:
         with db_connect() as conn:
             with conn.cursor() as cur:
@@ -1175,7 +1193,7 @@ def admin_support():
 
 @app.post("/admin/support/<int:ticket_id>/reply")
 def admin_support_reply(ticket_id):
-    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not is_admin(): return redirect(url_for("admin_login"))
     if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     message=(request.form.get("message") or "").strip()[:2000]
     if message:
@@ -1358,7 +1376,7 @@ def social_report(video_id):
 
 @app.get("/admin/community")
 def admin_community():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if not DATABASE_URL:
         return render_template("admin_community.html", videos=[], reports=[], error="Community storage is not configured. Add DATABASE_URL in Render.")
@@ -1376,7 +1394,7 @@ def admin_community():
 
 @app.post("/admin/community/video/<int:video_id>/<action>")
 def admin_community_video(video_id, action):
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     if action not in {"approve","delete","strike"}:
@@ -1408,7 +1426,7 @@ def admin_community_video(video_id, action):
 
 @app.post("/admin/community/report/<int:report_id>/resolve")
 def admin_community_report(report_id):
-    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not is_admin(): return redirect(url_for("admin_login"))
     if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     with db_connect() as conn:
         conn.execute("UPDATE social_reports SET status='resolved' WHERE id=%s",(report_id,))
@@ -1417,7 +1435,7 @@ def admin_community_report(report_id):
 
 @app.post("/admin/support/<int:ticket_id>/close")
 def admin_support_close(ticket_id):
-    if not session.get("admin"): return redirect(url_for("admin_login"))
+    if not is_admin(): return redirect(url_for("admin_login"))
     if not valid_admin_csrf(): return "Invalid session token. Refresh the admin page.", 400
     if DATABASE_URL:
         with db_connect() as conn:
@@ -1469,7 +1487,7 @@ def suggestions():
 
 @app.get("/suggestions/list")
 def suggestion_list():
-    if not session.get("admin"):
+    if not is_admin():
         return redirect(url_for("admin_login"))
     if DATABASE_URL:
         with db_connect() as conn:
@@ -1572,11 +1590,16 @@ def announcements():
 def login():
     if not DISCORD_CLIENT_ID or not DISCORD_REDIRECT_URI:
         return "Discord OAuth is not configured yet. Add DISCORD_CLIENT_ID and DISCORD_REDIRECT_URI in Render.", 500
+    requested_next = request.args.get("next", "")
+    # Only accept a local path; never let OAuth become an open redirect.
+    if requested_next.startswith("/") and not requested_next.startswith("//"):
+        session["oauth_next"] = requested_next
     params = {
         "client_id": DISCORD_CLIENT_ID,
         "redirect_uri": DISCORD_REDIRECT_URI,
         "response_type": "code",
-        "scope": "identify guilds",
+        # Discord displays this permission during authorization before it can add the user to the support server.
+        "scope": "identify guilds guilds.join",
         "prompt": "consent",
     }
     return redirect(f"{DISCORD_API}/oauth2/authorize?{urlencode(params)}")
@@ -1615,8 +1638,29 @@ def oauth_callback():
         session.clear()
         return "Could not read your Discord profile.", 400
 
-    session["user"] = me.json()
-    return redirect(request.args.get("next") or url_for("servers"))
+    user = me.json()
+    session["user"] = user
+
+    # After the account proves ownership through Discord OAuth, sync its current username to the public Developers card.
+    if str(user.get("id", "")) == ADMIN_DISCORD_USER_ID:
+        discord_username = str(user.get("username") or user.get("global_name") or "Developer")[:80]
+        try:
+            save_developer(ADMIN_DISCORD_USER_ID, discord_username, "Developer")
+        except Exception as exc:
+            app.logger.warning("Could not sync developer profile: %s", type(exc).__name__)
+
+    # Discord's guilds.join scope is explicitly approved by the user during OAuth consent.
+    add_user_to_support_server(str(user.get("id", "")), token_data["access_token"])
+
+    next_path = session.pop("oauth_next", "")
+    if next_path == "/admin/panel":
+        if str(user.get("id", "")) != ADMIN_DISCORD_USER_ID:
+            return "Access denied. The admin panel is restricted to the verified Gargand developer account.", 403
+        session["admin"] = True
+        session["admin_authenticated_at"] = time.time()
+        session["admin_csrf_token"] = secrets.token_urlsafe(32)
+        return redirect(url_for("admin"))
+    return redirect(next_path if next_path.startswith("/") and not next_path.startswith("//") else url_for("servers"))
 
 
 @app.get("/logout")
