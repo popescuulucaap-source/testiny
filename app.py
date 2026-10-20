@@ -31,6 +31,7 @@ MEMORY_ANNOUNCEMENTS = []
 MEMORY_ANNOUNCEMENT_ID = 1
 MEMORY_CUSTOM_COMMANDS = []
 MEMORY_CUSTOM_COMMAND_ID = 1
+MEMORY_DEVELOPERS = [{"discord_id":"1418291387668893699","display_name":"Owner","role":"Owner"},{"discord_id":"1242411642252431385","display_name":"Owner","role":"Owner"},{"discord_id":"1275463389941858346","display_name":"Developer","role":"Developer"}]
 BROWSER_ACTIONS = defaultdict(deque)
 BROWSER_ACTIONS_LOCK = threading.Lock()
 PASSIVE_VERIFICATION_ENDPOINTS = {
@@ -639,6 +640,9 @@ def init_db():
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("CREATE TABLE IF NOT EXISTS announcements (id BIGSERIAL PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL, date TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'website')")
+            cur.execute("CREATE TABLE IF NOT EXISTS developers (discord_id TEXT PRIMARY KEY, display_name TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'Developer', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            for developer_id, display_name, role in [("1418291387668893699", "Owner", "Owner"), ("1242411642252431385", "Owner", "Owner"), ("1275463389941858346", "Developer", "Developer")]:
+                cur.execute("INSERT INTO developers (discord_id, display_name, role) VALUES (%s,%s,%s) ON CONFLICT (discord_id) DO NOTHING", (developer_id, display_name, role))
             cur.execute("CREATE TABLE IF NOT EXISTS repository_updates (repo_kind TEXT PRIMARY KEY, commit_sha TEXT NOT NULL, checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'website'")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_telemetry (id BIGSERIAL PRIMARY KEY, event_type TEXT NOT NULL, guild_id TEXT, guild_name TEXT, user_id TEXT, username TEXT, command_name TEXT, metadata TEXT NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
@@ -818,6 +822,33 @@ def delete_custom_command(command_id):
         with conn.cursor() as cur: cur.execute("DELETE FROM custom_commands WHERE id = %s",(command_id,))
         conn.commit()
 
+def load_developers():
+    if not DATABASE_URL:
+        return [dict(item) for item in MEMORY_DEVELOPERS]
+    with db_connect() as conn:
+        rows = conn.execute("SELECT discord_id, display_name, role FROM developers ORDER BY CASE WHEN LOWER(role)='owner' THEN 0 ELSE 1 END, display_name ASC").fetchall()
+    return [{"discord_id": str(row[0]), "display_name": row[1], "role": row[2]} for row in rows]
+
+def save_developer(discord_id, display_name, role):
+    if not DATABASE_URL:
+        for item in MEMORY_DEVELOPERS:
+            if item["discord_id"] == discord_id:
+                item.update(display_name=display_name, role=role)
+                return
+        MEMORY_DEVELOPERS.append({"discord_id": discord_id, "display_name": display_name, "role": role})
+        return
+    with db_connect() as conn:
+        conn.execute("INSERT INTO developers (discord_id, display_name, role) VALUES (%s,%s,%s) ON CONFLICT (discord_id) DO UPDATE SET display_name=EXCLUDED.display_name, role=EXCLUDED.role", (discord_id, display_name, role))
+        conn.commit()
+
+def delete_developer(discord_id):
+    if not DATABASE_URL:
+        MEMORY_DEVELOPERS[:] = [item for item in MEMORY_DEVELOPERS if item["discord_id"] != discord_id]
+        return
+    with db_connect() as conn:
+        conn.execute("DELETE FROM developers WHERE discord_id=%s", (discord_id,))
+        conn.commit()
+
 def all_commands():
     # Keep the public library limited to commands implemented in main.py.
     # Admin dashboard notes are not executable bot commands.
@@ -837,7 +868,7 @@ def index():
         ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
         ("🎨","AI studio","Ask questions, create stories, jokes, poems, riddles, captions, names and quizzes with Gargand AI."),
     ]
-    return render_template("index.html", features=features, command_count=len(COMMANDS))
+    return render_template("index.html", features=features, command_count=len(COMMANDS), developers=load_developers())
 
 @app.route("/admin", methods=["GET","POST"])
 def admin_login():
@@ -938,7 +969,33 @@ def admin():
                     stats[field] = int(row[0] or 0)
         except psycopg.Error as exc:
             app.logger.warning("Could not read telemetry counts: %s", type(exc).__name__)
-    return render_template("admin.html", announcements=announcements, custom_commands=custom_commands, database_enabled=bool(DATABASE_URL), stats=stats, bot_guilds=guilds)
+    return render_template("admin.html", announcements=announcements, custom_commands=custom_commands, developers=load_developers(), database_enabled=bool(DATABASE_URL), stats=stats, bot_guilds=guilds)
+
+@app.post("/admin/developer")
+def admin_developer():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    if not valid_admin_csrf():
+        return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
+    discord_id = (request.form.get("discord_id") or "").strip()
+    display_name = (request.form.get("display_name") or "").strip()
+    role = (request.form.get("role") or "Developer").strip()
+    if not discord_id.isdigit() or not (17 <= len(discord_id) <= 20):
+        return redirect(url_for("admin") + "?developer_error=invalid_id")
+    if not display_name or len(display_name) > 80 or role not in {"Owner", "Developer", "Contributor", "Designer", "Moderator"}:
+        return redirect(url_for("admin") + "?developer_error=invalid_details")
+    save_developer(discord_id, display_name, role)
+    return redirect(url_for("admin") + "#developers-admin")
+
+@app.post("/admin/developer/<discord_id>/delete")
+def admin_developer_delete(discord_id):
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    if not valid_admin_csrf():
+        return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
+    if discord_id.isdigit() and 17 <= len(discord_id) <= 20:
+        delete_developer(discord_id)
+    return redirect(url_for("admin") + "#developers-admin")
 
 @app.post("/admin/command")
 def admin_command():
