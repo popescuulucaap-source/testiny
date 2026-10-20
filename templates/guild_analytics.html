@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Gargand • {{ guild.name }} activity{% endblock %}
+{% block content %}
+<style>
+  .guild-analytics { width:min(1100px, calc(100% - 2rem)); margin:2rem auto 5rem; }
+  .analytics-topline { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+  .analytics-period { display:flex; gap:.6rem; align-items:center; }
+  .analytics-period select { min-height:2.7rem; padding:.55rem .8rem; border-radius:.7rem; }
+  .analytics-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin:1.25rem 0; }
+  .analytics-kpi { padding:1.25rem; }
+  .analytics-kpi small { display:block; opacity:.7; letter-spacing:.08em; }
+  .analytics-kpi strong { display:block; font-size:2rem; margin-top:.3rem; }
+  .activity-list { display:grid; gap:.85rem; list-style:none; margin:0; padding:0; }
+  .activity-row { display:grid; grid-template-columns:5rem minmax(4rem,1fr) 3rem; gap:.75rem; align-items:center; }
+  .activity-track { height:.65rem; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; }
+  .activity-bar { display:block; height:100%; min-width:3px; border-radius:inherit; background:linear-gradient(90deg,#d9a441,#f2d18c); }
+  .analytics-tables { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(14rem,1fr); gap:1rem; margin-top:1rem; }
+  .analytics-table { width:100%; border-collapse:collapse; }
+  .analytics-table th,.analytics-table td { text-align:left; padding:.7rem .45rem; border-bottom:1px solid rgba(255,255,255,.1); }
+  .analytics-table th:last-child,.analytics-table td:last-child { text-align:right; }
+  .analytics-note { opacity:.75; font-size:.92rem; }
+  @media (max-width:700px) { .analytics-kpis { grid-template-columns:1fr; } .analytics-tables { grid-template-columns:1fr; } }
+</style>
+<section class="guild-analytics">
+  <div class="analytics-topline">
+    <div>
+      <span class="eyebrow">GARGAND SERVER ACTIVITY</span>
+      <h1>{{ guild.name }}</h1>
+      <p class="analytics-note">A private summary for this Discord server.</p>
+    </div>
+    <div class="analytics-period">
+      <a class="btn ghost" href="{{ url_for('dashboard', guild_id=guild.id) }}">← Dashboard</a>
+      <form method="get" action="{{ url_for('guild_analytics', guild_id=guild.id) }}">
+        <label for="analyticsDays">Period</label>
+        <select id="analyticsDays" name="days" onchange="this.form.submit()">
+          <option value="7" {% if period_days == 7 %}selected{% endif %}>Last 7 days</option>
+          <option value="30" {% if period_days == 30 %}selected{% endif %}>Last 30 days</option>
+        </select>
+      </form>
+    </div>
+  </div>
+
+  {% if analytics_error %}
+  <div class="card notice error" role="status">{{ analytics_error }}</div>
+  {% else %}
+  <div class="analytics-kpis" aria-label="Server activity totals">
+    <article class="card analytics-kpi"><small>COMMANDS USED</small><strong>{{ "{:,}".format(summary.commands) }}</strong></article>
+    <article class="card analytics-kpi"><small>TICKETS OPENED</small><strong>{{ "{:,}".format(summary.tickets) }}</strong></article>
+    <article class="card analytics-kpi"><small>MEMBERS WHO USED GARGAND</small><strong>{{ "{:,}".format(summary.active_members) }}</strong></article>
+    <article class="card analytics-kpi"><small>MODERATION CASES</small><strong>{{ "{:,}".format(summary.moderation_cases) }}</strong></article>
+  </div>
+
+  <div class="analytics-tables">
+    <section class="card">
+      <span class="eyebrow">DAILY ACTIVITY</span>
+      <h2>Events by day</h2>
+      {% if daily_activity %}
+      <ul class="activity-list">
+        {% for day in daily_activity %}
+        <li class="activity-row">
+          <time datetime="{{ day.date.isoformat() }}">{{ day.label }}</time>
+          <span class="activity-track" role="img" aria-label="{{ day.total }} events">
+            <span class="activity-bar" style="width:{{ day.bar_width }}%"></span>
+          </span>
+          <strong>{{ day.total }}</strong>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p>No bot activity has been recorded in this period yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <span class="eyebrow">MOST USED</span>
+      <h2>Top commands</h2>
+      {% if top_commands %}
+      <table class="analytics-table">
+        <thead><tr><th>Command</th><th>Uses</th></tr></thead>
+        <tbody>{% for command in top_commands %}<tr><td><code>{{ command.name }}</code></td><td>{{ command.total }}</td></tr>{% endfor %}</tbody>
+      </table>
+      {% else %}
+      <p>No command usage has been recorded yet.</p>
+      {% endif %}
+    </section>
+  </div>
+  <p class="analytics-note">This page counts bot commands, tickets and moderation cases reported by Gargand.</p>
+  {% endif %}
+</section>
+{% endblock %}

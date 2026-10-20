@@ -54,3 +54,15 @@ body.gargand-site:before{background:radial-gradient(ellipse at 50% 0%,#e8aa1d18,
 @media(max-width:1050px){.gg-header{gap:12px}.gg-nav{gap:0}.gg-nav a{padding:8px 7px}.gg-actions{gap:8px}.gg-language-label{display:none}.gg-hero{gap:28px}.gg-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.gg-header{top:6px;width:calc(100% - 16px);margin:6px auto 0;padding:10px 12px}.gg-actions{margin-left:auto}.gg-actions .gg-language-label,.gg-actions .gg-language,.gg-actions .gg-login{display:none}.gg-menu{display:block}.gg-nav{display:none;position:absolute;left:0;right:0;top:calc(100% + 8px);padding:10px;border:1px solid #755514;border-radius:14px;background:#090704f7;box-shadow:0 20px 50px #000b;align-items:stretch;flex-direction:column}.gg-menu-open .gg-nav{display:flex}.gg-nav a{padding:12px}.gg-hero{width:calc(100% - 32px);min-height:auto;padding:64px 0 48px;grid-template-columns:1fr;gap:28px}.gg-hero h1{font-size:clamp(44px,13vw,70px)}.gg-hero p{font-size:14px}.gg-black-logo{max-width:360px;width:88%}.gg-section{width:calc(100% - 32px);margin:30px auto 60px}.gg-section-head{align-items:start;flex-direction:column;gap:8px}.gg-feature-grid{grid-template-columns:1fr}.gg-command-preview{grid-template-columns:1fr}.gg-info-strip{padding:24px;align-items:flex-start;flex-direction:column}.gg-footer{width:calc(100% - 32px)}.gg-footer-top{align-items:flex-start;flex-wrap:wrap}.gg-footer-top p{flex-basis:100%;order:3}.gg-footer-top .gg-button{margin-left:0}.gg-footer-bottom{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+.gg-developers{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:28px;align-items:center;padding:28px 0;border-top:1px solid #5b4208;border-bottom:1px solid #5b4208}
+.gg-developers-heading h2{margin:.45rem 0;font-size:clamp(1.35rem,2vw,1.8rem);color:#f2d18c}
+.gg-developers-heading p{margin:0;color:#b8a77d}
+.gg-owner-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.gg-owner-card{display:grid;gap:6px;padding:16px;border:1px solid #755514;border-radius:14px;background:linear-gradient(145deg,#181107,#0b0905);color:#f5e7c2;text-decoration:none;transition:transform .2s,border-color .2s}
+.gg-owner-card:hover,.gg-owner-card:focus-visible{transform:translateY(-2px);border-color:#ffd52a}
+.gg-owner-card strong{font-size:1.05rem}
+.gg-owner-card code{color:#c8b78e;font-size:.76rem;overflow-wrap:anywhere}
+.gg-owner-card>span:last-child{color:#ffd52a;font-size:.84rem}
+.gg-owner-role{color:#ffd52a;font-size:.68rem;letter-spacing:.14em}
+@media(max-width:760px){.gg-developers{grid-template-columns:1fr;gap:18px}.gg-owner-list{grid-template-columns:1fr}}

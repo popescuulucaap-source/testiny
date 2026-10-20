@@ -1470,6 +1470,142 @@ def dashboard(guild_id):
     )
 
 
+@app.get("/dashboard/<guild_id>/analytics")
+@login_required
+def guild_analytics(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return "You do not have permission to manage this server.", 403
+
+    period_days = 30 if request.args.get("days") == "30" else 7
+    period = f"{period_days} days"
+    bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
+    guild = {"id": str(guild_id), "name": bot_guild.get("name") or "Discord server"}
+    summary = {"commands": 0, "tickets": 0, "active_members": 0, "moderation_cases": 0}
+    daily_activity = []
+    top_commands = []
+    analytics_error = None
+
+    if not DATABASE_URL:
+        analytics_error = "Activity history needs shared database storage (DATABASE_URL)."
+    else:
+        try:
+            with db_connect() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) FILTER (WHERE event_type = 'command_used'), "
+                    "COUNT(*) FILTER (WHERE event_type = 'ticket_created'), "
+                    "COUNT(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL AND user_id <> '' AND event_type IN ('command_used', 'ticket_created')), "
+                    "COUNT(*) FILTER (WHERE event_type = 'moderation_case') "
+                    "FROM bot_telemetry WHERE guild_id = %s AND created_at >= NOW() - %s::interval",
+                    (str(guild_id), period),
+                ).fetchone()
+                summary = {
+                    "commands": int(row[0] or 0),
+                    "tickets": int(row[1] or 0),
+                    "active_members": int(row[2] or 0),
+                    "moderation_cases": int(row[3] or 0),
+                }
+                rows = conn.execute(
+                    "SELECT created_at::date AS activity_date, COUNT(*) AS total, "
+                    "COUNT(*) FILTER (WHERE event_type = 'command_used') AS commands, "
+                    "COUNT(*) FILTER (WHERE event_type = 'ticket_created') AS tickets, "
+                    "COUNT(*) FILTER (WHERE event_type = 'moderation_case') AS moderation_cases "
+                    "FROM bot_telemetry WHERE guild_id = %s AND created_at >= NOW() - %s::interval "
+                    "GROUP BY created_at::date ORDER BY activity_date",
+                    (str(guild_id), period),
+                ).fetchall()
+                daily_activity = [
+                    {
+                        "date": item[0],
+                        "label": item[0].strftime("%b %d"),
+                        "total": int(item[1] or 0),
+                        "commands": int(item[2] or 0),
+                        "tickets": int(item[3] or 0),
+                        "moderation_cases": int(item[4] or 0),
+                    }
+                    for item in rows
+                ]
+                command_rows = conn.execute(
+                    "SELECT command_name, COUNT(*) AS total FROM bot_telemetry "
+                    "WHERE guild_id = %s AND event_type = 'command_used' "
+                    "AND created_at >= NOW() - %s::interval AND command_name <> '' "
+                    "GROUP BY command_name ORDER BY total DESC, command_name ASC LIMIT 5",
+                    (str(guild_id), period),
+                ).fetchall()
+                top_commands = [{"name": str(item[0]), "total": int(item[1])} for item in command_rows]
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load guild analytics: %s", type(exc).__name__)
+            analytics_error = "Activity history is temporarily unavailable."
+
+    max_daily_total = max((item["total"] for item in daily_activity), default=0)
+    for item in daily_activity:
+        item["bar_width"] = max(3, round(item["total"] * 100 / max_daily_total)) if max_daily_total else 0
+
+    return render_template(
+        "guild_analytics.html",
+        guild=guild,
+        period_days=period_days,
+        summary=summary,
+        daily_activity=daily_activity,
+        top_commands=top_commands,
+        analytics_error=analytics_error,
+    )
+
+
+
+@app.get("/dashboard/<guild_id>/moderation")
+@login_required
+def guild_moderation(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return "You do not have permission to manage this server.", 403
+
+    bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
+    guild = {"id": str(guild_id), "name": bot_guild.get("name") or "Discord server"}
+    cases = []
+    moderation_error = None
+
+    if not DATABASE_URL:
+        moderation_error = "Moderation history needs shared database storage (DATABASE_URL)."
+    else:
+        try:
+            with db_connect() as conn:
+                rows = conn.execute(
+                    "SELECT id, created_at, username, user_id, command_name, metadata "
+                    "FROM bot_telemetry WHERE guild_id = %s AND event_type = 'moderation_case' "
+                    "ORDER BY created_at DESC, id DESC LIMIT 100",
+                    (str(guild_id),),
+                ).fetchall()
+            for row in rows:
+                try:
+                    metadata = json.loads(row[5] or "{}")
+                except (TypeError, ValueError):
+                    metadata = {}
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                cases.append({
+                    "id": int(row[0]),
+                    "case_id": str(metadata.get("case_id") or row[0]),
+                    "created_at": row[1],
+                    "actor": str(row[2] or "Unknown staff member"),
+                    "actor_id": str(row[3] or ""),
+                    "action": str(metadata.get("action") or row[4] or "moderation"),
+                    "target_id": str(metadata.get("target_id") or ""),
+                    "target_name": str(metadata.get("target_name") or "—"),
+                    "reason": str(metadata.get("reason") or "No reason provided"),
+                    "outcome": str(metadata.get("outcome") or "success"),
+                    "details": str(metadata.get("details") or ""),
+                })
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load guild moderation history: %s", type(exc).__name__)
+            moderation_error = "Moderation history is temporarily unavailable."
+
+    return render_template(
+        "guild_moderation.html",
+        guild=guild,
+        cases=cases,
+        moderation_error=moderation_error,
+    )
+
+
 @app.get("/api/dashboard/<guild_id>/resources")
 @login_required
 def dashboard_resources(guild_id):
