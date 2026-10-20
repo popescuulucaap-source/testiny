@@ -163,3 +163,13 @@ body.gargand-site:before{background:radial-gradient(ellipse at 50% 0%,#e8aa1d18,
 @media(max-width:900px){.gg-proof-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.gg-proof-strip>div:nth-child(2){border-right:0}.gg-proof-strip>div:nth-child(-n+2){border-bottom:1px solid #4b390f}}
 @media(max-width:760px){.gg-hero-art{max-width:420px;margin:0 auto}.gg-lion-controls{bottom:9%;gap:5px;padding:5px}.gg-lion-controls button{padding:0 9px;font-size:9px}.gg-lion-controls span{max-width:115px}.gargand-audio-toggle{right:12px;bottom:12px;padding:9px 11px}.gg-proof-strip{width:calc(100% - 32px);margin:-5px auto 50px}.gg-proof-strip>div{padding:13px}.gg-proof-strip strong{font-size:11px}.gg-proof-strip small{font-size:9px}.gg-terminal-body>p{grid-template-columns:70px 10px 85px;gap:7px}.gg-terminal-body small{grid-column:3/-1;margin-top:-4px}.gg-terminal-note{align-items:flex-start}.dashboard-setup-teaser,.setup-wizard-heading,.setup-results-heading{align-items:flex-start;flex-direction:column}.setup-check-control{justify-items:start}.setup-step-grid{grid-template-columns:1fr}.setup-refresh-note{text-align:left}}
 @media(prefers-reduced-motion:reduce){.gg-hero-art-ring,.gg-hero-art-glow,.gg-hero-copy .gg-kicker i,.gg-crest-signal,.gg-roar-wave{animation:none!important}.gg-hero-art .gg-black-logo,.setup-step:hover{transform:none!important}.gg-hero-art .gg-black-logo img{animation:none!important;transform:none!important}}
+
+.gg-crown-secret{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:#030201e8;animation:gg-secret-in .28s ease-out both}
+.gg-crown-secret-card{position:relative;width:min(420px,100%);display:grid;justify-items:center;gap:14px;padding:38px 30px 30px;border:1px solid #ffd52a8c;border-radius:24px;background:radial-gradient(ellipse at 50% 0%,#d99a082e,transparent 65%),#100c04;box-shadow:0 0 80px #ffc9282b,0 30px 90px #000c;text-align:center;color:#fff4ce}
+.gg-crown-secret-close{position:absolute;top:10px;right:13px;width:36px;height:36px;border:1px solid #ffd52a55;border-radius:50%;background:#ffd52a10;color:#ffe68a;font-size:24px;cursor:pointer}
+.gg-crown-secret-icon{color:#ffd52a;font-size:54px;line-height:1;text-shadow:0 0 30px #ffd52a99}
+.gg-crown-secret-card strong{color:#ffd52a;font-size:12px;letter-spacing:.22em}
+.gg-crown-secret-card p{margin:0;color:#e8dbbb;font-size:14px;line-height:1.7}
+.gg-crown-secret-card small{color:#b69a55;font-size:9px;letter-spacing:.12em}
+@keyframes gg-secret-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.gg-crown-secret{animation:none}}

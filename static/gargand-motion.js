@@ -39,3 +39,30 @@
     observer.observe(element);
   });
 })();
+
+/* Hidden crown: the classic Konami sequence reveals a lightweight lion toast. */
+(()=>{
+  const code=["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+  let position=0;
+  const editable=el=>el&&(/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)||el.isContentEditable);
+  function reveal(){
+    if(document.querySelector(".gg-crown-secret"))return;
+    const veil=document.createElement("div");veil.className="gg-crown-secret";veil.setAttribute("role","dialog");veil.setAttribute("aria-modal","true");veil.setAttribute("aria-label","Gargand's hidden crown");
+    const card=document.createElement("div");card.className="gg-crown-secret-card";
+    const close=document.createElement("button");close.type="button";close.className="gg-crown-secret-close";close.setAttribute("aria-label","Close");close.textContent="×";
+    const crown=document.createElement("span");crown.className="gg-crown-secret-icon";crown.setAttribute("aria-hidden","true");crown.textContent="♛";
+    const title=document.createElement("strong");title.textContent="THE CROWN REMEMBERS";
+    const message=document.createElement("p");message.textContent="You found Gargand's hidden crest. The pride welcomes you.";
+    const mark=document.createElement("small");mark.textContent="✦ GARGAND • COMMUNITY SYSTEMS ✦";
+    card.append(close,crown,title,message,mark);veil.append(card);document.body.append(veil);
+    const dismiss=()=>{veil.remove();document.removeEventListener("keydown",onEscape);};
+    const onEscape=e=>{if(e.key==="Escape")dismiss();};
+    close.addEventListener("click",dismiss);veil.addEventListener("click",e=>{if(e.target===veil)dismiss();});card.addEventListener("click",e=>e.stopPropagation());document.addEventListener("keydown",onEscape);close.focus();window.setTimeout(dismiss,6500);
+  }
+  window.addEventListener("keydown",event=>{
+    if(editable(event.target)||event.ctrlKey||event.metaKey||event.altKey)return;
+    const key=event.key.length===1?event.key.toLowerCase():event.key;
+    if(key===code[position]){position++;if(position===code.length){position=0;reveal();}}
+    else position=key===code[0]?1:0;
+  });
+})();
