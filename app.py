@@ -208,6 +208,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_LOGIN_FAILURES = {}
 INVITE_URL = (os.getenv("INVITE_URL") or (f"https://discord.com/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&scope=bot%20applications.commands" if DISCORD_CLIENT_ID else "#")).strip()
 SUPPORT_URL = "https://discord.gg/AG2m6u9Ahm"  # Official Gargand support invite; do not override with stale deployment env vars.
+OFFICIAL_GUILD_ID = "1561076743236747387"
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 NIGHTFALL_YOUTUBE_CHANNEL_ID = (os.getenv("GARGAND_YOUTUBE_CHANNEL_ID") or os.getenv("NIGHTFALL_YOUTUBE_CHANNEL_ID") or "").strip()
 ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
@@ -311,7 +312,7 @@ def require_discord_for_site():
     # Public browsing is allowed. State-changing/private areas still require Discord.
     public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support", "/terms", "/socials", "/security", "/verification", "/gargand-lion.jpg", "/gargand-lion-4k.jpg", "/gargand-bar.gif"}
     public_secret_api = set()
-    public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull"}
+    public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull", "/api/bot/announcements"}
     endpoint = request.endpoint or ""
     if endpoint in {"login", "oauth_callback", "health"} or endpoint.startswith("static") or endpoint.startswith("admin"):
         return None
@@ -581,8 +582,8 @@ def sync_repository_updates(force=False):
             return
         REPO_SYNC_LAST_CHECK = now
     repos = [
-        ("site", "Website Update", "popescuulucaap-source/testiny"),
-        ("bot", "Bot Update", "popescuulucaap-source/night-fall-discord-bot"),
+        ("site", "Website Update", "popescuulucaap-source/website"),
+        ("bot", "Bot Update", "popescuulucaap-source/discord-bot"),
     ]
     try:
         with db_connect() as conn:
@@ -776,12 +777,12 @@ def save_announcement(title, body, kind="website"):
     if not DATABASE_URL:
         MEMORY_ANNOUNCEMENTS.insert(0, {"id": MEMORY_ANNOUNCEMENT_ID, "title": title, "body": body, "date": date, "kind": kind})
         MEMORY_ANNOUNCEMENT_ID += 1
-        return
-    with db_connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("INSERT INTO announcements (title, body, date, kind) VALUES (%s, %s, %s, %s)",(title,body,date,kind))
-        conn.commit()
-
+    else:
+        with db_connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("INSERT INTO announcements (title, body, date, kind) VALUES (%s, %s, %s, %s)",(title,body,date,kind))
+            conn.commit()
+    queue_bot_job(OFFICIAL_GUILD_ID, "official_announcement", {"title": title[:180], "body": body[:3500], "kind": kind, "url": "https://testiny-7wuu.onrender.com/announcements"})
 def delete_announcement(announcement_id):
     if not DATABASE_URL:
         MEMORY_ANNOUNCEMENTS[:] = [item for item in MEMORY_ANNOUNCEMENTS if int(item.get("id", 0)) != int(announcement_id)]
@@ -1458,6 +1459,20 @@ def post_review():
         return jsonify({"ok": False, "error": "Could not save your review right now."}), 500
 
 
+
+@app.post("/api/bot/announcements")
+def bot_publish_announcement():
+    denied = require_bot_key()
+    if denied:
+        return denied
+    data = request.get_json(silent=True) or {}
+    title = str(data.get("title") or "").strip()[:180]
+    body = str(data.get("body") or "").strip()[:3500]
+    kind = str(data.get("kind") or "bot").strip().lower()
+    if not title or not body or kind not in {"bot", "website"}:
+        return jsonify({"ok": False, "error": "title, body, and a valid kind are required"}), 400
+    save_announcement(title, body, kind)
+    return jsonify({"ok": True})
 
 @app.get("/api/bot/status")
 def bot_status():
