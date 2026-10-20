@@ -87,3 +87,5 @@ body.gargand-site:before{background:radial-gradient(ellipse at 72% 0%,#e8ac241e,
 @keyframes gg-lion-pulse{0%,100%{box-shadow:0 0 0 1px #ffd34d38,0 0 18px #ffca3020}50%{box-shadow:0 0 0 1px #ffd34d80,0 0 32px #ffca3048}}
 @keyframes gg-lion-sweep{0%,20%{transform:translateX(-90%)}70%,100%{transform:translateX(90%)}}
 @media(prefers-reduced-motion:reduce){.gg-mark,.gg-mark:after{animation:none!important}}
+
+.gg-honeypot{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden;pointer-events:none}
