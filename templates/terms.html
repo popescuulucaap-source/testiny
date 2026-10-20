@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Gargand — Terms of Service{% endblock %}
+{% block content %}
+<section class="page-head gg-legal-head">
+  <span class="eyebrow">GARGAND • LEGAL</span>
+  <h1>Terms of Service</h1>
+  <p>Clear rules for using the Gargand website and Discord bot.</p>
+  <small>Last updated: October 20, 2026</small>
+</section>
+<section class="gg-section gg-legal-body">
+  <div class="gg-legal-intro">
+    <p>By using this website or inviting Gargand to a Discord server, you agree to these terms. If you do not agree, please stop using the service.</p>
+  </div>
+  <div class="gg-feature-grid">
+    <article class="gg-feature"><h2>Use the service responsibly</h2><p>Use Gargand lawfully and respectfully. Do not spam its website forms, interfere with its hosting, try to bypass access controls, or use the bot to harass or harm people.</p></article>
+    <article class="gg-feature"><h2>Server owners control setup</h2><p>Server owners and administrators choose which permissions to grant, configure channels and roles, and decide how moderation features are used. Review each setting before enabling it.</p></article>
+    <article class="gg-feature"><h2>Availability and changes</h2><p>Features, status information, and Discord interactions can be delayed or unavailable. We may update, change, suspend, or remove parts of the service as it develops.</p></article>
+    <article class="gg-feature"><h2>Third-party platforms</h2><p>Gargand depends on services such as Discord and its hosting providers. Their own terms and policies apply when you use their platforms.</p><p><a href="https://discord.com/terms" target="_blank" rel="noopener noreferrer">Discord Terms of Service ↗</a><br><a href="https://discord.com/guidelines" target="_blank" rel="noopener noreferrer">Discord Community Guidelines ↗</a></p></article>
+    <article class="gg-feature"><h2>Website security checks</h2><p>The website may use a signed session cookie and quiet browser checks to protect form submissions. Normal visitors do not need to solve a CAPTCHA or complete an extra step.</p></article>
+    <article class="gg-feature"><h2>Questions</h2><p>Contact the Gargand team through the <a href="{{ support_url }}" target="_blank" rel="noopener noreferrer">official support server ↗</a>.</p></article>
+  </div>
+</section>
+<style>
+.gg-legal-head{max-width:1100px;margin:55px auto 18px;padding:42px 30px;border:1px solid #d1a62f33;border-radius:22px;background:radial-gradient(ellipse at 85% 10%,#d3a42718,transparent 44%),linear-gradient(135deg,#171206,#080704)}
+.gg-legal-head h1{font-size:clamp(42px,7vw,76px);margin:12px 0;color:#fff7dc}.gg-legal-head p{max-width:680px;color:#d0c29b}.gg-legal-head small{color:#ffd34d}.gg-legal-body{max-width:1100px;margin:0 auto 90px}.gg-legal-intro{margin:0 0 20px;padding:18px 22px;border-left:2px solid #ffd34d;background:#ffd34d0b;color:#fff1c6}.gg-legal-body .gg-feature-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}.gg-legal-body .gg-feature h2{font-size:18px}.gg-legal-body .gg-feature a{color:#ffe28a}
+@media(max-width:780px){.gg-legal-head{margin:32px 16px 14px;padding:30px 22px}.gg-legal-body{margin:0 16px 65px}}
+</style>
+{% endblock %}
