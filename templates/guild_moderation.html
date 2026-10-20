@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Gargand • {{ guild.name }} moderation cases{% endblock %}
+{% block content %}
+<style>
+  .guild-moderation{width:min(1180px,calc(100% - 2rem));margin:2rem auto 5rem}
+  .moderation-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin-bottom:1.4rem}
+  .moderation-heading h1{margin:.35rem 0}
+  .moderation-note{opacity:.75}
+  .moderation-tools{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+  .moderation-search{min-height:2.7rem;min-width:min(18rem,80vw);padding:.6rem .8rem;border:1px solid rgba(255,255,255,.18);border-radius:.7rem;background:rgba(0,0,0,.25);color:inherit}
+  .moderation-table-wrap{overflow-x:auto}
+  .moderation-table{width:100%;border-collapse:collapse;min-width:760px}
+  .moderation-table th,.moderation-table td{padding:.8rem .65rem;text-align:left;vertical-align:top;border-bottom:1px solid rgba(255,255,255,.1)}
+  .moderation-table th{font-size:.75rem;letter-spacing:.1em;opacity:.7}
+  .moderation-table td small{display:block;opacity:.65;margin-top:.25rem}
+  .moderation-table code{font-size:.78rem}
+  .case-outcome{display:inline-block;padding:.2rem .5rem;border-radius:99px;background:rgba(95,190,130,.14);color:#9ce2ad;font-size:.8rem}
+  .case-outcome.failed{background:rgba(240,95,95,.14);color:#ffb0a8}
+  .moderation-empty{text-align:center;padding:2rem}
+</style>
+<section class="guild-moderation">
+  <div class="moderation-heading">
+    <div><span class="eyebrow">GARGAND MODERATION CENTER</span><h1>{{ guild.name }}</h1><p class="moderation-note">Recent actions recorded by Gargand for this server. Visible to server managers.</p></div>
+    <div class="moderation-tools">
+      <a class="btn ghost" href="{{ url_for('dashboard', guild_id=guild.id) }}">← Dashboard</a>
+      <input id="caseSearch" class="moderation-search" type="search" placeholder="Search staff, member, action or reason" aria-label="Search moderation cases">
+    </div>
+  </div>
+  {% if moderation_error %}
+    <div class="card notice error" role="status">{{ moderation_error }}</div>
+  {% elif cases %}
+    <div class="card moderation-table-wrap">
+      <table class="moderation-table">
+        <thead><tr><th>CASE / TIME</th><th>ACTION</th><th>STAFF</th><th>MEMBER / DETAILS</th><th>REASON</th><th>RESULT</th></tr></thead>
+        <tbody id="caseRows">
+          {% for case in cases %}
+          <tr data-case-row>
+            <td><code>{{ case.case_id }}</code><small><time datetime="{{ case.created_at.isoformat() }}">{{ case.created_at.strftime("%Y-%m-%d %H:%M UTC") }}</time></small></td>
+            <td>{{ case.action|replace("_", " ")|title }}</td>
+            <td>{{ case.actor }}{% if case.actor_id %}<small><code>{{ case.actor_id }}</code></small>{% endif %}</td>
+            <td>{% if case.target_id %}<a href="https://discord.com/users/{{ case.target_id }}" target="_blank" rel="noopener noreferrer">{{ case.target_name }}</a><small><code>{{ case.target_id }}</code></small>{% else %}{{ case.target_name }}{% endif %}{% if case.details %}<small>{{ case.details }}</small>{% endif %}</td>
+            <td>{{ case.reason }}</td>
+            <td><span class="case-outcome {% if case.outcome != 'success' %}failed{% endif %}">{{ case.outcome|replace("_", " ")|title }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p id="caseSearchResult" class="moderation-note" aria-live="polite">Showing {{ cases|length }} recent cases.</p>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded",function(){
+        var search=document.getElementById("caseSearch"),rows=Array.from(document.querySelectorAll("[data-case-row]")),result=document.getElementById("caseSearchResult");
+        if(!search)return;
+        search.addEventListener("input",function(){
+          var query=search.value.trim().toLocaleLowerCase(),visible=0;
+          rows.forEach(function(row){var match=row.textContent.toLocaleLowerCase().includes(query);row.hidden=!match;if(match)visible++;});
+          result.textContent="Showing "+visible+" of "+rows.length+" cases.";
+        });
+      });
+    </script>
+  {% else %}
+    <div class="card moderation-empty"><h2>No cases yet</h2><p>Once Gargand reports moderation actions, new cases will appear here. Existing history from before this update is not backfilled.</p><a class="btn ghost" href="{{ url_for('guild_analytics', guild_id=guild.id) }}">View server activity</a></div>
+  {% endif %}
+</section>
+{% endblock %}
