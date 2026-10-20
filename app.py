@@ -1547,6 +1547,61 @@ def guild_analytics(guild_id):
     )
 
 
+
+@app.get("/dashboard/<guild_id>/moderation")
+@login_required
+def guild_moderation(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return "You do not have permission to manage this server.", 403
+
+    bot_guild = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
+    guild = {"id": str(guild_id), "name": bot_guild.get("name") or "Discord server"}
+    cases = []
+    moderation_error = None
+
+    if not DATABASE_URL:
+        moderation_error = "Moderation history needs shared database storage (DATABASE_URL)."
+    else:
+        try:
+            with db_connect() as conn:
+                rows = conn.execute(
+                    "SELECT id, created_at, username, user_id, command_name, metadata "
+                    "FROM bot_telemetry WHERE guild_id = %s AND event_type = 'moderation_case' "
+                    "ORDER BY created_at DESC, id DESC LIMIT 100",
+                    (str(guild_id),),
+                ).fetchall()
+            for row in rows:
+                try:
+                    metadata = json.loads(row[5] or "{}")
+                except (TypeError, ValueError):
+                    metadata = {}
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                cases.append({
+                    "id": int(row[0]),
+                    "case_id": str(metadata.get("case_id") or row[0]),
+                    "created_at": row[1],
+                    "actor": str(row[2] or "Unknown staff member"),
+                    "actor_id": str(row[3] or ""),
+                    "action": str(metadata.get("action") or row[4] or "moderation"),
+                    "target_id": str(metadata.get("target_id") or ""),
+                    "target_name": str(metadata.get("target_name") or "—"),
+                    "reason": str(metadata.get("reason") or "No reason provided"),
+                    "outcome": str(metadata.get("outcome") or "success"),
+                    "details": str(metadata.get("details") or ""),
+                })
+        except psycopg.Error as exc:
+            app.logger.warning("Could not load guild moderation history: %s", type(exc).__name__)
+            moderation_error = "Moderation history is temporarily unavailable."
+
+    return render_template(
+        "guild_moderation.html",
+        guild=guild,
+        cases=cases,
+        moderation_error=moderation_error,
+    )
+
+
 @app.get("/api/dashboard/<guild_id>/resources")
 @login_required
 def dashboard_resources(guild_id):
