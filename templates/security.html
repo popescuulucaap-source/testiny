@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Gargand — Server Security{% endblock %}
+{% block content %}
+<section class="page-head gg-legal-head">
+  <span class="eyebrow">GARGAND • SERVER PROTECTION</span>
+  <h1>Security that fits your server.</h1>
+  <p>Give moderators one place to tune protection, review activity, and respond when a server gets noisy.</p>
+  <div class="actions"><a class="gg-button gg-button-bright" href="{{ invite_url }}">Add Gargand ↗</a><a class="gg-button gg-button-dark" href="/commands">Browse commands ↗</a></div>
+</section>
+<section class="gg-section gg-legal-body">
+  <div class="gg-feature-grid">
+    <article class="gg-feature"><div class="gg-feature-icon">⬡</div><h2>Raid and nuke response</h2><p>Use Gargand’s anti-raid and anti-nuke controls to reduce disruption from suspicious joins or destructive channel and role activity.</p></article>
+    <article class="gg-feature"><div class="gg-feature-icon">✦</div><h2>Auto-Mod</h2><p>Configure spam, flood, mention and filtered-word checks, choose a response, and send moderation events to your log channel.</p></article>
+    <article class="gg-feature"><div class="gg-feature-icon">⌘</div><h2>Moderation history</h2><p>Review recorded cases and moderation events from the server dashboard when the bot-to-website bridge is configured.</p></article>
+  </div>
+  <div class="gg-info-strip gg-security-note"><div><span class="gg-kicker">QUICK SETUP</span><h2>Start with <code>!setup</code></h2><p>Choose the channels and roles Gargand should use, then test each protection with your moderator team before relying on it.</p></div><a class="gg-button gg-button-dark" href="/support">Get setup help ↗</a></div>
+  <p class="gg-security-footnote">Protection depends on Discord permissions, role order, channel overrides, and the settings selected by each server’s administrators. Keep a human moderation process in place.</p>
+</section>
+<style>
+.gg-legal-head{max-width:1100px;margin:55px auto 18px;padding:42px 30px;border:1px solid #d1a62f33;border-radius:22px;background:radial-gradient(ellipse at 85% 10%,#d3a42718,transparent 44%),linear-gradient(135deg,#171206,#080704)}
+.gg-legal-head h1{font-size:clamp(42px,7vw,76px);margin:12px 0;color:#fff7dc}.gg-legal-head p{max-width:680px;color:#d0c29b}.gg-legal-body{max-width:1100px;margin:0 auto 90px}.gg-legal-body .gg-feature-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))}.gg-legal-body .gg-feature h2{font-size:18px}.gg-security-note{margin-top:28px}.gg-security-footnote{margin-top:18px;color:#c2b795;font-size:13px}
+@media(max-width:780px){.gg-legal-head{margin:32px 16px 14px;padding:30px 22px}.gg-legal-body{margin:0 16px 65px}}
+</style>
+{% endblock %}
