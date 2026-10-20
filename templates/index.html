@@ -1,17 +1,29 @@
 {% extends "base.html" %}
 {% block title %}GARGAND — Golden security for your server{% endblock %}
 {% block content %}
-<section class="gg-hero">
-  <div>
-    <span class="gg-kicker">◉ THE NEXT LEVEL OF DISCORD</span>
-    <h1>Your server.<br><span>Your rules.</span><br>Your Gargand.</h1>
-    <p>A powerful all-in-one Discord companion for moderation, anti-raid protection, tickets, community tools, and a dashboard designed to put your server in your hands.</p>
-    <div class="gg-hero-actions"><a class="gg-button gg-button-bright" href="{{ invite_url }}">Add Gargand to Discord ↗</a><a class="gg-button gg-button-dark" href="/commands">Explore commands ↓</a></div>
-    <div class="nf-trust"><span><b>✓</b> Smart moderation</span><span><b>✓</b> Server security</span><span><b>✓</b> Web dashboard</span></div>
+<section class="gg-hero gg-hero-upgrade">
+  <div class="gg-hero-copy">
+    <span class="gg-kicker"><i aria-hidden="true"></i> MODERATION · SECURITY · COMMUNITY</span>
+    <h1>Lead with<br><span>confidence.</span><br>Guard with Gargand.</h1>
+    <p>One crowned guardian for your Discord server: practical moderation, layered protection, member support and a control room that keeps setup simple.</p>
+    <div class="gg-hero-actions"><a class="gg-button gg-button-bright" href="{{ invite_url }}">Add Gargand to Discord <span aria-hidden="true">↗</span></a><a class="gg-button gg-button-dark" href="/commands">Explore commands <span aria-hidden="true">↓</span></a></div>
+    <div class="gg-trust-list"><span><b>01</b> Protect your server</span><span><b>02</b> Support your members</span><span><b>03</b> Configure from one place</span></div>
   </div>
-  <div class="gg-black-logo"><div class="gg-lion-orbit" aria-hidden="true"></div><img src="{{ url_for('gargand_lion_asset') }}?v=4k1" alt="GARGAND crowned golden lion" fetchpriority="high" loading="eager"></div>
+  <div class="gg-hero-art" aria-label="Gargand crowned golden lion emblem">
+    <div class="gg-hero-art-ring gg-hero-art-ring-one" aria-hidden="true"></div>
+    <div class="gg-hero-art-ring gg-hero-art-ring-two" aria-hidden="true"></div>
+    <div class="gg-hero-art-glow" aria-hidden="true"></div>
+    <div class="gg-black-logo"><div class="gg-lion-orbit" aria-hidden="true"></div><img src="{{ url_for('gargand_lion_asset') }}?v=4k1" alt="GARGAND crowned golden lion" fetchpriority="high" loading="eager"></div>
+    <div class="gg-crest-label"><span class="gg-crest-signal"></span><span>THE CROWNED WATCHER</span><b>G · 01</b></div>
+  </div>
 </section>
-<section class="gg-section">
+<section class="gg-proof-strip" aria-label="Gargand systems">
+  <div><span>01 / SECURITY</span><strong>Layered protection</strong><small>Anti-raid · Anti-nuke · Auto-Mod</small></div>
+  <div><span>02 / MODERATION</span><strong>Clear staff tools</strong><small>Cases · Logs · Server controls</small></div>
+  <div><span>03 / COMMUNITY</span><strong>Member support</strong><small>Tickets · Roles · Verification</small></div>
+  <div><span>04 / CONTROL</span><strong>One dashboard</strong><small>Manage supported settings</small></div>
+</section>
+<section class="gg-section" id="features">
   <div class="gg-section-head"><div><span class="gg-kicker">BUILT FOR COMMUNITIES</span><h2>One bot. A whole command centre.</h2></div><p>Keep the tools your moderators need close at hand, with a warm gold glow and a dashboard built around clear controls.</p></div>
   <div class="gg-feature-grid">
     <article class="gg-feature"><div class="gg-feature-icon">⌘</div><h3>Moderation & cases</h3><p>Ban, kick, warn, timeout, purge, lock channels and keep your moderation workflow organised.</p><a href="/commands">Browse moderation ↗</a></article>
@@ -24,9 +36,17 @@
     <article class="gg-feature"><div class="gg-feature-icon">♛</div><h3>One-click server templates</h3><p>Start faster with Community, Gaming, Creator, or Support layouts. GARGAND adds starter channels, roles, welcome messages, and a ready-to-edit rules post without deleting existing content.</p><a href="/commands">Try !setup templates ↗</a></article>
   </div>
 </section>
-<section class="gg-section">
-  <div class="gg-section-head"><div><span class="gg-kicker">START IN MINUTES</span><h2>Set up. Lock in. Let it run.</h2></div><p>Use the setup flow to choose channels and roles, then tune protection to fit your community.</p></div>
-  <div class="gg-command-preview"><code>!setup<br><small>Configure server features</small></code><code>!help<br><small>Browse available commands</small></code><code>!questions<br><small>Learn about Gargand</small></code></div>
+<section class="gg-section gg-terminal-section" id="commands">
+  <div class="gg-section-head" id="setup"><div><span class="gg-kicker">A CONTROL ROOM IN DISCORD</span><h2>Quick to learn. Ready to scale.</h2></div><p>Start with the setup command, explore what the bot supports, then fine-tune channels and roles from the web dashboard.</p></div>
+  <div class="gg-terminal">
+    <div class="gg-terminal-bar"><span class="gg-terminal-lights" aria-hidden="true"><i></i><i></i><i></i></span><span>GARGAND · COMMAND PREVIEW</span><span class="gg-terminal-status"><i></i> READY</span></div>
+    <div class="gg-terminal-body">
+      <p><span class="gg-terminal-prompt">GARGAND</span><b>›</b> <code>!setup</code><small>Open the server setup flow.</small></p>
+      <p><span class="gg-terminal-prompt">GARGAND</span><b>›</b> <code>!help</code><small>Browse available commands.</small></p>
+      <p><span class="gg-terminal-prompt">GARGAND</span><b>›</b> <code>!questions</code><small>Get answers about Gargand.</small></p>
+      <div class="gg-terminal-note"><span>✦</span> Configure supported channels, roles and protections from the web control center.</div>
+    </div>
+  </div>
 </section>
 <section class="gg-section">
   <div class="gg-info-strip"><div><span class="gg-kicker">YOUR SERVER, YOUR SETTINGS</span><h2>Ready to bring order to the chaos?</h2><p>Invite Gargand, configure your server and explore the full command library.</p></div><a class="gg-button gg-button-bright" href="{{ invite_url }}">Get Gargand ↗</a></div>

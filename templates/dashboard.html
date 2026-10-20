@@ -24,6 +24,7 @@
 <div class="dashboard-grid">
   <aside class="side-menu" aria-label="Dashboard sections">
     <button class="tab active" type="button" data-tab="overview">✦ Overview</button>
+    <button class="tab" type="button" data-tab="setup">♛ Guided setup</button>
     {% for group_id, title, description, fields in setting_groups %}<button class="tab" type="button" data-tab="{{ group_id }}">{{ title }}</button>{% endfor %}
   </aside>
 
@@ -44,15 +45,32 @@
         <article class="card"><span class="card-icon">🎫</span><h3>Support</h3><p>Ticket panels, questions, appeals and jail workflows.</p><a href="#" class="dashboard-jump" data-tab-jump="tickets">Configure support →</a></article>
         <article class="card"><span class="card-icon">🌙</span><h3>Community</h3><p>Welcome, roles, invites, feedback and applications.</p><a href="#" class="dashboard-jump" data-tab-jump="community">Configure community →</a></article>
       </div>
-      <div class="dashboard-checklist card">
-        <span class="eyebrow">GARGAND LAUNCH CHECK</span>
-        <h3>Build your server in a few clicks.</h3>
-        <div class="checklist-grid">
-          <div><b>01</b><span>Choose your staff role and logs.</span></div>
-          <div><b>02</b><span>Turn on the security modules you need.</span></div>
-          <div><b>03</b><span>Set ticket, welcome and verification channels.</span></div>
-          <div><b>04</b><span>Publish the panels and let Gargand sync.</span></div>
+      <div class="dashboard-checklist card dashboard-setup-teaser">
+        <div><span class="eyebrow">GARGAND LAUNCH CHECK</span><h3>Start with a clean setup.</h3><p>Check your roles, channels, bot access and role order, then publish the panels your server needs.</p></div>
+        <a href="#" class="btn primary dashboard-jump" data-tab-jump="setup">Open guided setup <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+
+    <div id="setup" class="tab-panel">
+      <div class="card setup-wizard">
+        <div class="setup-wizard-heading">
+          <div><span class="eyebrow">GARGAND SETUP WIZARD</span><h2>Ready your server, step by step.</h2><p>Check what is configured, catch missing bot permissions and jump straight to the setting that needs attention.</p></div>
+          <div class="setup-check-control"><button class="btn primary" id="runSetupHealth" type="button">Run health check</button><span id="setupHealthSummary" aria-live="polite">Ready when you are.</span></div>
         </div>
+        <div class="setup-progress" role="progressbar" aria-label="Setup health checks passed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="setupProgressFill"></span></div>
+        <div class="setup-step-grid">
+          <article class="setup-step"><span>01 · FOUNDATION</span><h3>Staff &amp; audit logs</h3><p>Pick the people who help moderate and where Gargand should send its logs.</p><a href="#" class="dashboard-jump" data-tab-jump="general">Configure basics →</a></article>
+          <article class="setup-step"><span>02 · PROTECTION</span><h3>Security settings</h3><p>Choose the protections that fit your community and review the bot’s key permissions.</p><a href="#" class="dashboard-jump" data-tab-jump="security">Review protection →</a></article>
+          <article class="setup-step"><span>03 · VERIFICATION</span><h3>Roles &amp; access</h3><p>Connect the verification channel and verified/unverified roles, then check role order.</p><a href="#" class="dashboard-jump" data-tab-jump="security">Configure verification →</a></article>
+          <article class="setup-step"><span>04 · SUPPORT</span><h3>Ticket destination</h3><p>Choose where members open tickets and where Gargand should create them.</p><a href="#" class="dashboard-jump" data-tab-jump="tickets">Configure tickets →</a></article>
+        </div>
+        <div class="setup-results-heading"><div><span class="eyebrow">SERVER HEALTH</span><h3>Configuration checks</h3></div><span class="setup-refresh-note">Uses Discord’s live channel/role list and Gargand’s latest check-in.</span></div>
+        <ul id="setupCheckResults" class="setup-check-results" aria-live="polite"><li class="setup-check-placeholder">Run the check to see what is ready and what still needs a setting.</li></ul>
+        <div class="setup-panel-actions">
+          <button class="btn ghost bot-action" data-action="post_verification_panel" type="button">🔐 Publish verification panel</button>
+          <button class="btn ghost bot-action" data-action="post_ticket_panel" type="button">🎫 Publish ticket panel</button>
+        </div>
+        <p class="setup-safety-note">The check only reads Discord settings and bot permissions. It never changes channel or role permissions for you.</p>
       </div>
     </div>
 
@@ -95,6 +113,112 @@
   </section>
 </div>
 {% endif %}
-<script>window.GARGAND_GUILD_ID = {{ guild.id | tojson }};</script>
+<script type="application/json" id="setupHealthSnapshot">{{ {'settings': settings, 'health': bot_health or {}, 'online': not bot_error} | tojson }}</script>
+<script>
+window.GARGAND_GUILD_ID = {{ guild.id | tojson }};
+(function(){
+  var button=document.getElementById('runSetupHealth');
+  if(!button)return;
+  var snapshotNode=document.getElementById('setupHealthSnapshot');
+  var snapshot={};
+  try{snapshot=JSON.parse(snapshotNode.textContent||'{}')}catch(e){}
+  var list=document.getElementById('setupCheckResults');
+  var summary=document.getElementById('setupHealthSummary');
+  var progress=document.getElementById('setupProgressFill');
+  var bar=document.querySelector('.setup-progress');
+  var guildId=String(window.GARGAND_GUILD_ID||'');
+  var api='/api/dashboard/'+encodeURIComponent(guildId)+'/resources';
+  function settingValue(key){
+    var input=document.querySelector('[data-setting="'+key+'"]');
+    if(!input)return (snapshot.settings||{})[key];
+    if(input.type==='checkbox')return input.checked;
+    return input.value||input.dataset.current||(snapshot.settings||{})[key]||'';
+  }
+  function addCheck(kind,title,detail){
+    var row=document.createElement('li');
+    row.className='setup-check '+kind;
+    var state=document.createElement('span');
+    state.className='setup-check-state';
+    state.textContent=kind==='pass'?'✓':kind==='fail'?'!':'·';
+    var copy=document.createElement('div');
+    copy.className='setup-check-copy';
+    var heading=document.createElement('strong');
+    heading.textContent=title;
+    var description=document.createElement('span');
+    description.textContent=detail;
+    copy.appendChild(heading);copy.appendChild(description);
+    row.appendChild(state);row.appendChild(copy);list.appendChild(row);
+    return kind==='pass';
+  }
+  function settingLink(text,tab){
+    var a=document.createElement('a');a.href='#';a.className='dashboard-jump';a.dataset.tabJump=tab;a.textContent=text;return a;
+  }
+  button.addEventListener('click',async function(){
+    button.disabled=true;button.textContent='Checking…';list.replaceChildren();
+    var checks=[],passed=0,health=snapshot.health||{},resources=null,errorText='';
+    try{
+      var response=await fetch(api,{headers:{'Accept':'application/json'}});
+      if(!response.ok)throw new Error('Discord returned '+response.status);
+      resources=await response.json();
+      if(!resources.ok)throw new Error(resources.error||'Could not load Discord resources.');
+    }catch(error){errorText=error.message||'Could not reach Discord.'}
+    function check(kind,title,detail){checks.push({kind:kind,title:title,detail:detail});if(addCheck(kind,title,detail))passed++}
+    if(snapshot.online)check('pass','Bot connection','Gargand is online in this server and checking in with the website.');
+    else check('fail','Bot connection','Gargand is offline or has not checked in for this server.');
+    if(errorText){
+      check('fail','Discord resources',errorText);
+    }else{
+      var channels=resources.channels||[],roles=resources.roles||[];
+      function channelCheck(key,label){
+        var id=String(settingValue(key)||'');
+        if(!id){check('warn',label,'Choose a channel in the linked settings tab.');return}
+        var channel=channels.find(function(item){return String(item.id)===id});
+        if(!channel){check('fail',label,'The saved channel is missing or no longer belongs to this server.');return}
+        var live=health.channels&&health.channels[key];
+        if(!health.available||!live){check('warn',label,'Channel exists as #'+channel.name+'; waiting for Gargand’s permission check.');return}
+        var missing=[];
+        if(!live.can_view)missing.push('view channel');
+        if(!live.can_send)missing.push('send messages');
+        if(!live.can_embed)missing.push('embed links');
+        if(missing.length)check('warn',label,'#'+channel.name+' is set, but Gargand needs '+missing.join(', ')+'.');
+        else check('pass',label,'#'+channel.name+' is available to Gargand.');
+      }
+      function roleCheck(key,label,needsAssignment){
+        var id=String(settingValue(key)||'');
+        if(!id){check('warn',label,'Choose a role in Security & Auto-Mod.');return}
+        var role=roles.find(function(item){return String(item.id)===id});
+        if(!role){check('fail',label,'The saved role is missing or no longer belongs to this server.');return}
+        var live=health.roles&&health.roles[key];
+        if(!health.available||!live){check('warn',label,'Role exists as @'+role.name+'; waiting for Gargand’s hierarchy check.');return}
+        if(needsAssignment&&!live.assignable)check('warn',label,'@'+role.name+' is above Gargand’s highest role or is managed. Move Gargand’s role higher in Server Settings → Roles.');
+        else check('pass',label,'@'+role.name+' exists'+(needsAssignment?' and is below Gargand’s highest role.':'.'));
+      }
+      roleCheck('staff_role_id','Staff role',false);
+      channelCheck('logs_channel_id','Audit log channel');
+      channelCheck('verification_channel_id','Verification channel');
+      roleCheck('verified_role_id','Verified role',true);
+      roleCheck('unverified_role_id','Unverified role',true);
+      channelCheck('ticket_panel_channel_id','Ticket panel channel');
+      if(health.available){
+        var perms=health.permissions||{};
+        var needsRole=!!(settingValue('autorole_id')||settingValue('verified_role_id')||settingValue('unverified_role_id'));
+        if(needsRole&&!perms.manage_roles)check('warn','Manage roles permission','Gargand needs Manage Roles to assign the selected roles.');
+        else check('pass','Core bot permissions','The bot permission snapshot is available'+(needsRole?' and Manage Roles is enabled.':'.'));
+      }else{
+        check('warn','Bot permission telemetry','Waiting for the latest Fadehost bot build to report permission details.');
+      }
+    }
+    if(!checks.length)check('warn','Health check','No checks were returned.');
+    list.replaceChildren();
+    var passedCount=0;
+    checks.forEach(function(item){if(addCheck(item.kind,item.title,item.detail))passedCount++});
+    var percent=Math.round(100*passedCount/checks.length);
+    progress.style.width=percent+'%';bar.setAttribute('aria-valuenow',String(percent));
+    summary.textContent=passedCount+' of '+checks.length+' checks clear.';
+    button.textContent='Run again';button.disabled=false;
+    list.querySelectorAll('.dashboard-jump').forEach(function(link){link.addEventListener('click',function(event){event.preventDefault();var tab=link.dataset.tabJump;var target=document.querySelector('[data-tab="'+tab+'"]');if(target)target.click()})});
+  });
+})();
+</script>
 {% endblock %}
 
