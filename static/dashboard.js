@@ -36,21 +36,35 @@
       const data = await readJson(await fetch(api("/resources"), {credentials:"same-origin",headers:{"Accept":"application/json"}}));
       selects.forEach(select => {
         const kind = select.dataset.resource;
-        const items = kind === "role" ? (data.roles || []) : (data.channels || []);
-        const current = String(select.dataset.current || "");
+        const multipleRoles = kind === "roles";
+        const items = (kind === "role" || multipleRoles) ? (data.roles || []) : (data.channels || []);
+        let current = select.dataset.current || "";
+        if (multipleRoles) {
+          try { current = JSON.parse(current || "[]"); } catch (_) { current = []; }
+          if (!Array.isArray(current)) current = [];
+          current = current.map(String);
+        } else current = String(current);
         const blank = document.createElement("option"); blank.value = ""; blank.textContent = "— Not set —";
         select.replaceChildren(blank);
+        if (multipleRoles) select.removeChild(blank);
         items.sort((a,b) => kind === "channel" ? (a.position-b.position || a.name.localeCompare(b.name)) : (b.position-a.position || a.name.localeCompare(b.name)));
         items.forEach(item => {
           const option = document.createElement("option");
           option.value = String(item.id);
           option.textContent = kind === "channel" ? ((item.type === 4 ? "▰ " : "# ") + item.name) : ("@ " + item.name);
+          if (multipleRoles) option.selected = current.includes(option.value);
           select.appendChild(option);
         });
-        select.value = current;
-        if (current && select.value !== current) {
-          const missing = document.createElement("option"); missing.value=current; missing.textContent="Previously saved selection (not returned by Discord)";
-          select.appendChild(missing); select.value=current;
+        if (multipleRoles) {
+          current.filter(id => !items.some(item => String(item.id) === id)).forEach(id => {
+            const missing = document.createElement("option"); missing.value=id; missing.textContent="Saved role unavailable · "+id; missing.selected=true; select.appendChild(missing);
+          });
+        } else {
+          select.value = current;
+          if (current && select.value !== current) {
+            const missing = document.createElement("option"); missing.value=current; missing.textContent="Previously saved selection (not returned by Discord)";
+            select.appendChild(missing); select.value=current;
+          }
         }
         select.disabled = false;
       });
@@ -63,6 +77,7 @@
   const valueFor = (input) => {
     const key = input.dataset.setting;
     if (input.type === "checkbox") return input.checked;
+    if (input.dataset.resource === "roles") return [...input.selectedOptions].map(option => option.value).filter(Boolean);
     if (input.dataset.resource) return input.value || "";
     if (key === "ticket_options") return input.value.split(",").map(x => x.trim()).filter(Boolean);
     if (key === "ticket_questions") {

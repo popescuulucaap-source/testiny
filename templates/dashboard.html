@@ -87,14 +87,26 @@
             {% if field_type == 'toggle' %}
               <input type="checkbox" data-setting="{{ key }}" {% if settings.get(key, false) %}checked{% endif %}>
               {% if key == 'raid_auto_lockdown' %}<small class="field-help">Requires Anti-raid protection. At a severe join surge, Gargand temporarily pauses @everyone posting and restores saved channel permissions after 10 minutes.</small>{% endif %}
+              {% if key == 'anti_nuke' %}<small class="field-help">Tracks channel/role deletions and edits, links each incident to a case, and saves recovery snapshots. Alerts only by default.</small>{% endif %}
+              {% if key == 'anti_nuke_auto_lockdown' %}<small class="field-help">Optional response after an actor reaches a per-action threshold. It pauses @everyone posting for 10 minutes and restores saved permissions automatically.</small>{% endif %}
+              {% if key == 'anti_nuke_auto_ban' %}<small class="field-help">Optional and off by default. Enable only if you want Gargand to ban a non-trusted actor after the configured threshold.</small>{% endif %}
             {% elif field_type == 'channel' %}
               <select data-setting="{{ key }}" data-resource="channel" data-current="{{ settings.get(key, '') or '' }}"><option value="">Loading channels…</option></select>
               <small class="field-help">Choose a channel from your server. No ID needed.</small>
             {% elif field_type == 'role' %}
               <select data-setting="{{ key }}" data-resource="role" data-current="{{ settings.get(key, '') or '' }}"><option value="">Loading roles…</option></select>
               <small class="field-help">Choose a role from your server. No ID needed.</small>
+            {% elif field_type == 'roles' %}
+              <select multiple size="5" data-setting="{{ key }}" data-resource="roles" data-current='{{ settings.get(key, []) | tojson }}'><option value="">Loading roles…</option></select>
+              <small class="field-help">Hold Ctrl (Windows) or Command (Mac) to select trusted roles. Their destructive actions are still recorded, but won’t trigger automatic lockdown or bans.</small>
             {% elif field_type == 'number' %}
-              <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, '') }}" min="0" max="100000">
+              {% if key == 'anti_nuke_window_seconds' %}
+                <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, 10) }}" min="5" max="60" step="1">
+              {% elif key.startswith('anti_nuke_threshold_') %}
+                {% set default_threshold = 3 if key.endswith('_delete') else 4 %}<input type="number" data-setting="{{ key }}" value="{{ settings.get(key, default_threshold) }}" min="2" max="10" step="1">
+              {% else %}
+                <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, '') }}" min="0" max="100000" step="1">
+              {% endif %}
             {% elif field_type == 'id' %}
               <input type="text" inputmode="numeric" autocomplete="off" data-setting="{{ key }}" placeholder="Discord server ID" value="{{ settings.get(key, '') or '' }}" maxlength="22">
             {% elif field_type == 'list' %}
