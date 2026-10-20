@@ -69,9 +69,26 @@
         select.disabled = false;
       });
     } catch (error) {
-      selects.forEach(s => { s.disabled = false; s.innerHTML = '<option value="">Could not load options</option>'; });
-      const notice = document.querySelector(".bot-connection-card");
-      if (notice) say(notice.querySelector("p"), "Could not load Discord channels/roles: " + error.message, true);
+      const message = "Could not load options: " + (error.message || "Discord resource request failed.");
+      selects.forEach(select => {
+        select.disabled = false;
+        select.replaceChildren();
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = message;
+        select.appendChild(option);
+        select.title = message;
+      });
+      let notice = document.getElementById("dashboardResourceError");
+      if (!notice) {
+        notice = document.createElement("p");
+        notice.id = "dashboardResourceError";
+        notice.className = "notice error";
+        notice.setAttribute("role", "status");
+        const host = document.querySelector(".dashboard-content");
+        if (host) host.prepend(notice);
+      }
+      if (notice) notice.textContent = "Discord channels and roles could not be loaded. " + (error.message || "Refresh after Gargand checks in.");
     }
   };
   const valueFor = (input) => {
