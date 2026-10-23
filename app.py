@@ -2124,6 +2124,25 @@ def update_settings(guild_id):
             raw = str(value or "").strip()
             if raw and (not raw.isdigit() or len(raw) > 22):
                 return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be a numeric Discord ID."}), 400
+            if raw and key in CHANNEL_SETTINGS:
+                guild_snapshot = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
+                channels = guild_snapshot.get("channels", [])
+                selected = next((item for item in channels if isinstance(item, dict) and str(item.get("id")) == raw), None)
+                if selected is None:
+                    return jsonify({"ok": False, "error": f"Select a channel that belongs to this server for {key.replace('_', ' ')}."}), 400
+                channel_type = selected.get("type")
+                if key.endswith("_category_id"):
+                    valid_type = channel_type == 4
+                else:
+                    valid_type = channel_type in {0, 5}
+                if not valid_type:
+                    expected = "a category" if key.endswith("_category_id") else "a text channel"
+                    return jsonify({"ok": False, "error": f"Choose {expected} for {key.replace('_', ' ')}."}), 400
+            elif raw and key in ROLE_SETTINGS:
+                guild_snapshot = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
+                roles = guild_snapshot.get("roles", [])
+                if not any(isinstance(item, dict) and str(item.get("id")) == raw for item in roles):
+                    return jsonify({"ok": False, "error": "Select a role that belongs to this server."}), 400
             clean[key] = int(raw) if raw else None
         elif key in TOGGLE_SETTINGS:
             if not isinstance(value, bool):
