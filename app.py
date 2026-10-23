@@ -2199,7 +2199,25 @@ def redeem():
 
 @app.get("/health")
 def health():
-    return jsonify({"ok": True, "service": "Gargand Dashboard"})
+    # Keep Render's process health check independent from optional integrations,
+    # while making database configuration/connectivity observable without secrets.
+    database_configured = bool(DATABASE_URL)
+    database_reachable = False
+    if database_configured:
+        try:
+            with db_connect() as conn:
+                conn.execute("SELECT 1").fetchone()
+            database_reachable = True
+        except psycopg.Error as exc:
+            app.logger.warning("Health check could not reach database: %s", type(exc).__name__)
+    return jsonify({
+        "ok": True,
+        "service": "Gargand Dashboard",
+        "database": {
+            "configured": database_configured,
+            "reachable": database_reachable,
+        },
+    })
 
 
 
