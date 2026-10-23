@@ -59,6 +59,15 @@
           <div><span class="eyebrow">GARGAND SETUP WIZARD</span><h2>Ready your server, step by step.</h2><p>Check what is configured, catch missing bot permissions and jump straight to the setting that needs attention.</p></div>
           <div class="setup-check-control"><button class="btn primary" id="runSetupHealth" type="button">Run health check</button><span id="setupHealthSummary" aria-live="polite">Ready when you are.</span></div>
         </div>
+        <section class="preset-library" aria-labelledby="presetLibraryTitle">
+          <div class="setup-results-heading"><div><span class="eyebrow">QUICK START</span><h3 id="presetLibraryTitle">Choose a server preset</h3><p>Apply a sensible starting configuration, then select the channels and roles below. Presets do not change Discord permissions or create channels automatically.</p></div></div>
+          <div class="setup-step-grid preset-grid">
+            <article class="setup-step preset-card"><span>01 · COMMUNITY</span><h3>Gaming community</h3><p>XP and levels, activity analytics, anti-spam, flood and mention protection. Great for active game servers.</p><button class="btn primary apply-preset" data-preset="gaming" type="button">Apply gaming preset</button></article>
+            <article class="setup-step preset-card"><span>02 · PROTECTION</span><h3>High security</h3><p>Anti-raid, anti-nuke alerts, anti-link, spam and mention protection. Automatic anti-nuke bans stay disabled for safety.</p><button class="btn primary apply-preset" data-preset="security" type="button">Apply security preset</button></article>
+            <article class="setup-step preset-card"><span>03 · CREATORS</span><h3>Creator &amp; community</h3><p>Welcome/leave setup, feedback and applications destinations, tickets, XP and community activity tools.</p><button class="btn primary apply-preset" data-preset="creator" type="button">Apply creator preset</button></article>
+          </div>
+          <p id="presetApplyResult" class="notice" role="status" aria-live="polite">Choose a preset to queue its settings for Gargand.</p>
+        </section>
         <div class="setup-progress" role="progressbar" aria-label="Setup health checks passed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="setupProgressFill"></span></div>
         <div class="setup-step-grid">
           <article class="setup-step"><span>01 · FOUNDATION</span><h3>Staff &amp; audit logs</h3><p>Pick the people who help moderate and where Gargand should send its logs.</p><a href="#" class="dashboard-jump" data-tab-jump="general">Configure basics →</a></article>
