@@ -464,7 +464,22 @@ def admin_audit():
     if DATABASE_URL:
         with db_connect() as conn:
             rows = conn.execute("SELECT event_type,guild_id,guild_name,user_id,username,command_name,metadata,created_at FROM bot_telemetry ORDER BY id DESC LIMIT 500").fetchall()
-            events = [{"event_type":r[0],"guild_id":r[1],"guild_name":r[2],"user_id":r[3],"username":r[4],"command_name":r[5],"metadata":r[6],"created_at":r[7]} for r in rows]
+            events = []
+            for r in rows:
+                try:
+                    metadata = json.loads(r[6]) if isinstance(r[6], str) else (r[6] or {})
+                except (TypeError, ValueError):
+                    metadata = {}
+                if isinstance(metadata, dict) and "answers" in metadata:
+                    metadata = dict(metadata)
+                    metadata.pop("answers", None)
+                    metadata["ticket_answers"] = "redacted"
+                events.append({
+                    "event_type": r[0], "guild_id": r[1], "guild_name": r[2],
+                    "user_id": r[3], "username": r[4], "command_name": r[5],
+                    "metadata": json.dumps(metadata, ensure_ascii=False),
+                    "created_at": r[7],
+                })
             for key, label in (
                 ("command_used","commands"),
                 ("message_seen","messages"),
