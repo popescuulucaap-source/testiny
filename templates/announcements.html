@@ -1,16 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Gargand • Announcements{% endblock %}
+{% block title %}Gargand • Bot Updates{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">GARGAND CHANGELOG</span><h1>Every update. One place.</h1><p>Read website announcements, bot releases, maintenance notes and feature updates from Gargand.</p></section>
+<section class="page-head"><span class="eyebrow">GARGAND RELEASE NOTES</span><h1>Bot updates</h1><p>New Gargand Discord bot features, fixes and security improvements.</p></section>
 <section class="update-center">
-  <div class="update-center-head"><div><span class="eyebrow">LIVE UPDATE CENTRE</span><h2>Announcements</h2></div><span class="update-center-status">● UPDATE FEED</span></div>
-  <div class="update-columns">
-    <section class="update-column"><div class="update-column-title"><span class="update-icon">◈</span><div><h3>Website updates</h3><p>Website, dashboard and design changes.</p></div></div><div class="updates">
-      {% for a in site_updates %}<article class="update"><span>{{ a.date }} · WEBSITE</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No website updates yet</h3><p>New announcements will appear here.</p></article>{% endfor %}
-    </div></section>
-    <section class="update-column"><div class="update-column-title"><span class="update-icon">✦</span><div><h3>Bot updates</h3><p>New features, fixes and security improvements.</p></div></div><div class="updates">
-      {% for a in bot_updates %}<article class="update"><span>{{ a.date }} · BOT</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No bot updates yet</h3><p>New bot releases will appear here.</p></article>{% endfor %}
-    </div></section>
+  <div class="update-center-head"><div><span class="eyebrow">RELEASE FEED</span><h2>Bot announcements</h2></div><span class="update-center-status">● BOT RELEASES</span></div>
+  <div class="updates">
+    {% for a in bot_updates %}<article class="update"><span>{{ a.date }} · BOT</span><h3>{{ a.title }}</h3><p>{{ a.body }}</p></article>{% else %}<article class="card"><h3>No bot updates yet</h3><p>New bot releases will appear here.</p></article>{% endfor %}
   </div>
 </section>
 {% endblock %}
