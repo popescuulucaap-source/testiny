@@ -614,8 +614,8 @@ def sync_repository_updates(force=False):
         if not force and now - REPO_SYNC_LAST_CHECK < REPO_SYNC_INTERVAL:
             return
         REPO_SYNC_LAST_CHECK = now
+    # Only publish bot repository releases; website commits stay internal.
     repos = [
-        ("site", "Website Update", "popescuulucaap-source/website"),
         ("bot", "Bot Update", "popescuulucaap-source/discord-bot"),
     ]
     try:
@@ -680,17 +680,6 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS bot_telemetry (id BIGSERIAL PRIMARY KEY, event_type TEXT NOT NULL, guild_id TEXT, guild_name TEXT, user_id TEXT, username TEXT, command_name TEXT, metadata TEXT NOT NULL DEFAULT '{}', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE INDEX IF NOT EXISTS bot_telemetry_created_at_idx ON bot_telemetry(created_at DESC)")
             cur.execute("CREATE TABLE IF NOT EXISTS security_incident_reviews (guild_id TEXT NOT NULL, case_id TEXT NOT NULL, reviewed_by TEXT NOT NULL, reviewer_name TEXT NOT NULL, reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), note TEXT NOT NULL DEFAULT '', PRIMARY KEY (guild_id, case_id))")
-            cur.execute("SELECT 1 FROM announcements WHERE title=%s LIMIT 1", ("Gargand Updates Center • Automatic tracking",))
-            if not cur.fetchone():
-                cur.execute(
-                    "INSERT INTO announcements (title, body, date, kind) VALUES (%s,%s,%s,%s)",
-                    (
-                        "Gargand Updates Center • Automatic tracking",
-                        "Website and bot changes are now tracked from their GitHub repositories. New commits can appear here automatically, and admins can publish their own site or bot updates from the Admin panel.",
-                        "2026-10-05",
-                        "website",
-                    ),
-                )
             # Seed the public bot release announcements once, without duplicating them.
             bot_releases = [
                 (
@@ -718,18 +707,6 @@ def init_db():
                     )
             # Publish the recent merged website and bot releases in the public Updates feed.
             release_announcements = [
-                (
-                    "Guided setup & lion-led redesign • Website Update",
-                    "The homepage now features Gargand's gold lion identity, lighter motion, and a guided server setup flow. The setup health panel checks the bot's required permissions, configured channels, and role hierarchy so admins can spot setup issues sooner.",
-                    "2026-10-20",
-                    "website",
-                ),
-                (
-                    "Lion sound & security dashboard • Website Update",
-                    "The lion artwork now has opt-in ambient sound and a click-to-play roar. Server admins can review security incidents from the moderation dashboard and configure anti-nuke trusted roles, event windows, action thresholds, and optional responses.",
-                    "2026-10-20",
-                    "website",
-                ),
                 (
                     "Verification hardening • Bot Update",
                     "Member verification now uses a private four-word, three-digit challenge tied to the correct server and pending role. Cooldowns and temporary retry limits make repeated guessing harder, longer risk-based phrases stay readable, and the bot keeps the unverified role in place until verification succeeds.",
@@ -801,16 +778,18 @@ def init_db():
         conn.commit()
 
 def load_announcements():
+    # Poll only the bot repository; website changes are not public updates.
     sync_repository_updates()
     if not DATABASE_URL:
-        return list(MEMORY_ANNOUNCEMENTS)
+        return [item for item in MEMORY_ANNOUNCEMENTS if item.get("kind") == "bot"]
     with db_connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, title, body, date, kind FROM announcements ORDER BY id DESC")
-            return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3],"kind":r[4] or "website"} for r in cur.fetchall()]
+            cur.execute("SELECT id, title, body, date, kind FROM announcements WHERE kind='bot' ORDER BY id DESC")
+            return [{"id":r[0],"title":r[1],"body":r[2],"date":r[3],"kind":"bot"} for r in cur.fetchall()]
 
-def save_announcement(title, body, kind="website"):
+def save_announcement(title, body, kind="bot"):
     global MEMORY_ANNOUNCEMENT_ID
+    kind = "bot"
     date=__import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
     if not DATABASE_URL:
         MEMORY_ANNOUNCEMENTS.insert(0, {"id": MEMORY_ANNOUNCEMENT_ID, "title": title, "body": body, "date": date, "kind": kind})
@@ -1038,7 +1017,6 @@ def admin_command():
     desc=(request.form.get("description") or "").strip()
     if cmd and desc:
         save_custom_command(cmd,cat,desc)
-        save_announcement("Website Update • Command library changed", f"Admin added {cmd} to the {cat} command category.", "website")
     return redirect(url_for("admin"))
 
 @app.post("/admin/announcement")
@@ -1049,9 +1027,7 @@ def admin_announcement():
         return jsonify({"ok": False, "error": "Invalid session token. Refresh the admin page."}), 400
     title=(request.form.get("title") or "Update").strip()
     body=(request.form.get("body") or "").strip()
-    kind=(request.form.get("kind") or "website").strip().lower()
-    if kind not in {"bot","website"}: kind="website"
-    if title and body: save_announcement(title,body,kind)
+    if title and body: save_announcement(title,body,"bot")
     return redirect(url_for("admin"))
 
 @app.post("/admin/announcement/<int:announcement_id>/delete")
@@ -1584,8 +1560,6 @@ def announcements():
     items = load_announcements()
     return render_template(
         "announcements.html",
-        announcements=items,
-        site_updates=[item for item in items if item.get("kind") != "bot"],
         bot_updates=[item for item in items if item.get("kind") == "bot"],
     )
 
