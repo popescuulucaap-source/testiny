@@ -2508,7 +2508,7 @@ COMMANDS = [
     ("!jail @member [reason]", "Moderation", "Jail a member using the configured jail system."),
     ("!unjail @member [reason]", "Moderation", "Release a jailed member."),
     ("!announce #channel <message>", "Admin tools", "Post a server announcement."),
-    ("!poll <question and options>", "Community", "Create a reaction poll."),
+    ("!poll <question> <option1> <option2> [option3] [option4] [option5]", "Community", "Staff can create a reaction poll with two to five options."),
     ("!afk [reason]", "Utility", "Set your AFK status."),
     ("!8ball <question>", "Fun", "Ask the Gargand 8-Ball a question."),
     ("!mommycount [@member]", "Fun", "Count how many times a member has said “mommy” in this server."),
@@ -2559,6 +2559,12 @@ COMMANDS = [
     ("!proof <action>", "Community", "Use the configured proof workflow. Staff only."),
     ("!daily", "Games", "Claim your daily coins."),
     ("!balance [@member]", "Games", "Show your coin balance or another member's."),
+    ("!level [@member]", "Community", "Show your XP and level or another member's level."),
+    ("!leaderboard", "Community", "Show the top 10 members by Gargand XP."),
+    ("!suggest <idea>", "Community", "Send a suggestion to the configured staff feedback/suggestions channel."),
+    ("!serverstats", "Utility", "Show member counts, channels, server creation date and owner."),
+    ("!securitycheck", "Security", "Check Gargand permissions, logging setup and suggestions channel configuration. Staff only."),
+    ("!configbackup", "Admin tools", "Export this server's Gargand settings to a JSON file. Administrator only."),
     # Slash-command directory: keep every existing ! command above and also advertise the new / equivalents.
     ("/help", "Utility", "Show Gargand's command help as a Discord slash command."),
     ("/about", "Utility", "Show Gargand's launch information."),
@@ -2580,7 +2586,7 @@ COMMANDS = [
     ("/jail @member [reason]", "Moderation", "Jail a member using the configured jail system."),
     ("/unjail @member [reason]", "Moderation", "Release a jailed member."),
     ("/announce #channel <message>", "Admin tools", "Post a server announcement."),
-    ("/poll <question and options>", "Community", "Create a reaction poll."),
+    ("/poll <question> <option1> <option2> [option3] [option4] [option5]", "Community", "Staff can create a reaction poll with two to five options."),
     ("/afk [reason]", "Utility", "Set your AFK status."),
     ("/8ball <question>", "Fun", "Ask the Gargand 8-Ball a question."),
     ("/mommycount [@member]", "Fun", "Count tracked uses of mommy in this server."),
@@ -2633,6 +2639,12 @@ COMMANDS = [
     ("/stick <message>", "Utility", "Make a message sticky."),
     ("/unstick", "Utility", "Remove the sticky message."),
     ("/proof <action>", "Community", "Use the configured proof workflow. Staff only."),
+    ("/level [@member]", "Community", "Show your XP and level or another member's level."),
+    ("/leaderboard", "Community", "Show the top 10 members by Gargand XP."),
+    ("/suggest <idea>", "Community", "Send a suggestion to the configured staff feedback/suggestions channel."),
+    ("/serverstats", "Utility", "Show member counts, channels, server creation date and owner."),
+    ("/securitycheck", "Security", "Check Gargand permissions, logging setup and suggestions channel configuration. Staff only."),
+    ("/configbackup", "Admin tools", "Export this server's Gargand settings to a JSON file. Administrator only."),
 ]
 
 
