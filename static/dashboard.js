@@ -15,6 +15,66 @@
     node.classList.toggle("error", !!bad);
     node.classList.toggle("success", !bad);
   };
+  const PRESETS = {
+    gaming: {
+      xp_enabled:true, analytics_enabled:true, automod_spam:true, automod_flood:true,
+      automod_mentions:true, anti_link:false, anti_raid:false, anti_nuke:false,
+      raid_auto_lockdown:false, anti_nuke_auto_lockdown:false, anti_nuke_auto_ban:false,
+      automod_punishment:"timeout", automod_max_messages:6, automod_window_seconds:5,
+      automod_mention_limit:5, ticket_options:["support","report","partnership"]
+    },
+    security: {
+      anti_raid:true, raid_auto_lockdown:true, anti_nuke:true, anti_nuke_auto_lockdown:false,
+      anti_nuke_auto_ban:false, anti_link:true, automod_spam:true, automod_flood:true,
+      automod_mentions:true, automod_bad_words:false, automod_punishment:"timeout",
+      automod_max_messages:5, automod_window_seconds:5, automod_mention_limit:4
+    },
+    creator: {
+      xp_enabled:true, analytics_enabled:true, anti_raid:false, anti_nuke:false,
+      anti_link:false, automod_spam:true, automod_flood:true, automod_mentions:true,
+      ticket_options:["support","report","partnership","creator"], ticket_questions:{
+        support:["How can we help?"], report:["Who or what are you reporting?","Please share details."],
+        partnership:["Tell us about your community or project."], creator:["Share your channel or creator profile."]
+      }
+    }
+  };
+  const applyPresetToFields = (preset) => {
+    const payload = PRESETS[preset];
+    if (!payload) return;
+    const notice = document.getElementById("presetApplyResult");
+    const button = document.querySelector('.apply-preset[data-preset="' + preset + '"]');
+    const card = button?.closest(".preset-card");
+    const original = button?.textContent || "Apply preset";
+    if (button) { button.disabled = true; button.textContent = "Applying…"; }
+    if (notice) { notice.textContent = "Sending preset to Gargand…"; notice.classList.remove("error","success"); }
+    Object.entries(payload).forEach(([key,value]) => {
+      const field = document.querySelector('[data-setting="' + key + '"]');
+      if (!field) return;
+      if (field.type === "checkbox") field.checked = !!value;
+      else if (field.dataset.resource === "roles") {
+        const chosen = Array.isArray(value) ? value.map(String) : [];
+        [...field.options].forEach(option => option.selected = chosen.includes(option.value));
+      } else if (key === "ticket_options") field.value = Array.isArray(value) ? value.join(", ") : value;
+      else if (key === "ticket_questions") field.value = JSON.stringify(value, null, 2);
+      else field.value = value;
+    });
+    fetch(api("/settings"), {
+      method:"POST", credentials:"same-origin",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify(payload)
+    }).then(readJson).then(data => {
+      if (notice) {
+        notice.textContent = data.queued
+          ? "Preset queued! Gargand will apply it on its next bridge sync. Now choose the relevant channels and roles in the tabs, then save those settings."
+          : "Preset applied. Review your channels and roles before finishing setup.";
+        notice.classList.add("success");
+      }
+    }).catch(error => {
+      if (notice) { notice.textContent = "Preset could not be applied: " + (error.message || "Unknown error"); notice.classList.add("error"); }
+    }).finally(() => {
+      if (button) { button.disabled = false; button.textContent = original; }
+    });
+  };
   const setupTabs = () => {
     const tabs = [...document.querySelectorAll(".side-menu [data-tab]")];
     const panels = [...document.querySelectorAll(".tab-panel")];
@@ -138,6 +198,7 @@
     } catch (error) { say(result, error.message, true); }
     finally { button.disabled = false; button.textContent = original; }
   }));
+  document.querySelectorAll(".apply-preset").forEach(button => button.addEventListener("click", () => applyPresetToFields(button.dataset.preset)));
   setupTabs();
   loadResources();
 })();
