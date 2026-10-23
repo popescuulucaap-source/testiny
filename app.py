@@ -460,12 +460,19 @@ def admin_audit():
     if not is_admin():
         return redirect(url_for("admin_login"))
     events = []
-    summary = {"commands": 0, "messages": 0, "tickets": 0, "forms": 0}
+    summary = {"commands": 0, "messages": 0, "tickets": 0, "closed_tickets": 0, "forms": 0, "security_incidents": 0}
     if DATABASE_URL:
         with db_connect() as conn:
             rows = conn.execute("SELECT event_type,guild_id,guild_name,user_id,username,command_name,metadata,created_at FROM bot_telemetry ORDER BY id DESC LIMIT 500").fetchall()
             events = [{"event_type":r[0],"guild_id":r[1],"guild_name":r[2],"user_id":r[3],"username":r[4],"command_name":r[5],"metadata":r[6],"created_at":r[7]} for r in rows]
-            for key, label in (("command_used","commands"),("message_seen","messages"),("ticket_created","tickets"),("form_submitted","forms")):
+            for key, label in (
+                ("command_used","commands"),
+                ("message_seen","messages"),
+                ("ticket_created","tickets"),
+                ("ticket_closed","closed_tickets"),
+                ("form_submitted","forms"),
+                ("security_incident","security_incidents"),
+            ):
                 row = conn.execute("SELECT COUNT(*) FROM bot_telemetry WHERE event_type=%s", (key,)).fetchone()
                 summary[label] = int(row[0] or 0)
     return render_template("admin_audit.html", events=events, summary=summary)
