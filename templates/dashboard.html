@@ -215,6 +215,12 @@
                 <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, 10) }}" min="5" max="60" step="1">
               {% elif key.startswith('anti_nuke_threshold_') %}
                 {% set default_threshold = 3 if key.endswith('_delete') else 4 %}<input type="number" data-setting="{{ key }}" value="{{ settings.get(key, default_threshold) }}" min="2" max="10" step="1">
+              {% elif key == 'automod_max_messages' %}
+                <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, 6) }}" min="3" max="20" step="1">
+              {% elif key == 'automod_window_seconds' %}
+                <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, 8) }}" min="3" max="60" step="1">
+              {% elif key == 'automod_mention_limit' %}
+                <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, 5) }}" min="2" max="20" step="1">
               {% else %}
                 <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, '') }}" min="0" max="100000" step="1">
               {% endif %}
