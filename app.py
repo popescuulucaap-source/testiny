@@ -2565,6 +2565,7 @@ COMMANDS = [
     ("!serverstats", "Utility", "Show member counts, channels, server creation date and owner."),
     ("!securitycheck", "Security", "Check Gargand permissions, logging setup and suggestions channel configuration. Staff only."),
     ("!configbackup", "Admin tools", "Export this server's Gargand settings to a JSON file. Administrator only."),
+    ("!remind <duration> <message>", "Utility", "Set a persistent reminder from 1 minute to 7 days ahead."),
     # Slash-command directory: keep every existing ! command above and also advertise the new / equivalents.
     ("/help", "Utility", "Show Gargand's command help as a Discord slash command."),
     ("/about", "Utility", "Show Gargand's launch information."),
@@ -2645,6 +2646,7 @@ COMMANDS = [
     ("/serverstats", "Utility", "Show member counts, channels, server creation date and owner."),
     ("/securitycheck", "Security", "Check Gargand permissions, logging setup and suggestions channel configuration. Staff only."),
     ("/configbackup", "Admin tools", "Export this server's Gargand settings to a JSON file. Administrator only."),
+    ("/remind <duration> <message>", "Utility", "Set a persistent reminder from 1 minute to 7 days ahead."),
 ]
 
 
