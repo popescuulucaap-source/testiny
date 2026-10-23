@@ -485,6 +485,10 @@ def bot_heartbeat():
                 "invite_url": str(guild.get("invite_url") or "").strip(),
                 "settings": guild.get("settings") if isinstance(guild.get("settings"), dict) else {},
                 "health": guild.get("health") if isinstance(guild.get("health"), dict) else {},
+                # Preserve the bot-authorized channel/role lists; the dashboard
+                # resource endpoint depends on these fields to populate selectors.
+                "channels": guild.get("channels") if isinstance(guild.get("channels"), list) else [],
+                "roles": guild.get("roles") if isinstance(guild.get("roles"), list) else [],
             }
     last_seen = time.time()
     guild_snapshot = list(normalized.values())
