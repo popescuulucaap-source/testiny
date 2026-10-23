@@ -203,7 +203,7 @@ def format_duration(value):
 
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
-DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://testiny-7wuu.onrender.com/oauth/callback")
+DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "https://gargand-bot.onrender.com/oauth/callback")
 BOT_BRIDGE_SECRET = (os.getenv("GARGAND_BRIDGE_SECRET") or os.getenv("NIGHTFALL_BRIDGE_SECRET") or "").strip()
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_LOGIN_FAILURES = {}
@@ -277,26 +277,6 @@ def is_admin():
     """Admin access requires a Discord OAuth session for the explicitly allowed user."""
     user = session.get("user") or {}
     return bool(session.get("admin") and str(user.get("id", "")) == ADMIN_DISCORD_USER_ID)
-
-
-def add_user_to_support_server(user_id, user_access_token):
-    """Join users only after Discord OAuth explicitly grants the guilds.join scope."""
-    if not GARGAND_BOT_TOKEN:
-        app.logger.warning("Support auto-join skipped: configure GARGAND_BOT_TOKEN on the website service.")
-        return False
-    try:
-        response = requests.put(
-            f"{DISCORD_API}/guilds/{OFFICIAL_GUILD_ID}/members/{user_id}",
-            headers={"Authorization": f"Bot {GARGAND_BOT_TOKEN}", "Content-Type": "application/json"},
-            json={"access_token": user_access_token},
-            timeout=12,
-        )
-        if response.status_code in (201, 204):
-            return True
-        app.logger.warning("Support auto-join failed for user %s: Discord returned HTTP %s", user_id, response.status_code)
-    except requests.RequestException as exc:
-        app.logger.warning("Support auto-join request failed: %s", type(exc).__name__)
-    return False
 
 
 def login_required(fn):
@@ -1566,71 +1546,97 @@ def announcements():
 
 @app.get("/login")
 def login():
-    if not DISCORD_CLIENT_ID or not DISCORD_REDIRECT_URI:
-        return "Discord OAuth is not configured yet. Add DISCORD_CLIENT_ID and DISCORD_REDIRECT_URI in Render.", 500
+    if not DISCORD_CLIENT_ID or not DISCORD_CLIENT_SECRET or not DISCORD_REDIRECT_URI:
+        return "Discord login is temporarily unavailable. Please contact Gargand support.", 503
+
     requested_next = request.args.get("next", "")
-    # Only accept a local path; never let OAuth become an open redirect.
+    # Only accept local paths, never external redirects after OAuth.
     if requested_next.startswith("/") and not requested_next.startswith("//"):
         session["oauth_next"] = requested_next
-    if request.args.get("confirm") != "1":
-        return render_template("login.html", next_path=session.get("oauth_next", ""))
+
+    # Start on Discord's official authorization endpoint; Gargand never collects Discord passwords.
+    state = secrets.token_urlsafe(32)
+    session["oauth_state"] = state
     params = {
         "client_id": DISCORD_CLIENT_ID,
         "redirect_uri": DISCORD_REDIRECT_URI,
         "response_type": "code",
-        # Discord displays this permission during authorization before it can add the user to the support server.
-        "scope": "identify guilds guilds.join",
+        "scope": "identify guilds",
+        "state": state,
         "prompt": "consent",
     }
-    return redirect(f"{DISCORD_API}/oauth2/authorize?{urlencode(params)}")
+    return redirect(f"https://discord.com/oauth2/authorize?{urlencode(params)}")
 
 
 @app.get("/oauth/callback")
 def oauth_callback():
+    expected_state = str(session.pop("oauth_state", "") or "")
+    received_state = str(request.args.get("state", "") or "")
+    if not expected_state or not received_state or not compare_digest(expected_state, received_state):
+        session.pop("oauth_next", None)
+        return "Discord login could not be verified. Please restart from Gargand.", 400
+
+    if request.args.get("error"):
+        session.pop("oauth_next", None)
+        return redirect(url_for("index"))
+
     code = request.args.get("code")
     if not code:
         return redirect(url_for("index"))
 
-    token = requests.post(
-        f"{DISCORD_API}/oauth2/token",
-        data={
-            "client_id": DISCORD_CLIENT_ID,
-            "client_secret": DISCORD_CLIENT_SECRET,
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": DISCORD_REDIRECT_URI,
-        },
-        timeout=12,
-    )
-    if token.status_code != 200:
-        return f"Discord login failed: {token.text}", 400
+    try:
+        token = requests.post(
+            f"{DISCORD_API}/oauth2/token",
+            data={
+                "client_id": DISCORD_CLIENT_ID,
+                "client_secret": DISCORD_CLIENT_SECRET,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": DISCORD_REDIRECT_URI,
+            },
+            timeout=12,
+        )
+    except requests.RequestException as exc:
+        app.logger.warning("Discord OAuth token request failed: %s", type(exc).__name__)
+        return "Discord login is temporarily unavailable. Please try again.", 503
 
-    token_data = token.json()
-    session["access_token"] = token_data["access_token"]
+    if token.status_code != 200:
+        app.logger.warning("Discord OAuth token exchange failed with HTTP %s", token.status_code)
+        return "Discord login could not be completed. Please restart login from Gargand.", 400
+
+    try:
+        token_data = token.json()
+        access_token = token_data["access_token"]
+    except (ValueError, KeyError, TypeError):
+        return "Discord login could not be completed. Please restart login from Gargand.", 400
+
+    session["access_token"] = access_token
     session["refresh_token"] = token_data.get("refresh_token", "")
     session["token_expires_at"] = time.time() + int(token_data.get("expires_in", 604800))
     session.permanent = True
     session.modified = True
     award_site_xp("login", 25)
 
-    me = requests.get(f"{DISCORD_API}/users/@me", headers=discord_headers(), timeout=12)
+    try:
+        me = requests.get(f"{DISCORD_API}/users/@me", headers=discord_headers(), timeout=12)
+    except requests.RequestException as exc:
+        app.logger.warning("Discord profile request failed: %s", type(exc).__name__)
+        session.clear()
+        return "Discord login is temporarily unavailable. Please try again.", 503
     if me.status_code != 200:
         session.clear()
-        return "Could not read your Discord profile.", 400
+        return "Could not verify your Discord profile. Please restart login.", 400
 
     user = me.json()
     session["user"] = user
 
-    # After the account proves ownership through Discord OAuth, sync its current username to the public Developers card.
+    # Sync the verified developer account's current username to the public Developers card.
     if str(user.get("id", "")) == ADMIN_DISCORD_USER_ID:
         discord_username = str(user.get("username") or user.get("global_name") or "Developer")[:80]
         try:
             save_developer(ADMIN_DISCORD_USER_ID, discord_username, "Developer")
         except Exception as exc:
             app.logger.warning("Could not sync developer profile: %s", type(exc).__name__)
-
-    # Discord's guilds.join scope is explicitly approved by the user during OAuth consent.
-    add_user_to_support_server(str(user.get("id", "")), token_data["access_token"])
 
     next_path = session.pop("oauth_next", "")
     if next_path == "/admin/panel":
