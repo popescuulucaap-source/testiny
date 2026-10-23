@@ -285,6 +285,11 @@ ANTI_NUKE_NUMERIC_RANGES = {
     "anti_nuke_threshold_channel_update": (2, 10),
     "anti_nuke_threshold_role_update": (2, 10),
 }
+AUTOMOD_NUMERIC_RANGES = {
+    "automod_max_messages": (3, 20),
+    "automod_window_seconds": (3, 60),
+    "automod_mention_limit": (2, 20),
+}
 SETTING_GROUPS = [
     ("general", "General", "Identity, prefix and logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel", "channel"), ("staff_role_id", "Staff role", "role")]),
     ("community", "Community", "Welcome, roles, feedback, applications and XP", [("welcome_channel_id", "Welcome channel", "channel"), ("leave_channel_id", "Leave channel", "channel"), ("autorole_id", "Auto role", "role"), ("vouch_channel_id", "Vouch channel", "channel"), ("feedback_channel_id", "Feedback channel", "channel"), ("suggestions_channel_id", "Suggestions channel", "channel"), ("proof_channel_id", "Proof channel", "channel"), ("booster_role_id", "Booster role", "role"), ("staff_application_channel_id", "Applications channel", "channel"), ("autoreaction_channel_id", "Auto reaction channel", "channel"), ("autoreaction_emoji", "Auto reaction emoji", "text"), ("xp_enabled", "XP & levels", "toggle"), ("levelup_channel_id", "Level-up channel", "channel"), ("xp_per_message", "XP per message", "number"), ("xp_cooldown_seconds", "XP cooldown (seconds)", "number")]),
@@ -2164,6 +2169,11 @@ def update_settings(guild_id):
             except (requests.RequestException, ValueError, TypeError):
                 return jsonify({"ok": False, "error": "Discord could not verify the selected trusted roles."}), 502
             clean[key] = role_ids
+        elif key in AUTOMOD_NUMERIC_RANGES:
+            minimum, maximum = AUTOMOD_NUMERIC_RANGES[key]
+            if type(value) is not int or not minimum <= value <= maximum:
+                return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be between {minimum} and {maximum}."}), 400
+            clean[key] = value
         elif key in ANTI_NUKE_NUMERIC_RANGES:
             minimum, maximum = ANTI_NUKE_NUMERIC_RANGES[key]
             if type(value) is not int or not minimum <= value <= maximum:
