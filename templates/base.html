@@ -42,7 +42,7 @@
     <div class="gg-owner-list">
       {% for developer in developers|default([{"discord_id":"1418291387668893699","display_name":"Owner","role":"Owner"},{"discord_id":"1242411642252431385","display_name":"Owner","role":"Owner"},{"discord_id":"1275463389941858346","display_name":"Developer","role":"Developer"}]) %}
       <a class="gg-owner-card" href="https://discord.com/users/{{ developer.discord_id }}" target="_blank" rel="noopener noreferrer">
-        <span class="gg-owner-role">{{ developer.role|upper }}</span><strong>{{ developer.display_name }}</strong><code>{{ developer.discord_id }}</code><span>Open Discord profile ↗</span>
+        <span class="gg-owner-role">{{ developer.role|upper }}</span>{% if developer.display_name|lower != developer.role|lower %}<strong>{{ developer.display_name }}</strong>{% endif %}<code>{{ developer.discord_id }}</code><span>Open Discord profile ↗</span>
       </a>
       {% endfor %}
     </div>
