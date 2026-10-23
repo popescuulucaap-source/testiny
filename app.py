@@ -32,6 +32,8 @@ MEMORY_ANNOUNCEMENT_ID = 1
 MEMORY_CUSTOM_COMMANDS = []
 MEMORY_CUSTOM_COMMAND_ID = 1
 MEMORY_DEVELOPERS = [{"discord_id":"1418291387668893699","display_name":"Owner","role":"Owner"},{"discord_id":"1242411642252431385","display_name":"Owner","role":"Owner"},{"discord_id":"1275463389941858346","display_name":"Developer","role":"Developer"}]
+DEVELOPER_PROFILE_CACHE = {}
+DEVELOPER_PROFILE_CACHE_TTL = 21600
 BROWSER_ACTIONS = defaultdict(deque)
 BROWSER_ACTIONS_LOCK = threading.Lock()
 PASSIVE_VERIFICATION_ENDPOINTS = {
@@ -836,12 +838,63 @@ def delete_custom_command(command_id):
         with conn.cursor() as cur: cur.execute("DELETE FROM custom_commands WHERE id = %s",(command_id,))
         conn.commit()
 
+def public_discord_display_name(discord_id):
+    """Resolve only a public Discord name for legacy placeholder developer labels."""
+    discord_id = str(discord_id or "")
+    if not discord_id.isdigit() or not GARGAND_BOT_TOKEN:
+        return ""
+    now = time.time()
+    cached = DEVELOPER_PROFILE_CACHE.get(discord_id)
+    if cached and cached[0] > now:
+        return cached[1]
+    display_name = ""
+    try:
+        response = requests.get(
+            f"{DISCORD_API}/users/{discord_id}",
+            headers={"Authorization": f"Bot {GARGAND_BOT_TOKEN}"},
+            timeout=3,
+        )
+        if response.status_code == 200:
+            user = response.json()
+            display_name = str(user.get("global_name") or user.get("username") or "").strip()[:80]
+    except (requests.RequestException, ValueError, TypeError):
+        display_name = ""
+    # Cache both successes and failures to avoid repeated API calls during page renders.
+    DEVELOPER_PROFILE_CACHE[discord_id] = (
+        now + (DEVELOPER_PROFILE_CACHE_TTL if display_name else 300),
+        display_name,
+    )
+    if len(DEVELOPER_PROFILE_CACHE) > 500:
+        for stale_id, entry in list(DEVELOPER_PROFILE_CACHE.items()):
+            if entry[0] <= now:
+                DEVELOPER_PROFILE_CACHE.pop(stale_id, None)
+    return display_name
+
+
+def present_developers(developers):
+    """Replace generic role-as-name placeholders with public Discord display names."""
+    result = []
+    for developer in developers:
+        item = dict(developer)
+        name = str(item.get("display_name") or "").strip()
+        role = str(item.get("role") or "").strip()
+        if name and name.casefold() in {"owner", "developer", "contributor", "designer", "moderator"}:
+            resolved = public_discord_display_name(item.get("discord_id"))
+            if resolved:
+                item["display_name"] = resolved
+        result.append(item)
+    return result
+
+
 def load_developers():
     if not DATABASE_URL:
-        return [dict(item) for item in MEMORY_DEVELOPERS]
-    with db_connect() as conn:
-        rows = conn.execute("SELECT discord_id, display_name, role FROM developers ORDER BY CASE WHEN LOWER(role)='owner' THEN 0 ELSE 1 END, display_name ASC").fetchall()
-    return [{"discord_id": str(row[0]), "display_name": row[1], "role": row[2]} for row in rows]
+        rows = [dict(item) for item in MEMORY_DEVELOPERS]
+    else:
+        with db_connect() as conn:
+            rows = conn.execute("SELECT discord_id, display_name, role FROM developers ORDER BY CASE WHEN LOWER(role)='owner' THEN 0 ELSE 1 END, display_name ASC").fetchall()
+        rows = [{"discord_id": str(row[0]), "display_name": row[1], "role": row[2]} for row in rows]
+    return present_developers(rows)
+
 
 @app.context_processor
 def inject_developers():
@@ -849,7 +902,7 @@ def inject_developers():
         return {"developers": load_developers()}
     except psycopg.Error as exc:
         app.logger.warning("Could not load developer list: %s", type(exc).__name__)
-        return {"developers": list(MEMORY_DEVELOPERS)}
+        return {"developers": present_developers(MEMORY_DEVELOPERS)}
 
 def save_developer(discord_id, display_name, role):
     if not DATABASE_URL:
