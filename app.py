@@ -2229,9 +2229,20 @@ def health():
             database_reachable = True
         except psycopg.Error as exc:
             app.logger.warning("Health check could not reach database: %s", type(exc).__name__)
+    with APP_METRICS_LOCK:
+        request_count = APP_REQUEST_COUNT
     return jsonify({
         "ok": True,
         "service": "Gargand Dashboard",
+        "uptime_seconds": max(0, int(time.time() - APP_STARTED_AT)),
+        "requests_since_start": request_count,
+        "configuration": {
+            "stable_session_secret_configured": bool(
+                (os.getenv("SESSION_SECRET") or os.getenv("ROBLOX_OAUTH_CLIENT_SECRET") or "").strip()
+            ),
+            "discord_oauth_configured": bool(DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET),
+            "bot_bridge_secret_configured": bool(BOT_BRIDGE_SECRET),
+        },
         "database": {
             "configured": database_configured,
             "reachable": database_reachable,
