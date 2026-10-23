@@ -86,6 +86,18 @@ def gargand_bar_asset():
         return "GARGAND divider unavailable", 404
 
 
+@app.after_request
+def harden_oauth_callback_response(response):
+    # OAuth callback URLs contain short-lived authorization codes and state.
+    # Keep them out of caches, referrers, and search indexes.
+    if request.path == "/oauth/callback":
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    return response
+
+
 @app.before_request
 def count_site_request():
     global APP_REQUEST_COUNT
@@ -1570,6 +1582,14 @@ def login():
 
 @app.get("/oauth/callback")
 def oauth_callback():
+    # RFC 9207 issuer identification: reject authorization responses from any
+    # issuer other than Discord before sending the authorization code anywhere.
+    received_issuer = str(request.args.get("iss", "") or "")
+    if received_issuer != "https://discord.com":
+        session.pop("oauth_state", None)
+        session.pop("oauth_next", None)
+        return "Discord login could not be verified. Please restart from Gargand.", 400
+
     expected_state = str(session.pop("oauth_state", "") or "")
     received_state = str(request.args.get("state", "") or "")
     if not expected_state or not received_state or not compare_digest(expected_state, received_state):
