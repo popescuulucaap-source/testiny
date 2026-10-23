@@ -242,7 +242,7 @@ NIGHTFALL_YOUTUBE_CHANNEL_ID = (os.getenv("GARGAND_YOUTUBE_CHANNEL_ID") or os.ge
 ROBLOX_BRIDGE_SECRET = (os.getenv("ROBLOX_BRIDGE_SECRET") or BOT_BRIDGE_SECRET).strip()
 ROBLOX_OAUTH_CLIENT_ID = os.getenv("ROBLOX_OAUTH_CLIENT_ID", "").strip()
 ROBLOX_OAUTH_CLIENT_SECRET = os.getenv("ROBLOX_OAUTH_CLIENT_SECRET", "").strip()
-ROBLOX_OAUTH_REDIRECT_URI = (os.getenv("ROBLOX_OAUTH_REDIRECT_URI") or "https://testiny-7wuu.onrender.com/roblox/oauth/callback").strip()
+ROBLOX_OAUTH_REDIRECT_URI = (os.getenv("ROBLOX_OAUTH_REDIRECT_URI") or "https://gargand-bot.onrender.com/roblox/oauth/callback").strip()
 ROBLOX_OAUTH_AUTHORIZE_URL = "https://apis.roblox.com/oauth/v1/authorize"
 ROBLOX_OAUTH_TOKEN_URL = "https://apis.roblox.com/oauth/v1/token"
 ROBLOX_OAUTH_USERINFO_URL = "https://apis.roblox.com/oauth/v1/userinfo"
@@ -255,7 +255,7 @@ ADMINISTRATOR = 0x8
 CHANNEL_SETTINGS = {
     "logs_channel_id", "ticket_category_id", "ticket_panel_channel_id",
     "welcome_channel_id", "leave_channel_id", "verification_channel_id",
-    "command_channel_id", "vouch_channel_id", "feedback_channel_id",
+    "command_channel_id", "vouch_channel_id", "feedback_channel_id", "suggestions_channel_id",
     "proof_channel_id", "gamble_channel_id", "staff_application_channel_id",
     "jail_category_id", "jail_chat_channel_id", "jail_appeal_channel_id",
     "autoreaction_channel_id", "modlog_channel_id", "levelup_channel_id",
@@ -287,7 +287,7 @@ ANTI_NUKE_NUMERIC_RANGES = {
 }
 SETTING_GROUPS = [
     ("general", "General", "Identity, prefix and logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel", "channel"), ("staff_role_id", "Staff role", "role")]),
-    ("community", "Community", "Welcome, roles, feedback, applications and XP", [("welcome_channel_id", "Welcome channel", "channel"), ("leave_channel_id", "Leave channel", "channel"), ("autorole_id", "Auto role", "role"), ("vouch_channel_id", "Vouch channel", "channel"), ("feedback_channel_id", "Feedback channel", "channel"), ("proof_channel_id", "Proof channel", "channel"), ("booster_role_id", "Booster role", "role"), ("staff_application_channel_id", "Applications channel", "channel"), ("autoreaction_channel_id", "Auto reaction channel", "channel"), ("autoreaction_emoji", "Auto reaction emoji", "text"), ("xp_enabled", "XP & levels", "toggle"), ("levelup_channel_id", "Level-up channel", "channel"), ("xp_per_message", "XP per message", "number"), ("xp_cooldown_seconds", "XP cooldown (seconds)", "number")]),
+    ("community", "Community", "Welcome, roles, feedback, applications and XP", [("welcome_channel_id", "Welcome channel", "channel"), ("leave_channel_id", "Leave channel", "channel"), ("autorole_id", "Auto role", "role"), ("vouch_channel_id", "Vouch channel", "channel"), ("feedback_channel_id", "Feedback channel", "channel"), ("suggestions_channel_id", "Suggestions channel", "channel"), ("proof_channel_id", "Proof channel", "channel"), ("booster_role_id", "Booster role", "role"), ("staff_application_channel_id", "Applications channel", "channel"), ("autoreaction_channel_id", "Auto reaction channel", "channel"), ("autoreaction_emoji", "Auto reaction emoji", "text"), ("xp_enabled", "XP & levels", "toggle"), ("levelup_channel_id", "Level-up channel", "channel"), ("xp_per_message", "XP per message", "number"), ("xp_cooldown_seconds", "XP cooldown (seconds)", "number")]),
     ("security", "Security & Auto-Mod", "Automatic protection and moderation", [("anti_raid", "Anti-raid protection", "toggle"), ("raid_auto_lockdown", "Auto-lock channels during a join surge", "toggle"), ("anti_nuke", "Anti-nuke protection", "toggle"), ("anti_nuke_trusted_role_ids", "Trusted anti-nuke roles", "roles"), ("anti_nuke_window_seconds", "Anti-nuke event window (seconds)", "number"), ("anti_nuke_threshold_channel_delete", "Channel deletions before alert", "number"), ("anti_nuke_threshold_role_delete", "Role deletions before alert", "number"), ("anti_nuke_threshold_channel_update", "Channel edits before alert", "number"), ("anti_nuke_threshold_role_update", "Role edits before alert", "number"), ("anti_nuke_auto_lockdown", "Temporarily lock channels at threshold", "toggle"), ("anti_nuke_auto_ban", "Ban actor at threshold", "toggle"), ("anti_link", "Block links", "toggle"), ("automod_spam", "Anti-spam", "toggle"), ("automod_flood", "Anti-flood", "toggle"), ("automod_mentions", "Mention protection", "toggle"), ("automod_bad_words", "Configured word filter", "toggle"), ("automod_punishment", "Auto-mod punishment", "text"), ("automod_max_messages", "Max messages in window", "number"), ("automod_window_seconds", "Spam window (seconds)", "number"), ("automod_mention_limit", "Mention limit", "number"), ("automod_log_channel_id", "Auto-mod log channel", "channel"), ("j4j", "Join for join", "toggle"), ("j4j_dm", "J4J direct messages", "toggle"), ("verification_channel_id", "Verification channel", "channel"), ("command_channel_id", "Command-only channel", "channel")]),
     ("tickets", "Tickets & appeals", "Ticket panel, categories, questions and appeals", [("ticket_panel_channel_id", "Ticket panel channel", "channel"), ("ticket_category_id", "Ticket category", "channel"), ("ticket_options", "Ticket types (comma separated)", "list"), ("ticket_questions", "Ticket questions (JSON)", "json"), ("appeal_server_id", "Appeal server ID", "number"), ("appeal_invite_url", "Appeal invite URL", "text")]),
     ("moderation", "Moderation & jail", "Jail, giveaways and analytics", [("jail_role_id", "Jail role", "role"), ("jail_category_id", "Jail category", "channel"), ("jail_chat_channel_id", "Jail chat", "channel"), ("jail_appeal_channel_id", "Jail appeals", "channel"), ("giveaway_channel_id", "Giveaway channel", "channel"), ("giveaway_require_role", "Giveaways require role", "toggle"), ("analytics_enabled", "Server analytics", "toggle"), ("analytics_channel_id", "Analytics channel", "channel"), ("economy_enabled", "Community economy", "toggle"), ("daily_coins", "Daily coins", "number"), ("ai_memory_enabled", "AI channel memory", "toggle")]),
@@ -661,7 +661,7 @@ def sync_repository_updates(force=False):
                 )
                 conn.execute(
                     "INSERT INTO bot_jobs (guild_id, kind, payload) VALUES (%s,%s,%s)",
-                    (OFFICIAL_GUILD_ID, "official_announcement", json.dumps({"title": announcement_title, "body": announcement_body, "kind": announcement_kind, "url": "https://testiny-7wuu.onrender.com/announcements"})),
+                    (OFFICIAL_GUILD_ID, "official_announcement", json.dumps({"title": announcement_title, "body": announcement_body, "kind": announcement_kind, "url": "https://gargand-bot.onrender.com/announcements"})),
                 )
                 conn.execute(
                     "UPDATE repository_updates SET commit_sha=%s, checked_at=NOW() WHERE repo_kind=%s",
@@ -804,7 +804,7 @@ def save_announcement(title, body, kind="bot"):
             with conn.cursor() as cur:
                 cur.execute("INSERT INTO announcements (title, body, date, kind) VALUES (%s, %s, %s, %s)",(title,body,date,kind))
             conn.commit()
-    queue_bot_job(OFFICIAL_GUILD_ID, "official_announcement", {"title": title[:180], "body": body[:3500], "kind": kind, "url": "https://testiny-7wuu.onrender.com/announcements"})
+    queue_bot_job(OFFICIAL_GUILD_ID, "official_announcement", {"title": title[:180], "body": body[:3500], "kind": kind, "url": "https://gargand-bot.onrender.com/announcements"})
 def delete_announcement(announcement_id):
     if not DATABASE_URL:
         MEMORY_ANNOUNCEMENTS[:] = [item for item in MEMORY_ANNOUNCEMENTS if int(item.get("id", 0)) != int(announcement_id)]
@@ -1791,7 +1791,7 @@ def dashboard(guild_id):
 
     # Compact live server metrics for the control center.
     enabled_security = sum(bool(settings.get(key)) for key in ("anti_raid", "anti_nuke", "anti_link"))
-    enabled_community = sum(bool(settings.get(key)) for key in ("welcome_channel_id", "leave_channel_id", "autorole_id", "booster_role_id", "vouch_channel_id", "feedback_channel_id"))
+    enabled_community = sum(bool(settings.get(key)) for key in ("welcome_channel_id", "leave_channel_id", "autorole_id", "booster_role_id", "vouch_channel_id", "feedback_channel_id", "suggestions_channel_id"))
     enabled_support = sum(bool(settings.get(key)) for key in ("ticket_panel_channel_id", "ticket_category_id", "jail_enabled", "jail_appeal_channel_id"))
     dashboard_stats = {
         "members": int(guild.get("approximate_member_count") or guild.get("member_count") or (bot_guild or {}).get("member_count") or 0),
