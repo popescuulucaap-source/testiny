@@ -2746,6 +2746,18 @@ COMMANDS = [
     ("/securitycheck", "Security", "Check Gargand permissions, logging setup and suggestions channel configuration. Staff only."),
     ("/configbackup", "Admin tools", "Export this server's Gargand settings to a JSON file. Administrator only."),
     ("/remind <duration> <message>", "Utility", "Set a persistent reminder from 1 minute to 7 days ahead."),
+    ("!ping", "Utility", "Check Gargand bot latency and response health."),
+    ("!membercount", "Utility", "Show the current server member count."),
+    ("!roleinfo @role", "Utility", "Show details about a server role."),
+    ("!channelinfo #channel", "Utility", "Show details about a text channel."),
+    ("!recover <case_id>", "Moderation", "Recover or re-check a saved moderation case. Staff only."),
+    ("!antinuke", "Security", "Show the current anti-nuke protection status."),
+    ("!diagnose", "Admin tools", "Run Gargand setup and website-bridge diagnostics. Staff/admin only."),
+    ("!official <action> [value]", "Admin tools", "Check or update supported official-server announcement settings. Restricted to authorized admins."),
+    ("!coinflip <bet> <heads|tails>", "Economy", "Bet server coins on a coin flip, if the economy is enabled."),
+    ("!highlow <bet>", "Economy", "Play the high-low card game using server coins."),
+    ("!blackjack <bet>", "Economy", "Play blackjack using server coins."),
+    ("!roulette <bet> <pick>", "Economy", "Play the roulette game using server coins.")
 ]
 
 
