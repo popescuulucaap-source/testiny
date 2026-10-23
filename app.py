@@ -44,6 +44,17 @@ PASSIVE_VERIFICATION_ENDPOINTS = {
 
 
 
+@app.get("/google5b8141aa320c129f.html")
+def google_search_console_verification():
+    # Flask does not serve arbitrary files placed in the repository root.
+    # Return Google's exact verification-file contents at the expected URL.
+    return Response(
+        "google-site-verification: google5b8141aa320c129f.html\\n",
+        mimetype="text/plain",
+        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+    )
+
+
 @app.get("/gargand-lion.jpg")
 def gargand_lion_asset():
     """Serve the GARGAND lion; prefer the compressed custom PFP if installed."""
