@@ -1597,7 +1597,30 @@ def bot_publish_announcement():
 
 @app.get("/api/bot/status")
 def bot_status():
-    return jsonify({"ok": True, "online": bot_online()})
+    last_seen = None
+    guild_count = len(bot_guild_snapshot())
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute(
+                    "SELECT last_seen FROM bot_bridge_state WHERE state_id = 1"
+                ).fetchone()
+            if row and row[0]:
+                last_seen = float(row[0])
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read bot status heartbeat: %s", type(exc).__name__)
+    if last_seen is None:
+        with BOT_LOCK:
+            last_seen = float(BOT_LAST_SEEN) if BOT_LAST_SEEN else None
+            guild_count = len(BOT_GUILDS)
+    age = max(0, int(time.time() - last_seen)) if last_seen else None
+    online = bool(age is not None and age < 75)
+    return jsonify({
+        "ok": True,
+        "online": online,
+        "last_seen_age_seconds": age,
+        "guild_count": guild_count,
+    })
 
 @app.get("/commands")
 def commands():
