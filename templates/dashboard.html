@@ -204,6 +204,12 @@
             {% elif field_type == 'roles' %}
               <select multiple size="5" data-setting="{{ key }}" data-resource="roles" data-current='{{ settings.get(key, []) | tojson }}'><option value="">Loading roles…</option></select>
               <small class="field-help">Hold Ctrl (Windows) or Command (Mac) to select trusted roles. Their destructive actions are still recorded, but won’t trigger automatic lockdown or bans.</small>
+            {% elif field_type == 'choice' and key == 'automod_punishment' %}
+              <select data-setting="{{ key }}">
+                <option value="delete" {% if settings.get(key, 'delete') == 'delete' %}selected{% endif %}>Delete the message</option>
+                <option value="timeout" {% if settings.get(key, 'delete') == 'timeout' %}selected{% endif %}>Delete and timeout for 30 seconds</option>
+              </select>
+              <small class="field-help">Applies when the configured word filter matches. Staff members are exempt.</small>
             {% elif field_type == 'number' %}
               {% if key == 'anti_nuke_window_seconds' %}
                 <input type="number" data-setting="{{ key }}" value="{{ settings.get(key, 10) }}" min="5" max="60" step="1">
