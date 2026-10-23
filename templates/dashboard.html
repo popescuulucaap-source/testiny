@@ -1,5 +1,98 @@
 {% extends "base.html" %}
-{% block title %}Gargand • {{ guild.name }}{% endblock %}
+{% block title %}Gargand • {{ guild.name }}
+<script>
+(function(){
+  const guildId = String(window.GARGAND_GUILD_ID || "");
+  const result = document.getElementById("configBackupResult");
+  const say = function(message, error){
+    if(!result)return;
+    result.textContent = message;
+    result.classList.toggle("error", !!error);
+  };
+  const exportButton = document.getElementById("exportConfig");
+  const importButton = document.getElementById("importConfig");
+  const fileInput = document.getElementById("importConfigFile");
+  const snapshotNode = document.getElementById("setupHealthSnapshot");
+  function snapshot(){
+    try{return JSON.parse(snapshotNode ? snapshotNode.textContent : "{}") || {}}
+    catch(_){return {}}
+  }
+  if(exportButton){
+    exportButton.addEventListener("click", function(){
+      const data = snapshot();
+      const backup = {
+        format:"gargand-server-config",
+        version:1,
+        guild_id:guildId,
+        guild_name:{{ guild.name | tojson }},
+        exported_at:new Date().toISOString(),
+        settings:data.settings || {}
+      };
+      const blob = new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href=url;
+      anchor.download="gargand-config-"+guildId+".json";
+      document.body.appendChild(anchor);anchor.click();anchor.remove();URL.revokeObjectURL(url);
+      say("Configuration exported. Keep the JSON file private; it contains server IDs and settings.");
+    });
+  }
+  if(importButton && fileInput){
+    importButton.addEventListener("click",function(){fileInput.click()});
+    fileInput.addEventListener("change",async function(){
+      const file=fileInput.files&&fileInput.files[0];
+      if(!file)return;
+      importButton.disabled=true;
+      try{
+        const backup=JSON.parse(await file.text());
+        if(!backup || backup.format!=="gargand-server-config" || !backup.settings || typeof backup.settings!=="object" || Array.isArray(backup.settings)){
+          throw new Error("This is not a Gargand configuration backup.");
+        }
+        if(backup.guild_id && String(backup.guild_id)!==guildId){
+          throw new Error("This backup belongs to a different Discord server. Open that server's dashboard to restore it.");
+        }
+        if(!window.confirm("Queue this configuration for the current server? Review settings after Gargand applies them."))return;
+        const fields=[...document.querySelectorAll("[data-setting]")];
+        const byKey=new Map(fields.map(field=>[field.dataset.setting,field]));
+        const payload={};
+        Object.entries(backup.settings).forEach(function(entry){
+          const key=entry[0],value=entry[1],field=byKey.get(key);
+          if(!field)return;
+          if(field.type==="checkbox"){
+            if(typeof value==="boolean")payload[key]=value;
+          }else if(field.dataset.resource==="roles"){
+            if(Array.isArray(value))payload[key]=value.map(String);
+          }else if(field.dataset.resource){
+            payload[key]=value==null?"":String(value);
+          }else if(key==="ticket_options"){
+            if(Array.isArray(value))payload[key]=value.map(String);
+          }else if(key==="ticket_questions"){
+            if(value && typeof value==="object" && !Array.isArray(value))payload[key]=value;
+          }else if(field.type==="number"){
+            if(value===""||value==null)payload[key]="";
+            else if(Number.isFinite(Number(value)))payload[key]=Number(value);
+          }else if(value==null || ["string","number"].includes(typeof value)){
+            payload[key]=String(value==null?"":value);
+          }
+        });
+        if(!Object.keys(payload).length)throw new Error("No compatible settings were found in this backup.");
+        say("Checking permissions and queuing settings…");
+        const response=await fetch("/api/dashboard/"+encodeURIComponent(guildId)+"/settings",{
+          method:"POST",credentials:"same-origin",
+          headers:{"Content-Type":"application/json","Accept":"application/json"},
+          body:JSON.stringify(payload)
+        });
+        let data={};try{data=await response.json()}catch(_){}
+        if(!response.ok || !data.ok)throw new Error(data.error||"The configuration could not be queued.");
+        say("Restore queued successfully. Gargand will apply the settings on its next sync; refresh this dashboard afterward.");
+      }catch(error){say(error.message||"Could not read the configuration file.",true)}
+      finally{importButton.disabled=false;fileInput.value=""}
+    });
+  }
+})();
+</script>
+
+{% endblock %}
 {% block content %}
 <section class="dashboard-head">
   <div>
@@ -13,7 +106,7 @@
 </section>
 
 {% if bot_error %}
-<div class="card notice error bot-connection-card"><span class="eyebrow">BOT CONNECTION</span><h2>Gargand can’t reach this server yet.</h2><p>{{ bot_error }}</p><ul><li>Confirm Gargand is online and in this Discord server.</li><li>On Fadehost, set <code>GARGAND_WEBSITE_URL</code> to <code>https://testiny-7wuu.onrender.com</code> (or keep the legacy <code>NIGHTFALL_WEBSITE_URL</code>).</li><li>Set the same <code>GARGAND_BRIDGE_SECRET</code> in Fadehost and Render, then restart the bot. The legacy <code>NIGHTFALL_BRIDGE_SECRET</code> is also supported.</li></ul><p>After the bot checks in, refresh this dashboard to manage settings.</p></div>
+<div class="card notice error bot-connection-card"><span class="eyebrow">BOT CONNECTION</span><h2>Gargand can’t reach this server yet.</h2><p>{{ bot_error }}</p><ul><li>Confirm Gargand is online and in this Discord server.</li><li>On Fadehost, set <code>GARGAND_WEBSITE_URL</code> to <code>https://gargand-bot.onrender.com</code> (or keep the legacy <code>NIGHTFALL_WEBSITE_URL</code>).</li><li>Set the same <code>GARGAND_BRIDGE_SECRET</code> in Fadehost and Render, then restart the bot. The legacy <code>NIGHTFALL_BRIDGE_SECRET</code> is also supported.</li></ul><p>After the bot checks in, refresh this dashboard to manage settings.</p></div>
 {% else %}
 <div class="dashboard-metrics" aria-label="Live server statistics">
   <article class="dashboard-metric"><span>👥</span><div><small>MEMBERS</small><strong>{{ "{:,}".format(dashboard_stats.members) }}</strong></div></article>
@@ -41,7 +134,10 @@
         <button class="btn ghost bot-action" data-action="sync_setup" type="button">↻ Refresh Discord setup panel</button>
         <a class="btn ghost" href="/dashboard/{{ guild.id }}/analytics">📊 Server activity</a>
         <a class="btn ghost" href="/dashboard/{{ guild.id }}/moderation">🛡️ Moderation cases</a>
-      </div><p id="actionResult" class="notice" aria-live="polite">Choose a bot action to queue it.</p></div>
+        <button class="btn ghost" id="exportConfig" type="button">⬇ Export configuration</button>
+        <button class="btn ghost" id="importConfig" type="button">⬆ Restore configuration</button>
+        <input type="file" id="importConfigFile" accept="application/json,.json" hidden>
+      </div><p id="actionResult" class="notice" aria-live="polite">Choose a bot action to queue it.</p><p id="configBackupResult" class="notice" aria-live="polite">Back up settings before changing server configuration.</p></div>
       <div class="dashboard-highlights">
         <article class="card"><span class="card-icon">🛡️</span><h3>Protect</h3><p>Moderation case IDs, staged raid watch, optional automatic lockdown and risk-based verification.</p><a href="#" class="dashboard-jump" data-tab-jump="security">Configure security →</a></article>
         <article class="card"><span class="card-icon">🎫</span><h3>Support</h3><p>Ticket panels, questions, appeals and jail workflows.</p><a href="#" class="dashboard-jump" data-tab-jump="tickets">Configure support →</a></article>
