@@ -18,9 +18,7 @@
   const PRESETS = {
     gaming: {
       xp_enabled:true, analytics_enabled:true, automod_spam:true, automod_flood:true,
-      automod_mentions:true, anti_link:false, anti_raid:false, anti_nuke:false,
-      raid_auto_lockdown:false, anti_nuke_auto_lockdown:false, anti_nuke_auto_ban:false,
-      automod_punishment:"timeout", automod_max_messages:6, automod_window_seconds:5,
+      automod_mentions:true, automod_punishment:"timeout", automod_max_messages:6, automod_window_seconds:5,
       automod_mention_limit:5, ticket_options:["support","report","partnership"]
     },
     security: {
@@ -30,8 +28,7 @@
       automod_max_messages:5, automod_window_seconds:5, automod_mention_limit:4
     },
     creator: {
-      xp_enabled:true, analytics_enabled:true, anti_raid:false, anti_nuke:false,
-      anti_link:false, automod_spam:true, automod_flood:true, automod_mentions:true,
+      xp_enabled:true, analytics_enabled:true, automod_spam:true, automod_flood:true, automod_mentions:true,
       ticket_options:["support","report","partnership","creator"], ticket_questions:{
         support:["How can we help?"], report:["Who or what are you reporting?","Please share details."],
         partnership:["Tell us about your community or project."], creator:["Share your channel or creator profile."]
