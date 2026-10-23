@@ -460,7 +460,7 @@ def admin_audit():
     if not is_admin():
         return redirect(url_for("admin_login"))
     events = []
-    summary = {"commands": 0, "messages": 0, "members_joined": 0, "members_left": 0, "tickets": 0, "closed_tickets": 0, "forms": 0, "security_incidents": 0}
+    summary = {"commands": 0, "messages": 0, "members_joined": 0, "members_left": 0, "tickets": 0, "closed_tickets": 0, "dashboard_actions": 0, "settings_updates": 0, "forms": 0, "security_incidents": 0}
     if DATABASE_URL:
         with db_connect() as conn:
             rows = conn.execute("SELECT event_type,guild_id,guild_name,user_id,username,command_name,metadata,created_at FROM bot_telemetry ORDER BY id DESC LIMIT 500").fetchall()
@@ -487,6 +487,8 @@ def admin_audit():
                 ("member_left","members_left"),
                 ("ticket_created","tickets"),
                 ("ticket_closed","closed_tickets"),
+                ("dashboard_action","dashboard_actions"),
+                ("settings_updated","settings_updates"),
                 ("form_submitted","forms"),
                 ("security_incident","security_incidents"),
             ):
