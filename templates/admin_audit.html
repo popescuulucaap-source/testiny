@@ -5,6 +5,8 @@
 <section class="admin-feature-stats">
  <article class="admin-stat admin-stat-feature"><span>COMMAND USES</span><b>{{ summary.commands }}</b><small>Recorded command invocations</small></article>
  <article class="admin-stat admin-stat-feature"><span>MESSAGES</span><b>{{ summary.messages }}</b><small>Aggregate events only</small></article>
+ <article class="admin-stat admin-stat-feature"><span>MEMBERS JOINED</span><b>{{ summary.members_joined }}</b><small>Aggregate join events</small></article>
+ <article class="admin-stat admin-stat-feature"><span>MEMBERS LEFT</span><b>{{ summary.members_left }}</b><small>Aggregate departure events</small></article>
  <article class="admin-stat admin-stat-feature"><span>TICKETS OPENED</span><b>{{ summary.tickets }}</b><small>Ticket creation events</small></article>
  <article class="admin-stat admin-stat-feature"><span>TICKETS CLOSED</span><b>{{ summary.closed_tickets }}</b><small>Ticket closure events</small></article>
  <article class="admin-stat admin-stat-feature"><span>SECURITY EVENTS</span><b>{{ summary.security_incidents }}</b><small>Recorded security incidents</small></article>
@@ -15,5 +17,5 @@
 <div class="admin-row"><div><b>{{ e.event_type }}</b>{% if e.command_name %}<span> · /{{ e.command_name }}</span>{% endif %}<span> · {{ e.username or e.user_id or "Unknown user" }}</span><p>{{ e.guild_name or e.guild_id or "Unknown server" }} · {{ e.created_at }}</p></div><code>{{ e.metadata }}</code></div>
 {% else %}<p>No bot telemetry has arrived yet. Make sure the bot bridge is running.</p>{% endfor %}
 </div>
-<div class="card admin-list"><p><strong>Privacy:</strong> The audit does not store the full text of ordinary server messages. Ticket and form submissions can contain text users intentionally submit to those workflows.</p></div>
+<div class="card admin-list"><p><strong>Privacy:</strong> The audit does not store the full text of ordinary server messages. Ticket answer text is excluded from telemetry; this page displays event metadata and aggregate counts.</p></div>
 {% endblock %}
