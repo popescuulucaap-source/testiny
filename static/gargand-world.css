@@ -1,0 +1,60 @@
+/* GARGAND WORLD ATMOSPHERE — shared cinematic backdrop and motion layer for every route. */
+:root{--gg-world-ease:cubic-bezier(.2,.72,.22,1);--gg-world-gold:#ffd34d;--gg-world-line:rgba(222,177,63,.2)}
+html{scroll-behavior:smooth;scroll-padding-top:112px;background:#040302}
+body.gargand-site{background:#050402!important;color:#fff9e7;isolation:isolate}
+body.gargand-site:before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:#050402}
+.gargand-ambient{position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;overflow:hidden!important;isolation:isolate!important;opacity:1!important}
+.gargand-ambient:before{content:"";position:absolute;inset:-28%;z-index:-1;background:radial-gradient(ellipse at 70% 15%,rgba(214,155,23,.19),transparent 31%),radial-gradient(ellipse at 14% 68%,rgba(129,83,12,.17),transparent 34%),radial-gradient(ellipse at 54% 100%,rgba(183,117,8,.1),transparent 37%),radial-gradient(ellipse at 45% 42%,rgba(65,45,10,.12),transparent 60%);filter:blur(24px);animation:gg-world-nebula 28s ease-in-out infinite alternate;will-change:transform}
+.gargand-ambient:after{content:"";position:absolute;inset:0;z-index:0;opacity:.23;background-image:radial-gradient(circle at 14% 23%,#ffe6a6 0 1px,transparent 1.6px),radial-gradient(circle at 72% 61%,#ffd34d 0 1px,transparent 1.8px),radial-gradient(circle at 49% 88%,#fff5d7 0 .8px,transparent 1.5px),linear-gradient(120deg,transparent 32%,rgba(255,211,77,.035) 50%,transparent 65%);background-size:251px 233px,337px 297px,181px 199px,100% 100%;animation:gg-world-stardrift 75s linear infinite;mask-image:linear-gradient(180deg,transparent,#000 8%,#000 88%,transparent)}
+.gargand-ambient span{width:2px!important;height:2px!important;background:#ffe8a0!important;box-shadow:0 0 9px #ffd34d,0 0 24px #ffd34d77!important}
+.gargand-ambient span:nth-child(1){animation:gg-world-twinkle 4.8s ease-in-out infinite!important}
+.gargand-ambient span:nth-child(2){animation:gg-world-twinkle 5.6s 1.2s ease-in-out infinite!important}
+.gargand-ambient span:nth-child(3){animation:gg-world-twinkle 4.2s 2s ease-in-out infinite!important}
+.gargand-ambient i{border-color:rgba(227,173,37,.17)!important;filter:drop-shadow(0 0 18px rgba(217,154,8,.08))!important}
+.gargand-ambient i:nth-of-type(1){width:min(46vw,560px)!important;height:min(46vw,560px)!important;left:-20vw;top:39%;animation:gg-world-orbit 90s linear infinite!important}
+.gargand-ambient i:nth-of-type(2){width:min(34vw,420px)!important;height:min(34vw,420px)!important;right:-13vw;top:6%;animation:gg-world-orbit 120s linear infinite reverse!important}
+#main-content{position:relative!important;z-index:1!important;min-height:60vh}
+.gg-header{z-index:100!important;background:linear-gradient(115deg,rgba(7,6,4,.91),rgba(18,13,4,.82))!important;border-color:rgba(255,211,77,.3)!important;backdrop-filter:blur(26px) saturate(125%)!important}
+.gg-footer{position:relative;z-index:1}
+.gg-mark{border-radius:50%!important;overflow:hidden!important;clip-path:circle(50%)!important;background:#070604!important;border:1px solid rgba(255,211,77,.72)!important;box-shadow:0 0 0 3px rgba(255,211,77,.055),0 0 25px rgba(255,190,40,.19)!important}
+.gg-mark img{border-radius:50%!important;clip-path:circle(50%)!important;object-fit:cover!important;padding:0!important;filter:none!important}
+.gg-brand{gap:12px}
+.gg-brand>span:last-child{letter-spacing:.1em;text-shadow:0 1px 20px rgba(255,211,77,.12)}
+.gg-nav a,.gg-login,.gg-language,.gg-footer-bottom a{transition:color .3s var(--gg-world-ease),background .3s var(--gg-world-ease),border-color .3s var(--gg-world-ease),transform .3s var(--gg-world-ease)!important}
+.gg-nav a{border-radius:9px}
+.gg-nav a:hover,.gg-nav a:focus-visible{background:rgba(255,211,77,.055)!important}
+.gg-button,.gg-login,.gg-menu,.gg-language,.gg-film-control,.gg-film-chapter,.command-filter,.tab,.setup-step,.toggle,.settings-card button{transition:transform .35s var(--gg-world-ease),box-shadow .35s ease,border-color .35s ease,background-color .35s ease,color .35s ease!important}
+.gg-button{border-radius:999px!important}
+.gg-button:hover,.gg-login:hover{box-shadow:0 10px 30px rgba(0,0,0,.22),0 0 25px rgba(255,211,77,.09)}
+#main-content .page-head{background:radial-gradient(ellipse at 87% 2%,rgba(211,161,36,.12),transparent 43%),linear-gradient(130deg,rgba(17,13,5,.91),rgba(6,5,3,.9))!important;border-color:rgba(214,169,56,.27)!important;box-shadow:0 30px 85px rgba(0,0,0,.2),inset 0 1px rgba(255,248,210,.035)!important;backdrop-filter:blur(20px)}
+#main-content .page-head:after{background:linear-gradient(90deg,transparent,#ffd34d99,transparent)!important;box-shadow:0 0 22px rgba(255,211,77,.15)}
+#main-content .page-head h1,#main-content h1,#main-content h2,#main-content h3{ text-wrap:balance}
+#main-content .page-head h1{color:#fff8e5!important}
+#main-content .page-head p{color:#c9bd9f!important}
+#main-content .card,#main-content .command-card,#main-content .server-card,#main-content .support-choice,#main-content .support-panel,#main-content .update-center,#main-content .update,#main-content .dashboard-metric,#main-content .side-menu,#main-content .settings-card,#main-content .overview-card,#main-content .legal-grid article,#main-content .admin-row,#main-content .gg-feature,#main-content .gg-info-strip,#main-content .gg-terminal,#main-content .command-tools,#main-content .command-category,#main-content .dashboard-card,#main-content .dashboard-section{border-color:rgba(190,147,39,.25)!important;background:linear-gradient(145deg,rgba(21,16,6,.86),rgba(7,6,4,.92))!important;box-shadow:0 18px 55px rgba(0,0,0,.16),inset 0 1px rgba(255,245,205,.025)!important;backdrop-filter:blur(15px) saturate(115%)}
+#main-content .card:hover,#main-content .command-card:hover,#main-content .server-card:hover,#main-content .support-choice:hover,#main-content .support-panel:hover,#main-content .update:hover,#main-content .gg-feature:hover,#main-content .legal-grid article:hover{border-color:rgba(255,211,77,.54)!important;box-shadow:0 22px 65px rgba(0,0,0,.24),0 0 30px rgba(255,190,40,.045)!important}
+#main-content .command-tools{background:rgba(9,7,4,.91)!important;backdrop-filter:blur(22px)!important}
+#main-content .command-filter.active{background:linear-gradient(105deg,#ffe48b,#ffd34d)!important;color:#181103!important;box-shadow:0 6px 20px rgba(255,197,41,.16)!important}
+#main-content input:focus,#main-content textarea:focus,#main-content select:focus{border-color:rgba(255,211,77,.75)!important;box-shadow:0 0 0 3px rgba(255,211,77,.09)!important}
+.gg-footer{border-color:rgba(190,147,39,.22)!important}
+.gg-footer-bottom{border-color:rgba(190,147,39,.17)!important}
+.gg-owner-card{border-color:rgba(190,147,39,.25)!important;background:linear-gradient(145deg,rgba(20,15,6,.89),rgba(7,6,4,.91))!important;backdrop-filter:blur(16px)}
+.gg-section,.gg-feature-grid,.gg-terminal,.gg-proof-strip,.update-center,.command-grid,.legal-grid,.server-grid{position:relative}
+@keyframes gg-world-nebula{0%{transform:translate3d(-1.5%,1%,0) scale(1) rotate(-2deg)}50%{transform:translate3d(1%,-.5%,0) scale(1.04) rotate(1deg)}100%{transform:translate3d(2%,1.5%,0) scale(1.08) rotate(3deg)}}
+@keyframes gg-world-stardrift{from{background-position:0 0,0 0,0 0,0 0}to{background-position:251px -233px,-337px 297px,181px -199px,0 0}}
+@keyframes gg-world-twinkle{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.6)}}
+@keyframes gg-world-orbit{to{transform:rotate(360deg)}}
+@media(max-width:760px){
+ .gargand-ambient:before{inset:-12%;filter:blur(40px);opacity:.82}
+ .gargand-ambient:after{opacity:.13;background-size:180px 170px,240px 230px,150px 160px,100% 100%}
+ .gg-header{backdrop-filter:blur(22px)!important}
+ #main-content{width:calc(100% - 20px)!important;margin-top:18px!important}
+ #main-content .page-head{border-radius:20px!important;padding:25px!important}
+ #main-content .card,#main-content .command-card,#main-content .server-card,#main-content .support-choice,#main-content .support-panel,#main-content .update,#main-content .legal-grid article{border-radius:16px!important}
+ .gg-mark{width:34px!important;height:34px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto!important}
+ .gargand-ambient:before,.gargand-ambient:after,.gargand-ambient span,.gargand-ambient i{animation:none!important}
+ .gg-nav a,.gg-login,.gg-language,.gg-footer-bottom a,.gg-button,.gg-card,#main-content .card,#main-content .command-card{transition:none!important}
+}
