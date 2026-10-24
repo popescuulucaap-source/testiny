@@ -199,6 +199,8 @@
               {% if key == 'anti_nuke' %}<small class="field-help">Tracks channel/role deletions and edits, links each incident to a case, and saves recovery snapshots. Alerts only by default.</small>{% endif %}
               {% if key == 'anti_nuke_auto_lockdown' %}<small class="field-help">Optional response after an actor reaches a per-action threshold. It pauses @everyone posting for 10 minutes and restores saved permissions automatically.</small>{% endif %}
               {% if key == 'anti_nuke_auto_ban' %}<small class="field-help">Optional and off by default. Enable only if you want Gargand to ban a non-trusted actor after the configured threshold.</small>{% endif %}
+              {% if key == 'antinsfw_enabled' %}<small class="field-help">Deletes flagged text or images and logs the event. Text rules work without an API key; full text and photo classification requires OPENAI_MODERATION_API_KEY or OPENAI_API_KEY in the bot host, then restart the bot. Check with !antinsfw status.</small>{% endif %}
+              {% if key == 'anti_phishing_enabled' %}<small class="field-help">Blocks known scam hosts, fake Discord/Nitro domains, deceptive URL credentials, raw-IP links and punycode domains. Admins and staff are exempt.</small>{% endif %}
             {% elif field_type == 'channel' %}
               <select data-setting="{{ key }}" data-resource="channel" data-current="{{ settings.get(key, '') or '' }}"><option value="">Loading channels…</option></select>
               <small class="field-help">Choose a channel from your server. No ID needed.</small>
