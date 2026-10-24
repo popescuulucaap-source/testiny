@@ -97,8 +97,8 @@
           control.id||'',
           typeof control.className==='string'?control.className:'',
           control.getAttribute('data-feature')||''
-        ].join(' ').replace(/[\\s]+/g,' ').toLowerCase();
-        if(/\\bgargand(?:'s)?[\\s_-]+score\\b|\\bscore\\s+by\\s+gargand\\b|\\bgargandscore\\b/.test(signature))control.remove();
+        ].join(' ').replace(/\s+/g,' ').toLowerCase();
+        if(/\bgargand(?:'s)?[\s_-]+score\b|\bscore\s+by\s+gargand\b|\bgargandscore\b/.test(signature))control.remove();
       });
     }
     document.addEventListener('DOMContentLoaded',function(){
