@@ -13,11 +13,14 @@
     "/notifications":"announcements","/suggestions":"community","/suggestions/list":"community",
     "/guidelines":"security","/terms":"verification","/login":"home"
   };
-  const kind=scenes[path];
+  let kind=scenes[path];
+  if(!kind&&/^\/dashboard\/\d+(?:\/|$)/.test(path)){
+    kind=/analytics/.test(path)?"dashboard":(/moderation/.test(path)?"security":"dashboard");
+  }
   if(!kind||reduced||saveData)return;
   const targets=path==="/"
     ? [document.querySelector(".gg-hero")]
-    : [document.querySelector("#main-content > .page-head"),document.querySelector("#main-content > .dashboard-header"),document.querySelector("#main-content > .server-header")].filter(Boolean);
+    : [document.querySelector("#main-content > .page-head"),document.querySelector("#main-content > .dashboard-header"),document.querySelector("#main-content > .server-header"),document.querySelector("#main-content > .dashboard-head")].filter(Boolean);
   targets.filter(Boolean).forEach((target,slot)=>{
     if(target.querySelector(":scope > .gg-page-scene"))return;
     target.classList.add("gg-has-page-scene");
