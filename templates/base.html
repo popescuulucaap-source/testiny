@@ -22,9 +22,14 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-world.css') }}?v=20261024-world1">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-page-scenes.css') }}?v=20261024-performance1">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-performance.css') }}?v=20261024-performance1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-single-background.css') }}?v=20261024-single1">
 </head>
 <body class="gargand-site">
-  <div class="gargand-ambient" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div>
+  <div class="gg-site-backdrop" aria-hidden="true">
+    <video id="ggFilmVideo" class="gg-site-backdrop-video" preload="metadata" muted loop playsinline disablepictureinpicture tabindex="-1" aria-hidden="true">
+      <source src="{{ url_for('static', filename='gargand-trailer.mp4') }}?v=20261024-4k1" type="video/mp4">
+    </video>
+  </div>
   <header class="gg-header">
     <a class="gg-brand" href="/" aria-label="Gargand home"><span class="gg-mark" aria-hidden="true"><img src="{{ url_for('gargand_lion_asset') }}?v=lion202610" alt=""></span><span>GARGAND<span class="gg-dot">.</span></span></a>
     <nav class="gg-nav" aria-label="Main navigation">
@@ -107,9 +112,8 @@
   <script src="{{ url_for('static', filename='gargand-site-music.js') }}?v=20261024-music2" defer></script>
   <script src="{{ url_for('static', filename='dashboard.js') }}?v=20261024-cinematic-music2" defer></script>
   <script src="{{ url_for('static', filename='gargand-motion.js') }}?v=20261024-world1" defer></script>
-  <script src="{{ url_for('static', filename='gargand-page-scenes.js') }}?v=20261024-performance1" defer></script>
   <script src="{{ url_for('static', filename='cinematic-intro.js') }}?v=20261024-cinematic-music2" defer></script>
-  <script src="{{ url_for('static', filename='gargand-showreel.js') }}?v=20261024-performance1" defer></script>
+  <script src="{{ url_for('static', filename='gargand-showreel.js') }}?v=20261024-single1" defer></script>
   <script src="{{ url_for('static', filename='gargand-sound.js') }}?v=20261020-lion-roar" defer></script>
 </body>
 </html>
