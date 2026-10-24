@@ -1,13 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Gargand • Command Library{% endblock %}
 {% block content %}
-<section class="page-head"><span class="eyebrow">GARGAND COMMAND LIBRARY</span><h1>Find your next command.</h1><p>Browse the commands currently listed for Gargand. The default prefix is <code>!</code>. Use <code>!setup</code> to configure supported server features.</p></section>
-<section class="command-tools" aria-label="Find commands">
-  <label class="command-search"><span>⌕</span><input id="commandSearch" type="search" placeholder="Search by command, category, or feature…" autocomplete="off" aria-label="Search commands"></label>
-  <div class="command-filters" role="group" aria-label="Filter by category"><button class="command-filter active" type="button" data-category="all">All commands</button>{% for cat in commands|map(attribute=1)|unique|sort %}<button class="command-filter" type="button" data-category="{{ cat }}">{{ cat }}</button>{% endfor %}</div>
-  <p class="command-count" id="commandCount" aria-live="polite">{{ commands|length }} listed commands</p>
+<section class="page-head">
+  <span class="eyebrow">GARGAND COMMAND LIBRARY</span>
+  <h1>Find your next command.</h1>
+  <p>Live commands are supplied by Gargand's registered bot command catalog. The <code>!</code> prefix works for legacy commands; slash commands appear separately when registered.</p>
 </section>
-<div class="command-grid" id="commandGrid">{% for cmd,cat,desc in commands %}<article class="command-card" style="--command-index:{{ loop.index0 }}" data-category="{{ cat|lower }}" data-search="{{ (cmd ~ ' ' ~ cat ~ ' ' ~ desc)|lower }}"><span class="tag">{{ cat }}</span><button class="copy-command" type="button" aria-label="Copy {{ cmd }}" data-copy="{{ cmd }}">Copy</button><code>{{ cmd }}</code><p>{{ desc }}</p></article>{% endfor %}</div>
+<section class="command-tools" aria-label="Find commands">
+  <label class="command-search"><span>⌕</span><input id="commandSearch" type="search" placeholder="Search music, quests, audit logs, aliases, examples…" autocomplete="off" aria-label="Search commands"></label>
+  <div class="command-filters" role="group" aria-label="Filter by category">
+    <button class="command-filter active" type="button" data-category="all">All commands</button>
+    {% for cat in commands|map(attribute='category')|unique|sort %}
+    <button class="command-filter" type="button" data-category="{{ cat }}">{{ cat }}</button>
+    {% endfor %}
+  </div>
+  <p class="command-count" id="commandCount" aria-live="polite">{{ commands|length }} commands listed</p>
+</section>
+<div class="command-grid" id="commandGrid">
+  {% for cmd in commands %}
+  <article class="command-card" style="--command-index:{{ loop.index0 }}" data-category="{{ cmd.category|lower }}" data-search="{{ (cmd.command ~ ' ' ~ cmd.name ~ ' ' ~ cmd.category ~ ' ' ~ cmd.description ~ ' ' ~ (cmd.aliases|join(' ')) ~ ' ' ~ cmd.permission ~ ' ' ~ cmd.example ~ ' ' ~ cmd.mode)|lower }}">
+    <span class="tag">{{ cmd.category }}</span>
+    <button class="copy-command" type="button" aria-label="Copy {{ cmd.usage }}" data-copy="{{ cmd.usage }}">Copy usage</button>
+    <code>{{ cmd.command }}</code>
+    <p>{{ cmd.description }}</p>
+    <div class="command-details">
+      <span class="command-mode">{{ cmd.mode|capitalize }}</span>
+      <span class="command-permission">Access: {{ cmd.permission }}</span>
+      {% if cmd.aliases %}
+      <p class="command-aliases"><strong>Aliases:</strong> {% for alias in cmd.aliases %}<code>{{ alias }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+      {% endif %}
+      {% if cmd.example %}
+      <p class="command-example"><strong>Example:</strong> <code>{{ cmd.example }}</code></p>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
 <p id="noCommands" class="empty-commands" hidden>No commands match that search. Try another word or category.</p>
-<script src="{{ url_for('static', filename='commands.js') }}?v=20261017" defer></script>
+<script src="{{ url_for('static', filename='commands.js') }}?v=20261024-live" defer></script>
 {% endblock %}
