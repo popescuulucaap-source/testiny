@@ -1,0 +1,181 @@
+/* Performance pass: keep the gold cinema look while reducing costly full-page layers. */
+.gargand-ambient::before {
+  filter: blur(42px) !important;
+  animation-duration: 110s !important;
+}
+.gargand-ambient::after {
+  opacity: .16 !important;
+  animation-duration: 120s !important;
+}
+.gargand-ambient i {
+  filter: none !important;
+  animation-duration: 140s !important;
+}
+.gg-header {
+  -webkit-backdrop-filter: blur(9px) !important;
+  backdrop-filter: blur(9px) !important;
+}
+#main-content .card,
+#main-content .command-card,
+#main-content .server-card,
+#main-content .support-choice,
+#main-content .support-panel,
+#main-content .update-center,
+#main-content .update,
+#main-content .dashboard-metric,
+#main-content .side-menu,
+#main-content .settings-card,
+#main-content .overview-card,
+#main-content .legal-grid article,
+#main-content .admin-row,
+#main-content .gg-feature,
+#main-content .gg-info-strip,
+#main-content .gg-terminal,
+#main-content .command-tools,
+#main-content .command-category,
+#main-content .dashboard-card,
+#main-content .dashboard-section,
+.gg-owner-card {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.gg-page-scene {
+  contain: paint;
+}
+.gg-page-scene video,
+.gg-page-scene .gg-page-scene-video {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  transform: none;
+}
+.gg-page-scene video {
+  opacity: .2 !important;
+}
+.gg-page-scene video.is-visible {
+  opacity: .28 !important;
+  transform: scale(1.01);
+}
+.gg-film-frame.has-video .gg-film-video {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+  transform: none !important;
+}
+.gg-film-frame.has-video .gg-film-video:hover {
+  filter: none !important;
+  transform: none !important;
+}
+.gg-film-frame::after {
+  display: none !important;
+}
+.gg-site-music {
+  position: fixed;
+  z-index: 1200;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(280px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 211, 77, .28);
+  border-radius: 15px;
+  background: rgba(8, 7, 4, .94);
+  box-shadow: 0 12px 36px rgba(0,0,0,.25), 0 0 24px rgba(255, 190, 40, .06);
+  color: #f8e9bd;
+}
+.gg-site-music-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 11px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gg-site-music-note {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 211, 77, .24);
+  border-radius: 50%;
+  background: rgba(255, 211, 77, .07);
+  color: #ffd34d;
+  font-size: 18px;
+}
+.gg-site-music-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+.gg-site-music-copy strong {
+  color: #ffe5a0;
+  font-size: 9px;
+  letter-spacing: .16em;
+}
+.gg-site-music-copy > span {
+  color: #aa9b78;
+  font-size: 10px;
+}
+.gg-site-music-power {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border: 1px solid rgba(255, 211, 77, .18);
+  border-radius: 50%;
+  color: #ffd34d;
+  font-size: 11px;
+}
+.gg-site-music-volume {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 2px 0 45px;
+  color: #88784f;
+  font-size: 8px;
+  letter-spacing: .14em;
+}
+.gg-site-music-volume input {
+  width: 100%;
+  height: 4px;
+  accent-color: #ffd34d;
+  cursor: pointer;
+}
+.gg-site-music[data-state="playing"] .gg-site-music-note {
+  background: rgba(255, 211, 77, .14);
+  box-shadow: 0 0 18px rgba(255, 211, 77, .13);
+}
+.gg-site-music[data-state="playing"] .gg-site-music-power {
+  border-color: rgba(255, 211, 77, .55);
+  background: rgba(255, 211, 77, .1);
+}
+.gg-site-music button:focus-visible,
+.gg-site-music input:focus-visible {
+  outline: 2px solid #ffd34d;
+  outline-offset: 4px;
+}
+@media (max-width: 760px) {
+  .gargand-ambient i { animation: none !important; }
+  .gg-site-music {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(248px, calc(100vw - 20px));
+    padding: 8px 10px;
+    border-radius: 13px;
+  }
+  .gg-site-music-note { width: 30px; height: 30px; flex-basis: 30px; }
+  .gg-site-music-volume { padding-top: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gargand-ambient::before,
+  .gargand-ambient::after,
+  .gargand-ambient i,
+  .gg-page-scene video {
+    animation: none !important;
+  }
+}
