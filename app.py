@@ -356,7 +356,7 @@ def require_discord_for_site():
     # Public browsing is allowed. State-changing/private areas still require Discord.
     public_get = {"/", "/commands", "/planets", "/guidelines", "/announcements", "/suggestions", "/support", "/terms", "/socials", "/security", "/verification", "/gargand-lion.jpg", "/gargand-lion-4k.jpg", "/gargand-bar.gif"}
     public_secret_api = set()
-    public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull", "/api/bot/announcements"}
+    public_bot_api = {"/api/bot/heartbeat", "/api/bot/pull", "/api/bot/announcements", "/api/bot/job-result"}
     endpoint = request.endpoint or ""
     if endpoint in {"login", "oauth_callback", "health"} or endpoint.startswith("static") or endpoint.startswith("admin"):
         return None
