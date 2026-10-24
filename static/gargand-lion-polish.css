@@ -173,3 +173,36 @@ body.gargand-site:before{background:radial-gradient(ellipse at 50% 0%,#e8aa1d18,
 .gg-crown-secret-card small{color:#b69a55;font-size:9px;letter-spacing:.12em}
 @keyframes gg-secret-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.gg-crown-secret{animation:none}}
+
+/* 2026-10-24 Control Center: music, community, security, notification and live command cards */
+.music-status-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:20px 0}
+.music-status-strip>div,.dashboard-mini-metric{min-width:0;padding:15px 16px;border:1px solid #8b671766;border-radius:16px;background:linear-gradient(145deg,#151006dd,#0a0804dd);box-shadow:inset 0 1px #fff1}
+.music-status-strip small,.dashboard-mini-metric small{display:block;color:#cbb988;font-size:.69rem;letter-spacing:.11em;text-transform:uppercase;margin-bottom:8px}
+.music-status-strip strong,.dashboard-mini-metric strong{display:block;color:#fff1b7;font-size:1.03rem;line-height:1.45;overflow-wrap:anywhere}
+.dashboard-live-list{display:grid;gap:9px;margin-top:16px}
+.dashboard-live-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border:1px solid #6d501d66;border-radius:13px;background:#100c06cc;min-width:0}
+.dashboard-live-copy{min-width:0;flex:1}
+.dashboard-live-copy strong{display:block;color:#fff1bf;overflow-wrap:anywhere}
+.dashboard-live-copy p{margin:5px 0 0;color:#c3b58f;font-size:.88rem;overflow-wrap:anywhere;word-break:break-word}
+.dashboard-live-time{color:#c4b080;font-size:.78rem;white-space:nowrap}
+.dashboard-mini-metric{margin:0}
+.dashboard-mini-metric strong{font-size:1.4rem}
+.music-action,.notification-action{white-space:nowrap}
+.volume-field{margin-top:16px}
+.volume-field input[type=range]{width:100%;accent-color:#ffd52a}
+.security-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:10px;margin:18px 0}
+.security-check-card{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid #8b671766;border-radius:14px;background:#100c06cc;min-width:0}
+.security-check-card.pass{border-color:#879c3b66}
+.security-check-card.attention{border-color:#c28b3a88}
+.security-check-card strong,.security-check-card small{display:block;overflow-wrap:anywhere}
+.security-check-card strong{color:#fff1bf;font-size:.9rem;text-transform:capitalize}
+.security-check-card small{margin-top:4px;color:#c7b98f}
+.security-check-indicator{display:grid;place-items:center;width:29px;height:29px;flex:0 0 29px;border-radius:50%;background:#ffd52a1a;color:#ffdf69;font-weight:800}
+.security-check-card.pass .security-check-indicator{background:#b4cf4c1b;color:#d3ed85}
+.security-check-card.attention .security-check-indicator{background:#d899401e;color:#f3c06b}
+.command-details{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:13px;color:#c9bb96;font-size:.8rem}
+.command-details p{flex-basis:100%;margin:5px 0 0;overflow-wrap:anywhere}
+.command-details strong{color:#f8e7ab;font-weight:650}
+.command-mode,.command-permission{display:inline-flex;align-items:center;border:1px solid #8b671766;border-radius:999px;padding:4px 9px;background:#120d05;color:#e6d7ac}
+.command-details code{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:650px){.dashboard-live-row{align-items:flex-start;flex-direction:column}.dashboard-live-time{white-space:normal}.music-status-strip{grid-template-columns:1fr 1fr}}
