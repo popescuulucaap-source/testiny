@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-showreel.css') }}?v=20261024-worldtabs4">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-world.css') }}?v=20261024-world1">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-page-scenes.css') }}?v=20261024-smooth5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-performance.css') }}?v=20261024-performance1">
 </head>
 <body class="gargand-site">
   <div class="gargand-ambient" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div>
@@ -95,6 +96,15 @@
       if(nav)nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('gg-menu-open');var b=document.querySelector('.gg-menu');if(b)b.setAttribute('aria-expanded','false');});});
     });
   </script>
+  <div class="gg-site-music" id="ggSiteMusic" data-state="off">
+    <button class="gg-site-music-toggle" id="ggSiteMusicToggle" type="button" aria-pressed="false" aria-label="Play Gargand ambient soundtrack">
+      <span class="gg-site-music-note" aria-hidden="true">♫</span>
+      <span class="gg-site-music-copy"><strong>GARGAND SOUNDTRACK</strong><span id="ggSiteMusicStatus" aria-live="polite">Music off · Tap to play</span></span>
+      <span class="gg-site-music-power" id="ggSiteMusicPower" aria-hidden="true">▶</span>
+    </button>
+    <label class="gg-site-music-volume"><span>VOL</span><input id="ggSiteMusicVolume" type="range" min="0" max="60" value="24" step="1" aria-label="Soundtrack volume"></label>
+  </div>
+  <script src="{{ url_for('static', filename='gargand-site-music.js') }}?v=20261024-music1" defer></script>
   <script src="{{ url_for('static', filename='dashboard.js') }}?v=20261024-cinematic-music2" defer></script>
   <script src="{{ url_for('static', filename='gargand-motion.js') }}?v=20261024-world1" defer></script>
   <script src="{{ url_for('static', filename='gargand-page-scenes.js') }}?v=20261024-smooth5" defer></script>
