@@ -376,6 +376,7 @@ BOT_GUILDS = {}
 BOT_LAST_SEEN = 0.0
 BOT_JOBS = deque()
 BOT_NEXT_JOB_ID = 1
+BOT_JOB_RESULTS = {}
 
 
 def bot_online():
@@ -789,6 +790,7 @@ def init_db():
             cur.execute("CREATE TABLE IF NOT EXISTS custom_commands (id BIGSERIAL PRIMARY KEY, command TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_bridge_state (state_id SMALLINT PRIMARY KEY CHECK (state_id = 1), last_seen DOUBLE PRECISION NOT NULL, guilds TEXT NOT NULL)")
             cur.execute("CREATE TABLE IF NOT EXISTS bot_jobs (job_id BIGSERIAL PRIMARY KEY, guild_id TEXT NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
+            cur.execute("CREATE TABLE IF NOT EXISTS bot_job_results (job_id BIGINT PRIMARY KEY, guild_id TEXT NOT NULL, action TEXT NOT NULL, status TEXT NOT NULL, message TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS reviews (id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, rating INTEGER NOT NULL, review TEXT NOT NULL, date TEXT NOT NULL, approved BOOLEAN NOT NULL DEFAULT TRUE)")
             cur.execute("CREATE TABLE IF NOT EXISTS support_tickets (id BIGSERIAL PRIMARY KEY, token TEXT UNIQUE NOT NULL, name TEXT NOT NULL, subject TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
             cur.execute("CREATE TABLE IF NOT EXISTS support_messages (id BIGSERIAL PRIMARY KEY, ticket_id BIGINT NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE, sender TEXT NOT NULL, message TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())")
@@ -2179,6 +2181,86 @@ def dashboard_resources(guild_id):
     except (ValueError, TypeError, psycopg.Error) as exc:
         app.logger.warning("Could not load dashboard resources: %s", type(exc).__name__)
         return jsonify({"ok": False, "error": "Could not load Discord channels and roles. Try refreshing after the bot checks in."}), 503
+
+
+@app.post("/api/bot/job-result")
+def bot_job_result():
+    denied = require_bot_key()
+    if denied:
+        return denied
+    payload = request.get_json(silent=True) or {}
+    try:
+        job_id = int(payload.get("job_id"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "A valid job ID is required."}), 400
+    guild_id = str(payload.get("guild_id") or "").strip()
+    action = str(payload.get("action") or "").strip()[:100]
+    status = str(payload.get("status") or "").strip().lower()
+    message = str(payload.get("message") or "").strip()[:500]
+    if job_id <= 0 or not guild_id.isdigit() or status not in {"success", "failed"} or not action:
+        return jsonify({"ok": False, "error": "Invalid job result."}), 400
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                conn.execute(
+                    "INSERT INTO bot_job_results(job_id,guild_id,action,status,message,updated_at) VALUES(%s,%s,%s,%s,%s,NOW()) "
+                    "ON CONFLICT(job_id) DO UPDATE SET guild_id=EXCLUDED.guild_id,action=EXCLUDED.action,status=EXCLUDED.status,message=EXCLUDED.message,updated_at=NOW()",
+                    (job_id, guild_id, action, status, message),
+                )
+                # Keep the table bounded without deleting results that are still recent.
+                conn.execute("DELETE FROM bot_job_results WHERE updated_at < NOW() - INTERVAL '7 days'")
+                conn.commit()
+        except psycopg.Error as exc:
+            app.logger.warning("Could not store bot job result: %s", type(exc).__name__)
+            return jsonify({"ok": False, "error": "The dashboard could not save the action result."}), 503
+    else:
+        with BOT_LOCK:
+            BOT_JOB_RESULTS[job_id] = {
+                "job_id": job_id, "guild_id": guild_id, "action": action,
+                "status": status, "message": message, "updated_at": time.time(),
+            }
+            if len(BOT_JOB_RESULTS) > 2000:
+                oldest = sorted(BOT_JOB_RESULTS, key=lambda key: BOT_JOB_RESULTS[key].get("updated_at", 0))[:500]
+                for key in oldest:
+                    BOT_JOB_RESULTS.pop(key, None)
+    return jsonify({"ok": True})
+
+
+@app.get("/api/dashboard/<guild_id>/jobs/<job_id>")
+@login_required
+def dashboard_job_result(guild_id, job_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    if not str(job_id).isdigit() or len(str(job_id)) > 22:
+        return jsonify({"ok": False, "error": "Invalid job ID."}), 400
+    result = None
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                row = conn.execute(
+                    "SELECT guild_id, action, status, message, updated_at FROM bot_job_results WHERE job_id=%s",
+                    (int(job_id),),
+                ).fetchone()
+            if row and str(row[0]) == str(guild_id):
+                result = {
+                    "guild_id": str(row[0]), "action": str(row[1]), "status": str(row[2]),
+                    "message": str(row[3] or ""),
+                    "updated_at": row[4].isoformat() if hasattr(row[4], "isoformat") else str(row[4] or ""),
+                }
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read bot job result: %s", type(exc).__name__)
+            return jsonify({"ok": False, "error": "Action status is temporarily unavailable."}), 503
+    else:
+        with BOT_LOCK:
+            candidate = BOT_JOB_RESULTS.get(int(job_id))
+            if candidate and str(candidate.get("guild_id")) == str(guild_id):
+                result = dict(candidate)
+    if not result:
+        return jsonify({"ok": True, "status": "pending", "job_id": int(job_id)})
+    return jsonify({"ok": True, "status": result["status"], "job": {
+        "id": int(job_id), "action": result["action"], "message": result["message"],
+        "updated_at": result["updated_at"],
+    }})
 
 
 @app.get("/api/dashboard/<guild_id>/music")
