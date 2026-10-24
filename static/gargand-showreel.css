@@ -159,3 +159,16 @@
  .gg-film-scene{transition:none!important;transform:none!important}
  .gg-film-control,.gg-film-launch button{transition:none!important}
 }
+
+
+/* Real MP4 player with the animated six-scene tour retained as a resilient fallback. */
+.gg-film-video{position:absolute;z-index:1;inset:0;width:100%;height:100%;display:block;object-fit:cover;background:#030302;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility .45s;accent-color:#ffd34d}
+.gg-film-frame.has-video .gg-film-video{opacity:1;visibility:visible}
+.gg-film-frame.has-video .gg-film-scene{opacity:0!important;visibility:hidden!important;transform:none!important;pointer-events:none!important}
+.gg-film-frame.has-video:after{opacity:.06}
+.gg-film-frame.has-video .gg-film-atmosphere,.gg-film-frame.has-video .gg-film-stars,.gg-film-frame.has-video .gg-film-light-leak,.gg-film-frame.has-video .gg-film-grid{opacity:.05}
+.gg-film-frame.has-video .gg-film-topline{pointer-events:none;text-shadow:0 1px 8px #000}
+.gg-film-status{display:grid;gap:5px}
+.gg-film-status span+span{font-size:8px;color:#6f603d;letter-spacing:.09em}
+@media(max-width:760px){.gg-film-status{text-align:left}.gg-film-status span+span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.gg-film-video{transition:none!important}}
