@@ -24,9 +24,10 @@
   function writeSetting(key, value) {
     try { window.localStorage.setItem(key, value); } catch (_) {}
   }
-  function useSource() {
-    if (!audio.src) {
-      audio.src = "/static/gargand-ambient.mp3?v=20261024-music1";
+  const soundtrackUrl = new URL("/static/gargand-ambient.mp3?v=20261024-music2", window.location.origin).href;
+  function useSource(forceReload = false) {
+    if (forceReload || audio.src !== soundtrackUrl) {
+      audio.src = soundtrackUrl;
       audio.load();
     }
   }
@@ -43,12 +44,13 @@
     else status.textContent = "Music off · Tap to play";
   }
   async function startMusic(fromClick) {
+    const retryMedia = Boolean(fromClick && (failed || audio.error));
     if (fromClick) {
       enabled = true;
       failed = false;
       writeSetting(enabledKey, "1");
     }
-    useSource();
+    useSource(retryMedia);
     audio.volume = Number(volume.value) / 100;
     try {
       await audio.play();
@@ -56,11 +58,17 @@
       failed = false;
       writeSetting(enabledKey, "1");
       paint();
-    } catch (_) {
-      // Browsers may block resume after a full page navigation; another user tap starts it.
+    } catch (error) {
+      // Autoplay may be blocked after navigation; a user click should always be allowed to retry.
       enabled = true;
-      failed = false;
-      paint("Tap to resume the soundtrack");
+      writeSetting(enabledKey, "1");
+      if (error && (error.name === "NotAllowedError" || error.name === "AbortError")) {
+        failed = false;
+        paint("Playback was blocked · Tap to resume");
+      } else {
+        failed = true;
+        paint("Could not start soundtrack · Tap to retry");
+      }
     }
   }
   function stopMusic() {
@@ -85,7 +93,12 @@
   audio.addEventListener("pause", () => { if (!enabled) paint(); });
   audio.addEventListener("error", () => {
     failed = true;
-    paint("Music is loading slowly · Tap to retry");
+    const code = audio.error && audio.error.code;
+    const message = code === 2 ? "Network error loading soundtrack · Tap to retry"
+      : code === 3 ? "Soundtrack audio could not be decoded · Tap to retry"
+      : code === 4 ? "Soundtrack file is unavailable · Tap to retry"
+      : "Could not load soundtrack · Tap to retry";
+    paint(message);
   });
 
   // Remember the music choice across page navigation without trying to bypass autoplay rules.
