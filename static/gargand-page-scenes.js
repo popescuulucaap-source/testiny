@@ -86,7 +86,7 @@
   const container = scene;
   let front = scene.querySelector("video");
   if (!front) return;
-  const back = document.createElement("video");
+  let back = document.createElement("video");
   back.className = "gg-page-scene-video";
   back.muted = true;
   back.defaultMuted = true;
