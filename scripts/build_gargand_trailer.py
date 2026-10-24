@@ -673,7 +673,7 @@ def build():
         str(TEMP_VIDEO), (WIDTH, HEIGHT), fps=FPS, codec="libx264",
         pix_fmt_in="rgb24", pix_fmt_out="yuv420p", quality=None,
         macro_block_size=1, ffmpeg_log_level="error",
-        output_params=["-crf", "26", "-preset", "veryfast", "-movflags", "+faststart", "-vf", "scale=1280:720"],
+        output_params=["-crf", "24", "-preset", "veryfast", "-movflags", "+faststart", "-vf", "scale=3840:2160:flags=lanczos,setsar=1"],
     )
     writer.send(None)
     frame_count = int(DURATION * FPS)
@@ -718,7 +718,7 @@ def build():
                 tmp.unlink()
             except FileNotFoundError:
                 pass
-    print(f"Created {OUT} ({OUT.stat().st_size:,} bytes, {WIDTH}x{HEIGHT}, {DURATION}s, audio={audio_available})")
+    print(f"Created {OUT} ({OUT.stat().st_size:,} bytes, 3840x2160 4K output from {WIDTH}x{HEIGHT} authored frames, {DURATION}s, audio={audio_available})")
     build_tab_scenes()
     make_site_music()
 
