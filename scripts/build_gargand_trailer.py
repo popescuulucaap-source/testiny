@@ -304,30 +304,169 @@ def draw_dashboard_visual(frame, t):
         draw.rounded_rectangle((x,base_y-animated,x+22,base_y),radius=5,fill=(233,182,49,230 if i==11 else 155))
     draw.line((1260,739,1765,739),fill=(255,255,255,25),width=1)
 
-def draw_scene(scene_index, local_t, global_t):
-    frame = BASE.copy()
-    draw_stars(frame, global_t)
-    draw_header(ImageDraw.Draw(frame, "RGBA"), global_t, scene_index)
-    draw_title(frame, scene_index, local_t)
-    if scene_index == 0:
-        draw_lion(frame, local_t, center=(1455, 495), size=450)
-    elif scene_index == 1:
-        draw_security_visual(frame, local_t)
-    elif scene_index == 2:
-        draw_moderation_visual(frame, local_t)
-    elif scene_index == 3:
-        draw_community_visual(frame, local_t)
-    elif scene_index == 4:
-        draw_dashboard_visual(frame, local_t)
-    else:
-        draw_lion(frame, local_t, center=(1460, 495), size=405)
-        draw = ImageDraw.Draw(frame, "RGBA")
-        draw_text(draw, (1140, 825), "INVITE GARGAND  /  EXPLORE COMMANDS", FONT_SMALL, GOLD)
-    # Soft moving reflections near the edges, with a proper movie letterbox.
+def draw_ambient_stars(frame: Image.Image, t: float, duration: float = DURATION):
+    """Stars and glow that loop with the same deep-black/gold palette as the site."""
     draw = ImageDraw.Draw(frame, "RGBA")
-    glint_x = int(200 + ((global_t * 125) % (WIDTH - 400)))
-    draw.line((glint_x, 112, glint_x+220, 112), fill=(255,219,121,40), width=2)
+    phase = (t / max(.001, duration)) * math.tau
+    for x, y, speed, phase_index, radius in STARS:
+        # Static star positions prevent a jump at a looping boundary; only their
+        # luminance breathes, using a whole-cycle phase.
+        pulse = 0.48 + 0.42 * math.sin(phase + phase_index * .7 + speed)
+        alpha = max(32, min(145, int(65 + 70 * pulse)))
+        draw.ellipse((x, y, x+radius, y+radius), fill=(255, 226, 157, alpha))
+    # A soft reflection moves across the scene and returns to its initial position.
+    shift = math.sin(phase) * 250
+    x = int(WIDTH * .55 + shift)
+    draw.polygon([(x-90, 100), (x+10, 100), (x+620, HEIGHT-80), (x+510, HEIGHT-80)],
+                 fill=(255, 206, 75, 5))
+
+def draw_abstract_shield(frame: Image.Image, t: float, cx=1460, cy=495):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase = (t / 6.0) * math.tau
+    for n, alpha in [(270, 24), (225, 30), (176, 37)]:
+        radius = int(n + 6 * math.sin(phase))
+        draw.ellipse((cx-radius, cy-radius, cx+radius, cy+radius),
+                     outline=(255, 204, 65, alpha), width=2)
+    points = [(cx,cy-160),(cx+130,cy-105),(cx+112,cy+58),(cx,cy+161),(cx-112,cy+58),(cx-130,cy-105)]
+    draw.polygon(points, fill=(15,11,4,120), outline=(255,211,77,125))
+    inset_points=[]
+    for x,y in points:
+        inset_points.append((cx+(x-cx)*.79, cy+(y-cy)*.79))
+    draw.line(inset_points+[inset_points[0]], fill=(255,211,77,65), width=2, joint="curve")
+    draw.arc((cx-90,cy-90,cx+90,cy+90), 205, 335, fill=(255,232,159,190), width=4)
+    draw.line((cx-40,cy+3,cx-8,cy+36,cx+51,cy-37), fill=(255,232,159,225), width=7, joint="curve")
+
+def draw_abstract_commands(frame: Image.Image, t: float):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase = (t / 6.0) * math.tau
+    x0,y0,x1,y1 = 1100,235,1800,825
+    draw.rounded_rectangle((x0,y0,x1,y1),radius=28,fill=(8,7,4,135),outline=(218,172,56,75),width=2)
+    draw.rounded_rectangle((x0,y0,x1,y0+62),radius=27,fill=(42,30,8,90),outline=(218,172,56,50),width=1)
+    for i in range(3):
+        col=(255,211,77, 90 if i==0 else 45)
+        draw.ellipse((x0+28+i*24,y0+25,x0+39+i*24,y0+36),fill=col)
+    for row in range(5):
+        yy=y0+104+row*90
+        draw.rounded_rectangle((x0+28,yy,x1-28,yy+62),radius=12,fill=(255,245,209,7),outline=(255,211,77,24),width=1)
+        draw.rounded_rectangle((x0+48,yy+18,x0+64,yy+43),radius=5,fill=(255,211,77,55))
+        bar=160+int(28*math.sin(phase+row*.9))
+        draw.rounded_rectangle((x0+86,yy+15,x0+86+bar,yy+23),radius=4,fill=(255,226,160,65))
+        draw.rounded_rectangle((x0+86,yy+32,x0+330,yy+39),radius=4,fill=(220,190,120,28))
+        draw.rounded_rectangle((x1-115,yy+24,x1-53,yy+37),radius=7,outline=(255,211,77,65),width=1)
+
+def draw_abstract_community(frame: Image.Image, t: float):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase=(t/6.0)*math.tau
+    cx,cy=1450,495
+    for r,alpha in [(150,28),(220,35),(290,20)]:
+        draw.ellipse((cx-r,cy-r,cx+r,cy+r),outline=(255,207,79,alpha),width=2)
+    for i in range(8):
+        a=phase*.12+i*math.tau/8
+        x=int(cx+math.cos(a)*230); y=int(cy+math.sin(a)*230)
+        draw.ellipse((x-23,y-23,x+23,y+23),fill=(8,7,4,140),outline=(255,211,77,100),width=2)
+        draw.ellipse((x-8,y-8,x+8,y+8),fill=(255,211,77,85))
+        draw.line((cx,cy,x,y),fill=(255,211,77,14),width=1)
+    draw.rounded_rectangle((1180,370,1720,650),radius=30,fill=(8,7,4,98),outline=(255,211,77,42),width=2)
+    for i in range(4):
+        yy=420+i*48
+        draw.rounded_rectangle((1220,yy,1260,yy+30),radius=8,fill=(255,211,77,35))
+        draw.rounded_rectangle((1285,yy+3,1500+40*(i%2),yy+10),radius=4,fill=(255,240,189,50))
+        draw.rounded_rectangle((1285,yy+17,1620,yy+23),radius=4,fill=(255,240,189,24))
+
+def draw_abstract_dashboard(frame: Image.Image, t: float):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase=(t/6.0)*math.tau
+    rounded(draw,(1055,245,1810,805),25,fill=(6,5,3,145),outline=(205,161,48,85),width=2)
+    draw.rounded_rectangle((1055,245,1810,315),radius=25,fill=(25,18,6,120),outline=(205,161,48,50),width=1)
+    draw.rectangle((1055,282,1810,315),fill=(25,18,6,120))
+    draw.rounded_rectangle((1085,342,1230,750),radius=14,fill=(255,255,255,5),outline=(255,211,77,20),width=1)
+    for i in range(5):
+        yy=370+i*68
+        draw.rounded_rectangle((1103,yy,1207,yy+23),radius=6,fill=(255,211,77,30 if i==0 else 10))
+    for i in range(3):
+        x=1255+i*175
+        draw.rounded_rectangle((x,342,x+150,445),radius=14,fill=(255,255,255,7),outline=(255,211,77,30),width=1)
+        draw.rounded_rectangle((x+15,368,x+80+int(8*math.sin(phase+i)),376),radius=4,fill=(255,221,135,62))
+        draw.rounded_rectangle((x+15,393,x+100,420),radius=6,fill=(255,211,77,19))
+    draw.rounded_rectangle((1255,465,1780,750),radius=14,fill=(255,255,255,5),outline=(255,211,77,28),width=1)
+    base_y=716
+    heights=[82,123,99,166,137,202,154,231,181,210,164,225]
+    for i,h in enumerate(heights):
+        height=h+int(11*math.sin(phase+i*.8))
+        x=1280+i*39
+        draw.rounded_rectangle((x,base_y-height,x+20,base_y),radius=5,fill=(255,211,77,80+(i%3)*18))
+
+def draw_ambient_scene(scene_index: int, local_t: float, global_t: float):
+    """Background-only scene; the shared website UI supplies all text and controls."""
+    frame = BASE.copy()
+    draw_ambient_stars(frame, global_t)
+    phase = local_t / 6.0
+    if scene_index == 0:
+        draw_lion(frame, local_t, center=(1500, 495), size=420)
+    elif scene_index == 1:
+        draw_abstract_shield(frame, local_t)
+    elif scene_index == 2:
+        draw_abstract_commands(frame, local_t)
+    elif scene_index == 3:
+        draw_abstract_community(frame, local_t)
+    elif scene_index == 4:
+        draw_abstract_dashboard(frame, local_t)
+    else:
+        draw_lion(frame, local_t, center=(1490, 475), size=390)
+        draw_abstract_community(frame, local_t)
+    draw = ImageDraw.Draw(frame, "RGBA")
+    x = int(WIDTH * (.32 + .22 * math.sin(phase*math.tau)))
+    draw.ellipse((x-150, HEIGHT+30, x+520, HEIGHT+690), fill=(161,104,14,7))
     return frame
+
+def draw_scene(scene_index, local_t, global_t):
+    # Keep all wording in HTML so the film never looks like a separate embed.
+    return draw_ambient_scene(scene_index, local_t, global_t)
+
+TAB_SCENES = {
+    "home": 0,
+    "commands": 2,
+    "security": 1,
+    "verification": 1,
+    "support": 3,
+    "announcements": 4,
+    "dashboard": 4,
+    "community": 3,
+}
+
+def build_tab_scenes():
+    """Build small, silent, dedicated cinematic loops for the site's main tabs."""
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    scene_dir = STATIC / "gargand-scenes"
+    scene_dir.mkdir(parents=True, exist_ok=True)
+    scene_fps = 15
+    scene_duration = 6.0
+    scene_frames = int(scene_fps * scene_duration)
+    temp_video = scene_dir / ".gargand-scene-temp.mp4"
+    try:
+        for name, scene_index in TAB_SCENES.items():
+            output = scene_dir / f"{name}.mp4"
+            writer = imageio_ffmpeg.write_frames(
+                str(temp_video), (WIDTH, HEIGHT), fps=scene_fps, codec="libx264",
+                pix_fmt_in="rgb24", pix_fmt_out="yuv420p", quality=None,
+                macro_block_size=1, ffmpeg_log_level="error",
+                output_params=["-crf","27","-preset","veryfast","-movflags","+faststart","-vf","scale=1280:720"],
+            )
+            writer.send(None)
+            try:
+                for i in range(scene_frames):
+                    t = i / scene_fps
+                    frame = draw_ambient_scene(scene_index, t, t)
+                    writer.send(frame.convert("RGB").tobytes())
+            finally:
+                writer.close()
+            os.replace(temp_video, output)
+            print(f"Created tab ambience {output} ({output.stat().st_size:,} bytes)", flush=True)
+    finally:
+        try:
+            temp_video.unlink()
+        except FileNotFoundError:
+            pass
 
 def make_audio(path: Path):
     rate = 44100
@@ -406,6 +545,7 @@ def build():
             except FileNotFoundError:
                 pass
     print(f"Created {OUT} ({OUT.stat().st_size:,} bytes, {WIDTH}x{HEIGHT}, {DURATION}s, audio={audio_available})")
+    build_tab_scenes()
 
 if __name__ == "__main__":
     build()
