@@ -1,23 +1,20 @@
-/* Continuous, auto-playing Gargand showcase with cross-faded chapters and no video selector UI. */
+/* One continuous background film shared by all Gargand pages. */
 (() => {
   "use strict";
-  const film = document.getElementById("ggCinematicFilm");
-  if (!film) return;
-  const video = film.querySelector("#ggFilmVideo");
-  const scenes = Array.from(film.querySelectorAll("[data-film-scene-panel]"));
-  const soundButton = film.querySelector("[data-film-sound]");
-  if (!video || !scenes.length) return;
 
+  const video = document.getElementById("ggFilmVideo");
+  if (!video) return;
+
+  const film = document.getElementById("ggCinematicFilm");
+  const scenes = film ? Array.from(film.querySelectorAll("[data-film-scene-panel]")) : [];
+  const soundButton = film ? film.querySelector("[data-film-sound]") : null;
   const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const crossfadeLead = 1.05;
   const fallbackDelay = 5700;
   let current = -1;
-  let videoReady = false;
-  let inView = false;
-  let suspended = false;
   let fallbackTimer = 0;
 
   function activateScene(index) {
+    if (!film || !scenes.length) return;
     index = (index + scenes.length) % scenes.length;
     if (index === current) return;
     current = index;
@@ -30,11 +27,25 @@
   }
 
   function syncSceneToFilm() {
-    if (!videoReady || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    if (!film || !scenes.length || !Number.isFinite(video.duration) || video.duration <= 0) return;
     const segmentLength = video.duration / scenes.length;
-    // Start the text dissolve alongside the film's background crossfade, not after the cut.
-    const time = (video.currentTime + Math.min(crossfadeLead, segmentLength * 0.18)) % video.duration;
+    const lead = Math.min(1.05, segmentLength * 0.18);
+    const time = (video.currentTime + lead) % video.duration;
     activateScene(Math.floor(time / segmentLength));
+  }
+
+  function clearFallback() {
+    if (fallbackTimer) window.clearTimeout(fallbackTimer);
+    fallbackTimer = 0;
+  }
+
+  function scheduleFallback() {
+    clearFallback();
+    if (!film || !scenes.length || reduceMotion || document.hidden) return;
+    fallbackTimer = window.setTimeout(() => {
+      activateScene(current < 0 ? 0 : current + 1);
+      scheduleFallback();
+    }, fallbackDelay);
   }
 
   function paintSoundButton() {
@@ -46,27 +57,11 @@
     soundButton.classList.toggle("is-on", soundOn);
   }
 
-  function clearFallback() {
-    if (fallbackTimer) window.clearTimeout(fallbackTimer);
-    fallbackTimer = 0;
-  }
-
-  function scheduleFallback() {
-    clearFallback();
-    if (reduceMotion || videoReady || !inView || suspended || document.hidden) return;
-    fallbackTimer = window.setTimeout(() => {
-      activateScene(current < 0 ? 0 : current + 1);
-      scheduleFallback();
-    }, fallbackDelay);
-  }
-
-  function startFilm() {
-    if (reduceMotion || !inView || suspended || document.hidden) return;
+  function startBackground() {
+    if (reduceMotion || document.hidden) return;
     const attempt = video.play();
     if (attempt && typeof attempt.catch === "function") {
       attempt.catch(() => {
-        videoReady = false;
-        film.classList.remove("has-video");
         scheduleFallback();
       });
     }
@@ -76,73 +71,40 @@
   video.defaultMuted = true;
   video.loop = true;
   video.playsInline = true;
-  film.dataset.filmState = "continuous";
+  if (film) film.dataset.filmState = "continuous";
   activateScene(0);
   paintSoundButton();
 
-  function onMetadataReady() {
-    if (!Number.isFinite(video.duration) || video.duration <= 0) return;
-    videoReady = true;
-    clearFallback();
-    syncSceneToFilm();
-    if (inView && !reduceMotion && !suspended) startFilm();
-  }
-  video.addEventListener("loadedmetadata", onMetadataReady);
-  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) onMetadataReady();
-  video.addEventListener("loadeddata", () => {
-    if (inView && !reduceMotion && !suspended) startFilm();
-  });
-  video.addEventListener("play", () => {
-    film.classList.add("has-video");
-    film.dataset.filmState = "continuous";
-    clearFallback();
-    syncSceneToFilm();
-  });
+  video.addEventListener("loadedmetadata", syncSceneToFilm);
+  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) syncSceneToFilm();
   video.addEventListener("timeupdate", syncSceneToFilm);
-  video.addEventListener("error", () => {
-    videoReady = false;
-    film.classList.remove("has-video");
-    scheduleFallback();
+  video.addEventListener("play", () => {
+    clearFallback();
+    document.documentElement.classList.add("gargand-background-video-playing");
+    if (film) film.dataset.filmState = "continuous";
+    syncSceneToFilm();
   });
+  video.addEventListener("error", scheduleFallback);
 
   if (soundButton) {
     soundButton.addEventListener("click", () => {
       video.muted = !video.muted;
       video.volume = 0.72;
       paintSoundButton();
-      if (!video.muted) startFilm();
+      startBackground();
     });
-  }
-
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.target !== film) return;
-        inView = entry.isIntersecting && entry.intersectionRatio >= 0.08;
-        if (inView) {
-          suspended = false;
-          if (!reduceMotion) startFilm();
-        } else {
-          suspended = true;
-          clearFallback();
-          if (!video.paused) video.pause();
-        }
-      });
-    }, { threshold: [0, 0.08, 0.2], rootMargin: "80px 0px 80px 0px" });
-    observer.observe(film);
-  } else {
-    inView = true;
-    if (!reduceMotion) startFilm();
   }
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      suspended = true;
       clearFallback();
       if (!video.paused) video.pause();
     } else {
-      suspended = false;
-      if (inView && !reduceMotion) startFilm();
+      startBackground();
+      if (video.paused) scheduleFallback();
     }
   });
+
+  window.addEventListener("pageshow", startBackground);
+  startBackground();
 })();
