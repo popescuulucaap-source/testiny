@@ -284,7 +284,7 @@
       const data = await readJson(await fetch(api("/music"), {credentials:"same-origin",headers:{"Accept":"application/json"}}));
       const music = data.music || {};
       musicStateNode.textContent = music.connected ? ("Connected · " + (music.channel_name || "voice channel")) : "Not connected";
-      if (music.last_error && musicResult && !musicResult.classList.contains("success")) {
+      if (music.last_error && musicResult) {
         say(musicResult, "Playback issue: " + music.last_error, true);
       }
       const current = music.current || null;
