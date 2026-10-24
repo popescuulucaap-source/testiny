@@ -396,10 +396,10 @@ def draw_abstract_dashboard(frame: Image.Image, t: float):
         x=1280+i*39
         draw.rounded_rectangle((x,base_y-height,x+20,base_y),radius=5,fill=(255,211,77,80+(i%3)*18))
 
-def draw_ambient_scene(scene_index: int, local_t: float, global_t: float):
+def draw_ambient_scene(scene_index: int, local_t: float, global_t: float, loop_duration: float = DURATION):
     """Background-only scene; the shared website UI supplies all text and controls."""
     frame = BASE.copy()
-    draw_ambient_stars(frame, global_t)
+    draw_ambient_stars(frame, global_t, loop_duration)
     phase = local_t / 6.0
     if scene_index == 0:
         draw_lion(frame, local_t, center=(1500, 495), size=420)
@@ -456,7 +456,7 @@ def build_tab_scenes():
             try:
                 for i in range(scene_frames):
                     t = i / scene_fps
-                    frame = draw_ambient_scene(scene_index, t, t)
+                    frame = draw_ambient_scene(scene_index, t, t, scene_duration)
                     writer.send(frame.convert("RGB").tobytes())
             finally:
                 writer.close()
