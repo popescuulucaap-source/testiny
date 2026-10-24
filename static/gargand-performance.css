@@ -49,11 +49,19 @@
   transform: none;
 }
 .gg-page-scene video {
-  opacity: .2 !important;
+  opacity: 0 !important;
 }
 .gg-page-scene video.is-visible {
   opacity: .28 !important;
   transform: scale(1.01);
+}
+/* Page transitions use composited opacity/translation only; full-page blur is expensive. */
+@keyframes gargand-page-out {
+  to { opacity: 0; transform: translate3d(0, -2px, 0); }
+}
+@keyframes gargand-page-in {
+  from { opacity: 0; transform: translate3d(0, 5px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 .gg-film-frame.has-video .gg-film-video {
   mix-blend-mode: normal !important;
