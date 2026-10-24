@@ -233,14 +233,42 @@
     } else date = new Date(value);
     return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
   };
+  const wait = ms => new Promise(resolve => window.setTimeout(resolve, ms));
   const postDashboardAction = async (action, extras, resultNode) => {
     const data = await readJson(await fetch(api("/action"), {
       method: "POST", credentials: "same-origin",
       headers: {"Content-Type":"application/json","Accept":"application/json"},
       body: JSON.stringify(Object.assign({action}, extras || {}))
     }));
-    say(resultNode, "Queued successfully. Gargand will process this on its next bridge check.", false);
-    return data;
+    if (!data.job_id || !(String(action).startsWith("music_") || String(action).startsWith("notification_"))) {
+      say(resultNode, data.queued ? "Action queued. Gargand will process it on its next bridge check." : "Action accepted.", false);
+      return data;
+    }
+    say(resultNode, "Queued · waiting for Gargand to confirm the action…", false);
+    for (let attempt = 0; attempt < 18; attempt++) {
+      await wait(1000);
+      let result;
+      try {
+        result = await readJson(await fetch(api("/jobs/" + encodeURIComponent(data.job_id)), {
+          credentials: "same-origin", headers: {"Accept":"application/json"}
+        }));
+      } catch (error) {
+        if (attempt >= 2) throw error;
+        continue;
+      }
+      if (result.status === "success") {
+        const message = (result.job && result.job.message) || "Gargand completed the action.";
+        say(resultNode, "✓ " + message, false);
+        return Object.assign({}, data, {result});
+      }
+      if (result.status === "failed") {
+        const message = (result.job && result.job.message) || "Gargand could not complete the action.";
+        say(resultNode, "⚠ " + message, true);
+        throw new Error(message);
+      }
+    }
+    say(resultNode, "Still queued, but Gargand has not confirmed the result yet. Check that the bot is online and connected to this server.", true);
+    throw new Error("The bot did not confirm the action in time. Check that Gargand is online, then refresh the status.");
   };
 
   const musicStateNode = document.getElementById("musicConnectionState");
@@ -256,6 +284,9 @@
       const data = await readJson(await fetch(api("/music"), {credentials:"same-origin",headers:{"Accept":"application/json"}}));
       const music = data.music || {};
       musicStateNode.textContent = music.connected ? ("Connected · " + (music.channel_name || "voice channel")) : "Not connected";
+      if (music.last_error && musicResult && !musicResult.classList.contains("success")) {
+        say(musicResult, "Playback issue: " + music.last_error, true);
+      }
       const current = music.current || null;
       musicTitleNode.textContent = current ? ((music.paused ? "Paused · " : music.playing ? "Playing · " : "Queued · ") + current.title) : "Nothing playing";
       musicCountNode.textContent = (Number(music.queue_count) || 0) + " queued";
