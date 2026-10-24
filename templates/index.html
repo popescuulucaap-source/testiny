@@ -45,11 +45,11 @@
     <div><span class="gg-kicker">THE GARGAND EXPERIENCE · CINEMATIC TOUR</span><h2 id="gg-film-heading">Not just a bot.<br><span>Your command centre.</span></h2></div>
     <p>A continuous look at the tools behind Gargand—from layered server protection to member support and the web dashboard. The scenes flow together as one living part of the website.</p>
   </div>
-  <div class="gg-film-frame" id="ggCinematicFilm" data-film-state="paused" data-film-scene="0" tabindex="0" role="region" aria-label="Gargand cinematic product film. Use the chapter buttons or arrow keys to navigate.">
+  <div class="gg-film-frame" id="ggCinematicFilm" data-film-state="paused" data-film-scene="0" tabindex="0" role="region" aria-label="Gargand cinematic product showcase with automatically transitioning scenes.">
     <div class="gg-film-atmosphere" aria-hidden="true"></div><div class="gg-film-stars" aria-hidden="true"></div><div class="gg-film-light-leak" aria-hidden="true"></div><div class="gg-film-grid" aria-hidden="true"></div>
-    <video class="gg-film-video" id="ggFilmVideo" preload="metadata" muted loop playsinline disablepictureinpicture poster="{{ url_for('static', filename='gargand-mark.svg') }}?v=20261024-worldtabs3" aria-label="Gargand cinematic website presentation">
-      <source src="{{ url_for('static', filename='gargand-trailer.mp4') }}?v=20261024-worldtabs3" type="video/mp4">
-      Your browser cannot play this video. Use the chapter buttons below to explore the Gargand tour.
+    <video class="gg-film-video" id="ggFilmVideo" preload="metadata" muted loop playsinline disablepictureinpicture poster="{{ url_for('static', filename='gargand-mark.svg') }}?v=20261024-smooth5" aria-label="Gargand cinematic website presentation">
+      <source src="{{ url_for('static', filename='gargand-trailer.mp4') }}?v=20261024-smooth5" type="video/mp4">
+      Your browser cannot play the background film. The cinematic presentation will continue with animated website visuals.
     </video>
     <div class="gg-film-topline"><span><strong>GARGAND</strong> ORIGINALS</span><span class="gg-film-live">A LIVING SHOWCASE</span><button class="gg-film-sound-toggle" type="button" data-film-sound aria-pressed="false" aria-label="Enable cinematic soundtrack">♫ SOUND OFF</button></div>
 
@@ -83,15 +83,7 @@
       <div class="gg-film-visual"><div class="gg-film-final-mark"><img src="{{ url_for('gargand_lion_asset') }}?v=film20261024" alt="" loading="lazy"></div></div>
     </article>
 
-    <div class="gg-film-launch"><button type="button" data-film-play><span class="gg-film-play-symbol" aria-hidden="true">▶</span>PLAY THE SHOWCASE</button></div>
-  </div>
-  <div class="gg-film-controls">
-    <div class="gg-film-control-group"><button class="gg-film-control" type="button" data-film-previous aria-label="Previous chapter">← <span>Back</span></button><button class="gg-film-control" type="button" data-film-pause aria-label="Play cinematic tour">Play</button><button class="gg-film-control" type="button" data-film-next aria-label="Next chapter"><span>Next</span> →</button></div>
-    <div class="gg-film-timeline" aria-label="Choose a film chapter">{% for chapter in ["The guardian","Security","Moderation","Community","Dashboard","Your next chapter"] %}<button type="button" data-film-segment="{{ loop.index0 }}" aria-label="Go to chapter {{ loop.index }}"><span></span></button>{% endfor %}</div>
-    <div class="gg-film-status"><span data-film-position aria-live="polite">CHAPTER 01 / 06</span><span data-film-status aria-live="polite">READY TO PLAY</span></div>
-  </div>
-  <div class="gg-film-chapter-list" aria-label="Cinematic tour chapters">{% for chapter in ["The guardian","Security","Moderation","Community","Dashboard","Your next chapter"] %}<button class="gg-film-chapter{% if loop.first %} is-active{% endif %}" type="button" data-film-chapter="{{ loop.index0 }}"><b>0{{ loop.index }}</b>{{ chapter }}</button>{% endfor %}</div>
-  <p class="gg-film-caption">Six chapters, one guided presentation. Use the chapter buttons or arrow keys while the player is focused to navigate. *Security behavior depends on enabled settings and permissions.</p>
+    </div>
 </section>
 <section class="gg-section" id="features">
   <div class="gg-section-head"><div><span class="gg-kicker">BUILT FOR COMMUNITIES</span><h2>One bot. A whole command centre.</h2></div><p>Keep the tools your moderators need close at hand, with a warm gold glow and a dashboard built around clear controls.</p></div>
