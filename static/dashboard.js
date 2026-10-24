@@ -431,7 +431,7 @@
             } catch(error) { say(notificationMessage,error.message || "Could not remove anime alert.",true); remove.disabled=false; }
           });
           const next = item.next_episode ? (" · Next episode "+item.next_episode) : "";
-          appendLiveRow(rssList && rssList === animeList ? animeList : animeList,item.title+" · AniList "+item.anilist_id,"Channel "+item.channel_id+next,remove);
+          appendLiveRow(animeList,item.title+" · AniList "+item.anilist_id,"Channel "+item.channel_id+next,remove);
         });
         if (!(notifications.anime || []).length) setListMessage(animeList,"No anime alerts are configured.");
       }
