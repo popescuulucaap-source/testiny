@@ -525,6 +525,11 @@ def bot_heartbeat():
                 # resource endpoint depends on these fields to populate selectors.
                 "channels": guild.get("channels") if isinstance(guild.get("channels"), list) else [],
                 "roles": guild.get("roles") if isinstance(guild.get("roles"), list) else [],
+                "music": guild.get("music") if isinstance(guild.get("music"), dict) else {},
+                "community": guild.get("community") if isinstance(guild.get("community"), dict) else {},
+                "notifications": guild.get("notifications") if isinstance(guild.get("notifications"), dict) else {},
+                "audit": guild.get("audit") if isinstance(guild.get("audit"), list) else [],
+                "command_catalog": guild.get("command_catalog") if isinstance(guild.get("command_catalog"), list) else [],
             }
     last_seen = time.time()
     guild_snapshot = list(normalized.values())
@@ -956,9 +961,61 @@ def delete_developer(discord_id):
         conn.commit()
 
 def all_commands():
-    # Keep the public library limited to commands implemented in main.py.
-    # Admin dashboard notes are not executable bot commands.
-    return list(COMMANDS)
+    """Prefer the bot's live registry; fall back to the checked-in public catalog while it is offline."""
+    raw_commands = None
+    for guild_snapshot in bot_guild_snapshot():
+        candidate = guild_snapshot.get("command_catalog")
+        if isinstance(candidate, list) and candidate:
+            raw_commands = candidate
+            break
+    if raw_commands is None:
+        raw_commands = COMMANDS
+
+    rows = []
+    seen = set()
+    for item in raw_commands:
+        if isinstance(item, dict):
+            command = str(item.get("command") or "").strip()
+            category = str(item.get("category") or "Utility").strip() or "Utility"
+            description = str(item.get("description") or "").strip()[:500]
+            aliases = item.get("aliases") if isinstance(item.get("aliases"), list) else []
+            permission = str(item.get("permission") or "Server members")[:100]
+            mode = str(item.get("mode") or ("slash" if command.startswith("/") else "prefix")).lower()
+            usage = str(item.get("usage") or command).strip()
+            example = str(item.get("example") or usage).strip()
+            name = str(item.get("name") or command).strip()
+        else:
+            try:
+                command, category, description = item[:3]
+            except (TypeError, ValueError):
+                continue
+            command = str(command).strip()
+            category = str(category or "Utility").strip()
+            description = str(description or "").strip()[:500]
+            aliases = []
+            permission = "Server members"
+            mode = "slash" if command.startswith("/") else ("custom" if not command.startswith("!") else "prefix")
+            usage = command
+            example = command
+            name = command
+        if not command:
+            continue
+        unique_key = (command.casefold(), mode)
+        if unique_key in seen:
+            continue
+        seen.add(unique_key)
+        rows.append({
+            "command": command,
+            "name": name,
+            "category": category,
+            "description": description,
+            "aliases": [str(alias)[:80] for alias in aliases[:20] if str(alias).strip()],
+            "permission": permission,
+            "mode": mode,
+            "usage": usage,
+            "example": example,
+        })
+    return rows
 
 init_db()
 sync_repository_updates(force=True)
@@ -974,7 +1031,7 @@ def index():
         ("🎁","Giveaways","Prize embeds, timers, winners, rerolls and early endings."),
         ("🎨","AI studio","Ask questions, create stories, jokes, poems, riddles, captions, names and quizzes with Gargand AI."),
     ]
-    return render_template("index.html", features=features, command_count=len(COMMANDS), developers=load_developers())
+    return render_template("index.html", features=features, command_count=len(all_commands()), developers=load_developers())
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
@@ -1656,7 +1713,21 @@ def bot_status():
 @app.get("/commands")
 def commands():
     listed = all_commands()
-    listed.extend((item["command"], item["category"], item["description"]) for item in load_custom_commands())
+    for item in load_custom_commands():
+        command = str(item.get("command") or "").strip()
+        if not command:
+            continue
+        listed.append({
+            "command": command,
+            "name": command,
+            "category": str(item.get("category") or "Custom").strip()[:80],
+            "description": str(item.get("description") or "").strip()[:500],
+            "aliases": [],
+            "permission": "Custom website entry",
+            "mode": "custom",
+            "usage": command,
+            "example": command,
+        })
     return render_template("commands.html", commands=listed)
 
 
