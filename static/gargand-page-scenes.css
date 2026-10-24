@@ -57,3 +57,79 @@
 /* Let the homepage's cinematic backdrop run edge-to-edge, while its copy stays in the normal page flow. */
 .gg-film-section{width:100vw!important;max-width:none!important;margin-left:calc(50% - 50vw)!important;margin-right:calc(50% - 50vw)!important}
 .gg-film-frame{width:100%!important}
+
+
+/* Smooth, shared motion across page changes, scene changes and dashboard background swaps. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) {
+  animation: gargand-page-out .28s cubic-bezier(.4, 0, 1, 1) both;
+}
+::view-transition-new(root) {
+  animation: gargand-page-in .58s cubic-bezier(.18, .72, .22, 1) both;
+}
+@keyframes gargand-page-out {
+  to { opacity: 0; transform: scale(.995); filter: blur(2px); }
+}
+@keyframes gargand-page-in {
+  from { opacity: 0; transform: translate3d(0, 9px, 0) scale(1.006); filter: blur(3px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+
+/* Let the story copy dissolve in sync with the background film's own crossfades. */
+.gg-film-frame.has-video .gg-film-scene {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translate3d(0, 18px, 0) scale(.99) !important;
+  filter: blur(9px) !important;
+  transition: opacity 1.25s cubic-bezier(.2, .72, .22, 1),
+              transform 1.4s cubic-bezier(.2, .72, .22, 1),
+              filter 1.1s ease,
+              visibility 0s linear 1.25s;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+.gg-film-frame.has-video .gg-film-scene:not(.is-active) {
+  visibility: hidden !important;
+}
+.gg-film-frame.has-video .gg-film-scene.is-active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translate3d(0, 0, 0) scale(1) !important;
+  filter: blur(0) !important;
+  transition: opacity 1.25s cubic-bezier(.2, .72, .22, 1),
+              transform 1.4s cubic-bezier(.2, .72, .22, 1),
+              filter 1.1s ease,
+              visibility 0s;
+  pointer-events: auto !important;
+  z-index: 4 !important;
+}
+
+/* Fade page ambience in only after a video has decoded; swap scenes instead of flashing. */
+.gg-page-scene .gg-page-scene-video {
+  opacity: 0 !important;
+  animation: none !important;
+  transition: opacity 1.35s cubic-bezier(.2, .72, .22, 1),
+              transform 4.5s cubic-bezier(.2, .72, .22, 1) !important;
+  transform: scale(1.065);
+}
+.gg-page-scene .gg-page-scene-video.is-visible {
+  opacity: .36 !important;
+  transform: scale(1.025);
+}
+.gg-page-scene .gg-page-scene-video.is-visible.is-muted-scene {
+  opacity: .24 !important;
+}
+@media (max-width: 760px) {
+  .gg-page-scene .gg-page-scene-video.is-visible { opacity: .24 !important; }
+  .gg-film-frame.has-video .gg-film-scene {
+    transition-duration: 1.05s, 1.2s, 1s, 0s;
+  }
+  ::view-transition-old(root) { animation-duration: .22s; }
+  ::view-transition-new(root) { animation-duration: .46s; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+  .gg-film-frame.has-video .gg-film-scene,
+  .gg-page-scene .gg-page-scene-video { transition: none !important; filter: none !important; }
+}
