@@ -2176,6 +2176,116 @@ def dashboard_resources(guild_id):
         return jsonify({"ok": False, "error": "Could not load Discord channels and roles. Try refreshing after the bot checks in."}), 503
 
 
+@app.get("/api/dashboard/<guild_id>/music")
+@login_required
+def dashboard_music_state(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    guild = next((item for item in bot_guild_snapshot() if str(item.get("id")) == str(guild_id)), None)
+    if not bot_online() or not guild:
+        return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
+    return jsonify({"ok": True, "music": guild.get("music", {}) if isinstance(guild.get("music"), dict) else {}})
+
+
+@app.get("/api/dashboard/<guild_id>/community")
+@login_required
+def dashboard_community_state(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    guild = next((item for item in bot_guild_snapshot() if str(item.get("id")) == str(guild_id)), None)
+    if not bot_online() or not guild:
+        return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
+    return jsonify({
+        "ok": True,
+        "community": guild.get("community", {}) if isinstance(guild.get("community"), dict) else {},
+        "settings": guild.get("settings", {}) if isinstance(guild.get("settings"), dict) else {},
+    })
+
+
+@app.get("/api/dashboard/<guild_id>/notifications")
+@login_required
+def dashboard_notification_state(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    guild = next((item for item in bot_guild_snapshot() if str(item.get("id")) == str(guild_id)), None)
+    if not bot_online() or not guild:
+        return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
+    return jsonify({
+        "ok": True,
+        "notifications": guild.get("notifications", {}) if isinstance(guild.get("notifications"), dict) else {},
+    })
+
+
+@app.get("/api/dashboard/<guild_id>/security")
+@login_required
+def dashboard_security_state(guild_id):
+    if not user_can_manage_guild(guild_id):
+        return jsonify({"ok": False, "error": "You do not have permission to manage this server."}), 403
+    guild = next((item for item in bot_guild_snapshot() if str(item.get("id")) == str(guild_id)), None)
+    if not bot_online() or not guild:
+        return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
+
+    events = []
+    history_message = ""
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn:
+                rows = conn.execute(
+                    "SELECT event_type, user_id, username, command_name, metadata, created_at "
+                    "FROM bot_telemetry WHERE guild_id=%s AND event_type IN "
+                    "('staff_action','moderation_case','security_incident','dashboard_action','settings_updated','command_used') "
+                    "ORDER BY created_at DESC LIMIT 40",
+                    (str(guild_id),),
+                ).fetchall()
+            for row in rows:
+                metadata = row[4] if isinstance(row[4], dict) else {}
+                if not metadata and row[4]:
+                    try:
+                        parsed = json.loads(row[4]) if isinstance(row[4], str) else {}
+                        metadata = parsed if isinstance(parsed, dict) else {}
+                    except (TypeError, ValueError):
+                        metadata = {}
+                # Do not expose message contents, ticket answers, or arbitrary payloads in the activity view.
+                safe_metadata = {
+                    str(key)[:60]: value
+                    for key, value in metadata.items()
+                    if str(key) in {"action", "result", "case_id", "reason", "channel_id", "setting_keys", "error_type", "source"}
+                    and isinstance(value, (str, int, float, bool, list, type(None)))
+                }
+                created = row[5].isoformat() if hasattr(row[5], "isoformat") else str(row[5] or "")
+                events.append({
+                    "type": str(row[0])[:50],
+                    "user_id": str(row[1] or ""),
+                    "username": str(row[2] or "Gargand")[:100],
+                    "command": str(row[3] or "")[:120],
+                    "metadata": safe_metadata,
+                    "created_at": created,
+                })
+        except psycopg.Error as exc:
+            app.logger.warning("Could not read security timeline: %s", type(exc).__name__)
+            history_message = "Security history is temporarily unavailable; the live permission snapshot is still shown."
+    else:
+        history_message = "Persistent security timeline requires the shared DATABASE_URL connection."
+        for item in (guild.get("audit") or [])[:12]:
+            if not isinstance(item, dict):
+                continue
+            events.append({
+                "type": "staff_action",
+                "user_id": str(item.get("actor_id") or ""),
+                "username": str(item.get("actor_id") or "Staff"),
+                "command": str(item.get("command") or "")[:120],
+                "metadata": {"channel_id": str(item.get("channel_id") or "")},
+                "created_at": str(item.get("created_at") or ""),
+            })
+    return jsonify({
+        "ok": True,
+        "health": guild.get("health", {}) if isinstance(guild.get("health"), dict) else {},
+        "settings": guild.get("settings", {}) if isinstance(guild.get("settings"), dict) else {},
+        "events": events,
+        "history_message": history_message,
+    })
+
+
 @app.post("/api/dashboard/<guild_id>/settings")
 @login_required
 def update_settings(guild_id):
@@ -2322,13 +2432,67 @@ def dashboard_action(guild_id):
     if not bot_online() or not any(item["id"] == str(guild_id) for item in bot_guild_snapshot()):
         return jsonify({"ok": False, "error": "Gargand is offline or is not connected to this server."}), 503
     payload = request.get_json(silent=True) or {}
-    allowed_actions = {"sync_setup", "post_ticket_panel", "post_verification_panel", "post_feedback_panel", "post_application_panel", "toggle_jail", "raid_lockdown", "raid_release"}
-    if payload.get("action") not in allowed_actions:
+    allowed_actions = {
+        "sync_setup", "post_ticket_panel", "post_verification_panel", "post_feedback_panel",
+        "post_application_panel", "toggle_jail", "raid_lockdown", "raid_release",
+        "music_join", "music_play", "music_skip", "music_pause", "music_resume",
+        "music_stop", "music_leave", "music_volume", "notification_rss_add",
+        "notification_rss_remove", "notification_anime_add", "notification_anime_remove",
+    }
+    action_name = str(payload.get("action") or "")
+    if action_name not in allowed_actions:
         return jsonify({"ok": False, "error": "Unknown action."}), 400
-    if payload.get("action") in {"raid_lockdown", "raid_release"} and not user_is_guild_admin(guild_id):
-        return jsonify({"ok": False, "error": "Administrator permission is required for raid lockdown controls."}), 403
+    if action_name in {"raid_lockdown", "raid_release", "notification_rss_add", "notification_rss_remove", "notification_anime_add", "notification_anime_remove"} and not user_is_guild_admin(guild_id):
+        return jsonify({"ok": False, "error": "Discord administrator permission is required for this action."}), 403
     guild_snapshot = next((item for item in bot_guild_snapshot() if item["id"] == str(guild_id)), {})
     settings = guild_snapshot.get("settings", {})
+
+    channels = guild_snapshot.get("channels", []) if isinstance(guild_snapshot.get("channels"), list) else []
+    def valid_channel(channel_id, types):
+        raw = str(channel_id or "").strip()
+        return any(isinstance(channel, dict) and str(channel.get("id")) == raw and int(channel.get("type", -1)) in types for channel in channels)
+
+    if action_name in {"music_join", "music_play"} and payload.get("channel_id"):
+        if not valid_channel(payload.get("channel_id"), {2}):
+            return jsonify({"ok": False, "error": "Choose a voice channel belonging to this server."}), 400
+    if action_name == "music_join" and not payload.get("channel_id"):
+        return jsonify({"ok": False, "error": "Choose a voice channel first."}), 400
+    if action_name == "music_play":
+        query = str(payload.get("query") or "").strip()
+        if not query or len(query) > 300:
+            return jsonify({"ok": False, "error": "Enter a song title or URL (300 characters maximum)."}), 400
+        if not payload.get("channel_id") and not (guild_snapshot.get("music") or {}).get("connected"):
+            return jsonify({"ok": False, "error": "Choose a voice channel before starting music from the website."}), 400
+    if action_name == "music_volume":
+        try:
+            volume = int(payload.get("volume"))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Volume must be between 5 and 150."}), 400
+        if not 5 <= volume <= 150:
+            return jsonify({"ok": False, "error": "Volume must be between 5 and 150."}), 400
+    if action_name in {"notification_rss_add", "notification_anime_add"}:
+        if not valid_channel(payload.get("channel_id"), {0, 5}):
+            return jsonify({"ok": False, "error": "Choose a text or announcement channel belonging to this server."}), 400
+    if action_name == "notification_rss_add":
+        feed_url = str(payload.get("feed_url") or "").strip()
+        parsed = urlparse(feed_url)
+        if len(feed_url) > 512 or parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            return jsonify({"ok": False, "error": "Enter a valid public HTTP or HTTPS RSS/Atom feed URL."}), 400
+    if action_name in {"notification_rss_remove", "notification_anime_remove"}:
+        value_key = "subscription_id" if action_name == "notification_rss_remove" else "anilist_id"
+        try:
+            resource_id = int(payload.get(value_key))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Enter a valid subscription or AniList ID."}), 400
+        if resource_id <= 0:
+            return jsonify({"ok": False, "error": "ID must be a positive number."}), 400
+    if action_name == "notification_anime_add":
+        try:
+            anime_id = int(payload.get("anilist_id"))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Enter a valid AniList ID."}), 400
+        if not 0 < anime_id < 2**31:
+            return jsonify({"ok": False, "error": "Enter a valid AniList ID."}), 400
     required = {
         "post_ticket_panel": ("ticket_panel_channel_id", "Set a ticket panel channel in Tickets & appeals first."),
         "post_verification_panel": ("verification_channel_id", "Set a verification channel in Security first."),
