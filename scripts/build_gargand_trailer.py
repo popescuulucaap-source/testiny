@@ -12,7 +12,7 @@ import wave
 from pathlib import Path
 
 import imageio_ffmpeg
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
@@ -24,7 +24,7 @@ FPS = 24
 SCENE_SECONDS = 6
 SCENES = 6
 DURATION = SCENE_SECONDS * SCENES
-CROSSFADE = 0.65
+CROSSFADE = 1.05
 
 FONT_CANDIDATES = {
     "bold": [
@@ -162,17 +162,31 @@ def draw_stars(frame: Image.Image, t):
 def draw_lion(frame: Image.Image, t, center=(1450, 525), size=430):
     draw = ImageDraw.Draw(frame, "RGBA")
     cx, cy = center
-    radius = int(size * (0.52 + 0.012 * math.sin(t * 1.25)))
-    for r, alpha in [(radius + 60, 32), (radius + 20, 35), (radius - 18, 38)]:
+    radius = int(size * (0.52 + 0.008 * math.sin(t * 0.8)))
+    for r, alpha in [(radius + 68, 22), (radius + 34, 29), (radius + 10, 38)]:
         draw.ellipse((cx-r, cy-r, cx+r, cy+r), outline=(255, 204, 65, alpha), width=2)
-    angle = t * 0.28
-    for i in range(9):
-        a = angle + i * math.tau / 9
-        ox = int(cx + math.cos(a) * (radius + 24))
-        oy = int(cy + math.sin(a) * (radius + 24))
-        draw.ellipse((ox-4, oy-4, ox+4, oy+4), fill=GOLD)
-    logo = LOGO.resize((size, size), Image.Resampling.LANCZOS)
+    angle = t * 0.19
+    for i in range(12):
+        a = angle + i * math.tau / 12
+        ox = int(cx + math.cos(a) * (radius + 25))
+        oy = int(cy + math.sin(a) * (radius + 25))
+        draw.ellipse((ox-3, oy-3, ox+3, oy+3), fill=GOLD)
+    # Clip the source artwork to a high-quality circular alpha mask so no square
+    # corners from its JPG background can appear in the finished film.
+    logo = LOGO.convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
+    mask_big = Image.new("L", (size * 4, size * 4), 0)
+    ImageDraw.Draw(mask_big).ellipse((2, 2, size * 4 - 3, size * 4 - 3), fill=255)
+    circle_mask = mask_big.resize((size, size), Image.Resampling.LANCZOS)
+    logo.putalpha(ImageChops.multiply(logo.getchannel("A"), circle_mask))
+    glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    glow_draw = ImageDraw.Draw(glow)
+    glow_draw.ellipse((size * .04, size * .04, size * .96, size * .96), fill=(255, 193, 37, 36))
+    glow = glow.filter(ImageFilter.GaussianBlur(max(8, size // 13)))
+    frame.alpha_composite(glow, (cx - size // 2, cy - size // 2))
     frame.alpha_composite(logo, (cx - size // 2, cy - size // 2))
+    draw = ImageDraw.Draw(frame, "RGBA")
+    edge = size // 2 - 2
+    draw.ellipse((cx-edge, cy-edge, cx+edge, cy+edge), outline=(255, 221, 118, 182), width=2)
 
 def draw_title(frame: Image.Image, scene_index, local_t):
     draw = ImageDraw.Draw(frame, "RGBA")
@@ -362,6 +376,7 @@ def build():
             if index < SCENES - 1 and local >= SCENE_SECONDS - CROSSFADE:
                 next_scene = draw_scene(index + 1, local - (SCENE_SECONDS - CROSSFADE), t)
                 amount = min(1.0, (local - (SCENE_SECONDS - CROSSFADE)) / CROSSFADE)
+                amount = amount * amount * (3.0 - 2.0 * amount)  # smoothstep cross-dissolve
                 frame = Image.blend(current, next_scene, amount)
             else:
                 frame = current
