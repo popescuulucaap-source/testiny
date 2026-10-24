@@ -65,6 +65,7 @@
     const attempt = video.play();
     if (attempt && typeof attempt.catch === "function") {
       attempt.catch(() => {
+        videoReady = false;
         film.classList.remove("has-video");
         scheduleFallback();
       });
@@ -79,13 +80,15 @@
   activateScene(0);
   paintSoundButton();
 
-  video.addEventListener("loadedmetadata", () => {
+  function onMetadataReady() {
     if (!Number.isFinite(video.duration) || video.duration <= 0) return;
     videoReady = true;
     clearFallback();
     syncSceneToFilm();
     if (inView && !reduceMotion && !suspended) startFilm();
-  });
+  }
+  video.addEventListener("loadedmetadata", onMetadataReady);
+  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) onMetadataReady();
   video.addEventListener("loadeddata", () => {
     if (inView && !reduceMotion && !suspended) startFilm();
   });
