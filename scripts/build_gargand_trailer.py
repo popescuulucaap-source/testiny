@@ -525,9 +525,16 @@ def build_tab_scenes():
             )
             writer.send(None)
             try:
+                fade_frames = max(1, int(scene_fps * CROSSFADE))
                 for i in range(scene_frames):
                     t = i / scene_fps
                     frame = draw_ambient_scene(scene_index, t, t, scene_duration)
+                    if i >= scene_frames - fade_frames:
+                        overlap_t = (i - (scene_frames - fade_frames)) / scene_fps
+                        loop_start = draw_ambient_scene(scene_index, overlap_t, overlap_t, scene_duration)
+                        amount = min(1.0, max(0.0, (i - (scene_frames - fade_frames)) / fade_frames))
+                        amount = amount * amount * (3.0 - 2.0 * amount)
+                        frame = Image.blend(frame, loop_start, amount)
                     writer.send(frame.convert("RGB").tobytes())
             finally:
                 writer.close()
@@ -583,10 +590,13 @@ def build():
             index = min(SCENES - 1, int(t // SCENE_SECONDS))
             local = t - index * SCENE_SECONDS
             current = draw_scene(index, local, t)
-            if index < SCENES - 1 and local >= SCENE_SECONDS - CROSSFADE:
-                next_scene = draw_scene(index + 1, local - (SCENE_SECONDS - CROSSFADE), t)
-                amount = min(1.0, (local - (SCENE_SECONDS - CROSSFADE)) / CROSSFADE)
-                amount = amount * amount * (3.0 - 2.0 * amount)  # smoothstep cross-dissolve
+            if local >= SCENE_SECONDS - CROSSFADE:
+                overlap_local = local - (SCENE_SECONDS - CROSSFADE)
+                next_index = (index + 1) % SCENES
+                next_global = overlap_local if index == SCENES - 1 else t
+                next_scene = draw_scene(next_index, overlap_local, next_global)
+                amount = min(1.0, max(0.0, overlap_local / CROSSFADE))
+                amount = amount * amount * (3.0 - 2.0 * amount)  # smoothstep cross-dissolve, including the loop seam
                 frame = Image.blend(current, next_scene, amount)
             else:
                 frame = current
