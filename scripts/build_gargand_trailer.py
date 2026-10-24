@@ -396,6 +396,69 @@ def draw_abstract_dashboard(frame: Image.Image, t: float):
         x=1280+i*39
         draw.rounded_rectangle((x,base_y-height,x+20,base_y),radius=5,fill=(255,211,77,80+(i%3)*18))
 
+def draw_abstract_verification(frame: Image.Image, t: float):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase = (t / 6.0) * math.tau
+    cx, cy = 1480, 475
+    for radius, alpha in [(270,24),(218,38),(163,52)]:
+        r = int(radius + 5*math.sin(phase))
+        draw.ellipse((cx-r,cy-r,cx+r,cy+r),outline=(255,211,77,alpha),width=2)
+    points=[(cx,cy-170),(cx+137,cy-112),(cx+116,cy+62),(cx,cy+169),(cx-116,cy+62),(cx-137,cy-112)]
+    draw.polygon(points,fill=(11,8,3,150),outline=(255,211,77,145))
+    draw.arc((cx-52,cy-72,cx+52,cy+34),180,360,fill=(255,227,145,190),width=7)
+    draw.rounded_rectangle((cx-72,cy-16,cx+72,cy+91),radius=20,fill=(255,211,77,40),outline=(255,227,145,180),width=3)
+    draw.ellipse((cx-11,cy+15,cx+11,cy+37),fill=(255,227,145,225))
+    draw.rounded_rectangle((cx-5,cy+32,cx+5,cy+61),radius=4,fill=(255,227,145,225))
+    for i in range(6):
+        a=phase*.2+i*math.tau/6
+        x=int(cx+math.cos(a)*290); y=int(cy+math.sin(a)*290)
+        draw.ellipse((x-4,y-4,x+4,y+4),fill=(255,226,146,150))
+
+def draw_abstract_announcements(frame: Image.Image, t: float):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase=(t/6.0)*math.tau
+    cx,cy=1490,465
+    pulse=(phase%(math.tau))/math.tau
+    for base_radius,alpha in [(110,42),(180,30),(255,20)]:
+        r=int(base_radius+10*math.sin(phase))
+        draw.ellipse((cx-r,cy-r,cx+r,cy+r),outline=(255,211,77,alpha),width=2)
+    draw.ellipse((cx-85,cy-85,cx+85,cy+85),fill=(255,211,77,12),outline=(255,219,124,115),width=2)
+    draw.polygon([(cx-22,cy-47),(cx+33,cy-47),(cx+58,cy-16),(cx+58,cy+25),(cx+29,cy+25),(cx+10,cy+58),(cx-1,cy+25),(cx-22,cy+25)],
+                 fill=(255,211,77,64),outline=(255,230,158,170))
+    for i in range(12):
+        a=phase*.13+i*math.tau/12
+        radius=250+16*math.sin(phase+i)
+        x=int(cx+math.cos(a)*radius);y=int(cy+math.sin(a)*radius)
+        draw.ellipse((x-3,y-3,x+3,y+3),fill=(255,224,137,150))
+    # Abstract release cards; no readable text is baked into the clip.
+    for i in range(3):
+        yy=660+i*55
+        xx=1180+i*38
+        draw.rounded_rectangle((xx,yy,xx+390,yy+42),radius=10,fill=(5,4,2,105),outline=(255,211,77,45),width=1)
+        draw.rounded_rectangle((xx+20,yy+14,xx+48,yy+28),radius=5,fill=(255,211,77,50))
+        draw.rounded_rectangle((xx+68,yy+13,xx+200+int(26*math.sin(phase+i)),yy+19),radius=3,fill=(255,230,172,62))
+        draw.rounded_rectangle((xx+68,yy+24,xx+300,yy+29),radius=3,fill=(255,230,172,27))
+
+def draw_abstract_support(frame: Image.Image, t: float):
+    draw = ImageDraw.Draw(frame, "RGBA")
+    phase=(t/6.0)*math.tau
+    # Three floating message panes with shared lighting and soft geometric movement.
+    panes=[(1110,285,1660,510),(1260,455,1800,715),(1035,590,1430,790)]
+    for i,(x0,y0,x1,y1) in enumerate(panes):
+        dy=int(7*math.sin(phase+i*1.4))
+        box=(x0,y0+dy,x1,y1+dy)
+        draw.rounded_rectangle(box,radius=22,fill=(6,5,3,118),outline=(255,211,77,58-i*9),width=2)
+        for row in range(3 if i!=1 else 4):
+            yy=y0+dy+38+row*38
+            width=150+int(34*math.sin(phase+row+i))
+            draw.rounded_rectangle((x0+24,yy,x0+24+width,yy+7),radius=4,fill=(255,228,160,55 if row==0 else 31))
+        draw.ellipse((x0+24,y0+dy+153,x0+43,y0+dy+172),fill=(255,211,77,68))
+    cx,cy=1000,390
+    for radius,alpha in [(80,25),(53,40),(25,75)]:
+        r=int(radius+3*math.sin(phase))
+        draw.ellipse((cx-r,cy-r,cx+r,cy+r),outline=(255,211,77,alpha),width=2)
+    draw.line((cx+90,cy+38,cx+190,cy+98,cx+295,cy+57),fill=(255,211,77,38),width=2)
+
 def draw_ambient_scene(scene_index: int, local_t: float, global_t: float, loop_duration: float = DURATION):
     """Background-only scene; the shared website UI supplies all text and controls."""
     frame = BASE.copy()
@@ -411,6 +474,12 @@ def draw_ambient_scene(scene_index: int, local_t: float, global_t: float, loop_d
         draw_abstract_community(frame, local_t)
     elif scene_index == 4:
         draw_abstract_dashboard(frame, local_t)
+    elif scene_index == 5:
+        draw_abstract_verification(frame, local_t)
+    elif scene_index == 6:
+        draw_abstract_announcements(frame, local_t)
+    elif scene_index == 7:
+        draw_abstract_support(frame, local_t)
     else:
         draw_lion(frame, local_t, center=(1490, 475), size=390)
         draw_abstract_community(frame, local_t)
@@ -421,15 +490,17 @@ def draw_ambient_scene(scene_index: int, local_t: float, global_t: float, loop_d
 
 def draw_scene(scene_index, local_t, global_t):
     # Keep all wording in HTML so the film never looks like a separate embed.
-    return draw_ambient_scene(scene_index, local_t, global_t)
+    # The sixth chapter returns to the circular lion for the finale.
+    page_scene = 0 if scene_index == SCENES - 1 else scene_index
+    return draw_ambient_scene(page_scene, local_t, global_t)
 
 TAB_SCENES = {
     "home": 0,
     "commands": 2,
     "security": 1,
-    "verification": 1,
-    "support": 3,
-    "announcements": 4,
+    "verification": 5,
+    "support": 7,
+    "announcements": 6,
     "dashboard": 4,
     "community": 3,
 }
