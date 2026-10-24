@@ -1,4 +1,4 @@
-/* Gargand lion roar interaction. The separate floating "Gargand score" button is removed. */
+/* Gargand lion roar interaction. Site soundtrack controls live in the shared layout. */
 document.addEventListener("DOMContentLoaded", () => {
   "use strict";
 
