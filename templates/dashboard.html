@@ -118,6 +118,10 @@
   <aside class="side-menu" aria-label="Dashboard sections">
     <button class="tab active" type="button" data-tab="overview">✦ Overview</button>
     <button class="tab" type="button" data-tab="setup">♛ Guided setup</button>
+    <button class="tab" type="button" data-tab="music">🎵 Music player</button>
+    <button class="tab" type="button" data-tab="community-center">🏅 Community</button>
+    <button class="tab" type="button" data-tab="security-center">🛡️ Security center</button>
+    <button class="tab" type="button" data-tab="notifications">📡 Notifications</button>
     {% for group_id, title, description, fields in setting_groups %}<button class="tab" type="button" data-tab="{{ group_id }}">{{ title }}</button>{% endfor %}
   </aside>
 
@@ -242,6 +246,111 @@
       </div>
     </div>
     {% endfor %}
+
+    <div id="music" class="tab-panel">
+      <div class="card settings-card">
+        <span class="eyebrow">GARGAND MUSIC</span>
+        <h2>Music control center</h2>
+        <p>Connect Gargand to a voice channel, add tracks, and control playback without leaving the website. Music state refreshes automatically while this dashboard is open.</p>
+        <div class="music-status-strip">
+          <div><small>VOICE CONNECTION</small><strong id="musicConnectionState">Checking…</strong></div>
+          <div><small>NOW PLAYING</small><strong id="musicCurrentTitle">Nothing playing</strong></div>
+          <div><small>UP NEXT</small><strong id="musicQueueCount">0 tracks</strong></div>
+        </div>
+        <div class="setting-fields">
+          <label class="setting-field"><span>Voice channel</span><select id="musicVoiceChannel" data-resource="voice-channel"><option value="">Loading voice channels…</option></select><small class="field-help">Choose the voice channel Gargand should join.</small></label>
+          <label class="setting-field"><span>Add a track</span><input id="musicQuery" type="text" maxlength="300" placeholder="Song title or supported URL"><small class="field-help">Tracks are queued in the server's current music session.</small></label>
+        </div>
+        <div class="dashboard-actions">
+          <button class="btn primary music-action" data-music-action="music_join" type="button">🔊 Join voice</button>
+          <button class="btn primary music-action" data-music-action="music_play" type="button">▶ Add & play</button>
+          <button class="btn ghost music-action" data-music-action="music_skip" type="button">⏭ Skip</button>
+          <button class="btn ghost music-action" data-music-action="music_pause" type="button">⏸ Pause</button>
+          <button class="btn ghost music-action" data-music-action="music_resume" type="button">▶ Resume</button>
+          <button class="btn ghost music-action" data-music-action="music_stop" type="button">⏹ Stop & clear</button>
+          <button class="btn ghost music-action" data-music-action="music_leave" type="button">↗ Leave voice</button>
+        </div>
+        <label class="setting-field volume-field"><span>Volume <strong id="musicVolumeValue">50%</strong></span><input type="range" id="musicVolume" min="5" max="150" step="5" value="50"><button class="btn ghost music-action" data-music-action="music_volume" type="button">Apply volume</button></label>
+        <p id="musicActionResult" class="notice" aria-live="polite">Music controls are ready.</p>
+      </div>
+      <div class="card settings-card">
+        <span class="eyebrow">PLAYBACK QUEUE</span><h2>What's playing</h2>
+        <div id="musicQueueList" class="dashboard-live-list"><p class="muted">Loading music state…</p></div>
+      </div>
+    </div>
+
+    <div id="community-center" class="tab-panel">
+      <div class="card settings-card setting-group" data-group="community-center">
+        <span class="eyebrow">COMMUNITY MANAGEMENT</span><h2>XP, levels and analytics</h2>
+        <p>Configure the XP system and activity analytics for this server. Changes are queued through the same bot settings bridge.</p>
+        <div class="setting-fields">
+          <label class="setting-field setting-toggle"><span>XP and levels</span><input type="checkbox" data-setting="xp_enabled" {% if settings.get('xp_enabled', false) %}checked{% endif %}><small class="field-help">Award XP and calculate levels for active members.</small></label>
+          <label class="setting-field setting-toggle"><span>Activity analytics</span><input type="checkbox" data-setting="analytics_enabled" {% if settings.get('analytics_enabled', false) %}checked{% endif %}><small class="field-help">Count supported bot activity for the server analytics view.</small></label>
+          <label class="setting-field"><span>XP per eligible message</span><input type="number" data-setting="xp_per_message" min="0" max="100" step="1" value="{{ settings.get('xp_per_message', 10) }}"><small class="field-help">Use 0 to disable XP rewards while keeping the XP system configured.</small></label>
+          <label class="setting-field"><span>XP cooldown (seconds)</span><input type="number" data-setting="xp_cooldown_seconds" min="5" max="3600" step="5" value="{{ settings.get('xp_cooldown_seconds', 30) }}"><small class="field-help">Prevents rapid message spam from farming XP.</small></label>
+        </div>
+        <div class="actions"><button class="btn primary save-settings" type="button">Save community settings</button></div>
+        <p class="notice save-result" aria-live="polite">Changes are ready to save.</p>
+      </div>
+      <div class="card settings-card">
+        <span class="eyebrow">LIVE COMMUNITY SNAPSHOT</span><h2>Community activity</h2>
+        <div id="communityMetrics" class="music-status-strip"><p class="muted">Loading community metrics…</p></div>
+        <div id="communityAnalytics" class="dashboard-live-list"></div>
+        <p id="communityStateMessage" class="notice" aria-live="polite"></p>
+      </div>
+      <div class="dashboard-highlights">
+        <article class="card"><span class="card-icon">🏅</span><h3>Achievements</h3><p>Track server-wide achievement unlocks from the new Gargand achievements system.</p></article>
+        <article class="card"><span class="card-icon">📜</span><h3>Daily quests</h3><p>Members can use <code>!quest</code> to check progress and earn bonus XP.</p></article>
+        <article class="card"><span class="card-icon">🤝</span><h3>Co-op parties</h3><p>Party membership and monthly points are included in the live snapshot.</p></article>
+      </div>
+    </div>
+
+    <div id="security-center" class="tab-panel">
+      <div class="card settings-card">
+        <span class="eyebrow">SECURITY OPERATIONS</span><h2>Security center</h2>
+        <p>Review the bot's latest permission snapshot, configured protections and the timeline of moderation, security and staff actions.</p>
+        <div id="securityPermissionChecks" class="security-check-grid"><p class="muted">Loading current bot permission checks…</p></div>
+        <div class="dashboard-actions">
+          <button class="btn danger bot-action" data-action="raid_lockdown" data-confirm="Start a 10-minute server-wide posting lockdown? Gargand will save and restore current @everyone permissions." type="button">🚨 Start raid lockdown</button>
+          <button class="btn ghost bot-action" data-action="raid_release" data-confirm="Restore the saved channel permissions and end the active raid lockdown?" type="button">🟢 Release lockdown</button>
+          <button class="btn ghost" id="refreshSecurityTimeline" type="button">↻ Refresh timeline</button>
+          <a class="btn ghost" href="/dashboard/{{ guild.id }}/moderation">Open moderation cases →</a>
+        </div>
+        <p id="securityStateMessage" class="notice" aria-live="polite"></p>
+      </div>
+      <div class="card settings-card">
+        <span class="eyebrow">RECENT ACTIVITY</span><h2>Security & staff timeline</h2>
+        <div id="securityTimeline" class="dashboard-live-list"><p class="muted">Loading recent events…</p></div>
+      </div>
+      <div class="card settings-card">
+        <span class="eyebrow">CONFIGURATION</span><h2>Protection settings</h2>
+        <p>Use the security settings tab for anti-raid, anti-nuke, trusted staff roles, anti-link and Auto-Mod thresholds.</p>
+        <a href="#" class="btn primary dashboard-jump" data-tab-jump="security">Open protection settings →</a>
+      </div>
+    </div>
+
+    <div id="notifications" class="tab-panel">
+      <div class="card settings-card">
+        <span class="eyebrow">NOTIFICATION MANAGER</span><h2>RSS feed subscriptions</h2>
+        <p>Choose the channel where updates should appear, then subscribe to a public RSS or Atom feed. New articles are polled automatically by Gargand.</p>
+        <div class="setting-fields">
+          <label class="setting-field"><span>Destination channel</span><select id="notificationChannel" data-resource="text-channel"><option value="">Loading text channels…</option></select></label>
+          <label class="setting-field"><span>RSS / Atom feed URL</span><input id="notificationFeedUrl" type="url" maxlength="512" placeholder="https://example.com/feed.xml"></label>
+        </div>
+        <div class="dashboard-actions"><button class="btn primary notification-action" data-notification-action="notification_rss_add" type="button">＋ Add RSS feed</button><button class="btn ghost" id="refreshNotifications" type="button">↻ Refresh subscriptions</button></div>
+        <div id="rssSubscriptionList" class="dashboard-live-list"><p class="muted">Loading RSS subscriptions…</p></div>
+      </div>
+      <div class="card settings-card">
+        <span class="eyebrow">ANIME EPISODE ALERTS</span><h2>Airing notifications</h2>
+        <p>Track an anime with its AniList ID and choose where Gargand posts episode notifications.</p>
+        <div class="setting-fields">
+          <label class="setting-field"><span>AniList anime ID</span><input id="animeListId" inputmode="numeric" type="number" min="1" max="2147483647" placeholder="21"></label>
+        </div>
+        <div class="dashboard-actions"><button class="btn primary notification-action" data-notification-action="notification_anime_add" type="button">＋ Track anime</button></div>
+        <div id="animeWatchList" class="dashboard-live-list"><p class="muted">Loading anime subscriptions…</p></div>
+        <p id="notificationActionResult" class="notice" aria-live="polite">RSS and anime changes require Discord administrator permission.</p>
+      </div>
+    </div>
   </section>
 </div>
 {% endif %}
