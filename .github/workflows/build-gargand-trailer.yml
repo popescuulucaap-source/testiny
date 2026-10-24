@@ -35,7 +35,31 @@ jobs:
           git add static/gargand-trailer.mp4 static/gargand-scenes/*.mp4
           if git diff --cached --quiet; then
             echo "Cinematic assets have not changed."
-          else
-            git commit -m "Build shared cinematic film and tab scene loops"
-            git push
+            exit 0
           fi
+          git commit -m "Build shared cinematic film and tab scene loops"
+          # The workflow can start from a commit that becomes stale while the clips render.
+          # Rebase generated files and retry instead of failing when a source update lands.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase origin/main; then
+              if git push origin HEAD:main; then
+                exit 0
+              fi
+              echo "Push raced with another commit; retrying ($attempt/5)."
+              git rebase --abort 2>/dev/null || true
+            else
+              echo "Rebase failed; checking if another run published the cinematic assets."
+              git rebase --abort 2>/dev/null || true
+              git fetch origin main
+              git reset --hard origin/main
+              if git cat-file -e HEAD:static/gargand-trailer.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/home.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/commands.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/security.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/verification.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/support.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/announcements.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/dashboard.mp4 2>/dev/null && git cat-file -e HEAD:static/gargand-scenes/community.mp4 2>/dev/null; then
+                echo "Another run has already published all cinematic assets."
+                exit 0
+              fi
+              echo "Assets are not all published yet; retrying ($attempt/5)."
+            fi
+            sleep 2
+          done
+          echo "Could not publish cinematic assets after five attempts."
+          exit 1
