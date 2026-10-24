@@ -266,7 +266,8 @@ TOGGLE_SETTINGS = {
     "anti_raid", "raid_auto_lockdown", "anti_nuke", "anti_nuke_auto_lockdown", "anti_nuke_auto_ban", "anti_link", "j4j", "j4j_dm", "jail_enabled",
     "automod_spam", "automod_flood", "automod_mentions", "automod_bad_words",
     "xp_enabled", "economy_enabled", "analytics_enabled", "ai_memory_enabled",
-    "giveaway_require_role"
+    "giveaway_require_role", "achievements_enabled", "daily_quests_enabled",
+    "seasonal_events_enabled", "party_system_enabled"
 }
 TEXT_SETTINGS = {"prefix", "autoreaction_emoji", "appeal_invite_url", "automod_punishment"}
 EDITABLE_SETTINGS = CHANNEL_SETTINGS | ROLE_SETTINGS | TOGGLE_SETTINGS | TEXT_SETTINGS | {
@@ -289,6 +290,10 @@ AUTOMOD_NUMERIC_RANGES = {
     "automod_max_messages": (3, 20),
     "automod_window_seconds": (3, 60),
     "automod_mention_limit": (2, 20),
+}
+COMMUNITY_NUMERIC_RANGES = {
+    "xp_per_message": (0, 100),
+    "xp_cooldown_seconds": (5, 3600),
 }
 SETTING_GROUPS = [
     ("general", "General", "Identity, prefix and logging", [("prefix", "Command prefix", "text"), ("logs_channel_id", "Logs channel", "channel"), ("staff_role_id", "Staff role", "role")]),
@@ -2352,6 +2357,11 @@ def update_settings(guild_id):
             clean[key] = role_ids
         elif key in AUTOMOD_NUMERIC_RANGES:
             minimum, maximum = AUTOMOD_NUMERIC_RANGES[key]
+            if type(value) is not int or not minimum <= value <= maximum:
+                return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be between {minimum} and {maximum}."}), 400
+            clean[key] = value
+        elif key in COMMUNITY_NUMERIC_RANGES:
+            minimum, maximum = COMMUNITY_NUMERIC_RANGES[key]
             if type(value) is not int or not minimum <= value <= maximum:
                 return jsonify({"ok": False, "error": f"{key.replace('_', ' ')} must be between {minimum} and {maximum}."}), 400
             clean[key] = value
