@@ -656,7 +656,7 @@ def make_site_music():
             [ffmpeg, "-y", "-i", str(TEMP_MUSIC_WAV),
              "-c:a", "libmp3lame", "-b:a", "96k", "-ar", str(MUSIC_RATE), "-ac", "2",
              "-metadata", "title=Gargand Ambient Soundtrack",
-             "-metadata", "artist=Gargand", "-write_xing", "0", str(MUSIC_OUT)],
+             "-metadata", "artist=Gargand", str(MUSIC_OUT)],
             check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
         )
     finally:
