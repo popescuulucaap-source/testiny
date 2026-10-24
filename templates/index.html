@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block title %}GARGAND — Golden security for your server{% endblock %}
 {% block content %}
+<div class="gg-cinematic-intro" id="ggCinematicIntro" role="dialog" aria-modal="true" aria-label="Gargand cinematic introduction">
+  <div class="gg-intro-orbit" aria-hidden="true"></div>
+  <div class="gg-intro-center">
+    <span class="gg-intro-pretitle">A new guardian rises</span>
+    <div class="gg-intro-mark"><img src="{{ url_for('gargand_lion_asset') }}?v=20261024-cinematic" alt="" width="196" height="196" fetchpriority="high"></div>
+    <h1 class="gg-intro-title">GARGAND</h1>
+    <p class="gg-intro-subtitle">Command the chaos. Protect your realm.</p>
+    <div class="gg-intro-rule" aria-hidden="true"></div>
+    <button class="gg-intro-enter" type="button" data-intro-dismiss>Enter the realm <span aria-hidden="true">↗</span></button>
+  </div>
+  <button class="gg-intro-skip" type="button" data-intro-dismiss>Skip intro ×</button>
+</div>
 <section class="gg-hero gg-hero-upgrade">
   <div class="gg-hero-copy">
     <span class="gg-kicker"><i aria-hidden="true"></i> MODERATION · SECURITY · COMMUNITY</span>
