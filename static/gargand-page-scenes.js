@@ -1,10 +1,14 @@
-/* Silent ambient backplates with cross-faded swaps for every Gargand tab. */
+/* Lazy, low-power-aware page ambience with optional crossfades inside dashboards. */
 (() => {
   "use strict";
   const reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const saveData = !!(connection && connection.saveData);
+  const cores = Number(navigator.hardwareConcurrency || 0);
+  const memory = Number(navigator.deviceMemory || 0);
+  const lowPower = (cores > 0 && cores <= 4) || (memory > 0 && memory <= 4);
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
-  const scenes = {
+  const sceneMap = {
     "/": "home", "/commands": "commands", "/security": "security", "/verification": "verification",
     "/support": "support", "/announcements": "announcements", "/servers": "dashboard", "/dashboard": "dashboard",
     "/admin": "dashboard", "/admin/panel": "dashboard", "/admin/audit": "dashboard", "/admin/community": "community", "/admin/support": "support",
@@ -13,11 +17,12 @@
     "/notifications": "announcements", "/suggestions": "community", "/suggestions/list": "community",
     "/guidelines": "security", "/terms": "verification", "/login": "home", "/premium": "dashboard", "/redeem": "dashboard", "/secrets": "security"
   };
-  let kind = scenes[path];
-  if (!kind && /^\/dashboard\/\d+(?:\/|$)/.test(path)) {
-    kind = /analytics/.test(path) ? "dashboard" : (/moderation/.test(path) ? "security" : "dashboard");
+  let initialKind = sceneMap[path];
+  if (!initialKind && /^\/dashboard\/\d+(?:\/|$)/.test(path)) {
+    initialKind = /analytics/.test(path) ? "dashboard" : (/moderation/.test(path) ? "security" : "dashboard");
   }
-  if (!kind || reduced || saveData) return;
+  // Static glow CSS remains the fallback; avoid decoding video on reduced-motion, data-saver and lower-powered devices.
+  if (!initialKind || reduced || saveData || lowPower) return;
 
   const targets = path === "/"
     ? [document.querySelector(".gg-hero")]
@@ -27,127 +32,139 @@
         document.querySelector("#main-content > .server-header"),
         document.querySelector("#main-content > .dashboard-head")
       ].filter(Boolean);
+  const controllers = [];
+  const videoSource = name => "/static/gargand-scenes/" + name + ".mp4?v=20261024-performance1";
 
-  const videoSource = value => "/static/gargand-scenes/" + value + ".mp4?v=20261024-smooth5";
+  function createVideo() {
+    const video = document.createElement("video");
+    video.className = "gg-page-scene-video";
+    video.muted = true;
+    video.defaultMuted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = "none";
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("aria-hidden", "true");
+    video.disablePictureInPicture = true;
+    video.addEventListener("loadeddata", () => video.classList.add("is-visible"), { once: true });
+    video.addEventListener("play", () => video.classList.add("is-visible"));
+    return video;
+  }
 
-  targets.filter(Boolean).forEach((target, slot) => {
+  function loadAndPlay(video, name) {
+    const source = videoSource(name);
+    if (video.dataset.sceneSource !== source) {
+      video.dataset.sceneSource = source;
+      video.removeAttribute("src");
+      video.src = source;
+      video.load();
+    }
+    const attempt = video.play();
+    if (attempt && typeof attempt.catch === "function") {
+      attempt.catch(() => video.closest(".gg-page-scene")?.classList.add("is-static"));
+    }
+  }
+
+  targets.filter(Boolean).forEach(target => {
     if (target.querySelector(":scope > .gg-page-scene")) return;
     target.classList.add("gg-has-page-scene");
     const wrapper = document.createElement("div");
     wrapper.className = "gg-page-scene";
     wrapper.setAttribute("aria-hidden", "true");
-    wrapper.dataset.sceneKind = kind;
-
-    const video = document.createElement("video");
-    video.className = "gg-page-scene-video";
-    video.muted = true;
-    video.defaultMuted = true;
-    video.autoplay = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.preload = slot === 0 ? "metadata" : "none";
-    video.setAttribute("muted", "");
-    video.setAttribute("playsinline", "");
-    video.setAttribute("aria-hidden", "true");
-    video.disablePictureInPicture = true;
-    video.src = videoSource(kind);
-    video.dataset.sceneSource = videoSource(kind);
-    video.addEventListener("loadeddata", () => video.classList.add("is-visible"), { once: true });
-    video.addEventListener("play", () => video.classList.add("is-visible"));
+    wrapper.dataset.sceneKind = initialKind;
+    const video = createVideo();
     const grain = document.createElement("span");
     grain.className = "gg-page-scene-grain";
     wrapper.append(video, grain);
     target.prepend(wrapper);
 
-    const play = video.play();
-    if (play && typeof play.catch === "function") play.catch(() => wrapper.classList.add("is-static"));
-    const visibility = "IntersectionObserver" in window ? new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          if (video.paused) video.play().catch(() => {});
-        } else if (!video.paused) {
-          video.pause();
+    const controller = {
+      target, wrapper, front: video, back: null, kind: initialKind,
+      visible: false, request: 0,
+      start() {
+        this.visible = true;
+        loadAndPlay(this.front, this.kind);
+      },
+      stop() {
+        this.visible = false;
+        [this.front, this.back].filter(Boolean).forEach(item => {
+          if (!item.paused) item.pause();
+        });
+      },
+      crossFade(nextKind) {
+        if (!nextKind || nextKind === this.kind) return;
+        this.kind = nextKind;
+        wrapper.dataset.sceneKind = nextKind;
+        if (!this.visible) return;
+        if (!this.back) {
+          this.back = createVideo();
+          wrapper.insertBefore(this.back, grain);
         }
-      });
-    }, { threshold: 0.01, rootMargin: "100px 0px" }) : null;
-    if (visibility) visibility.observe(target);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) {
-        if (!video.paused) video.pause();
-      } else if (!reduced && !saveData && target.getBoundingClientRect().bottom > 0 && target.getBoundingClientRect().top < window.innerHeight) {
-        video.play().catch(() => {});
+        const incoming = this.back;
+        const request = ++this.request;
+        incoming.pause();
+        incoming.classList.remove("is-visible");
+        incoming.removeAttribute("src");
+        incoming.dataset.sceneSource = "";
+        const onReady = () => {
+          incoming.removeEventListener("loadeddata", onReady);
+          if (request !== this.request || !this.visible) return;
+          const attempt = incoming.play();
+          if (attempt && typeof attempt.catch === "function") attempt.catch(() => {});
+          incoming.classList.add("is-visible");
+          const outgoing = this.front;
+          outgoing.classList.remove("is-visible");
+          this.front = incoming;
+          this.back = outgoing;
+          window.setTimeout(() => {
+            if (outgoing !== this.front && !outgoing.classList.contains("is-visible")) outgoing.pause();
+          }, 1450);
+        };
+        incoming.addEventListener("loadeddata", onReady);
+        loadAndPlay(incoming, nextKind);
       }
-    });
+    };
+    controllers.push(controller);
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.target !== target) return;
+          if (entry.isIntersecting) controller.start();
+          else controller.stop();
+        });
+      }, { threshold: 0.01, rootMargin: "100px 0px" });
+      observer.observe(target);
+    } else {
+      controller.start();
+    }
   });
 
-  // Dashboard/header tabs get a second video layer so new ambience can load underneath the current one.
-  const scene = document.querySelector("#main-content .gg-page-scene") || document.querySelector(".gg-page-scene");
-  if (!scene) return;
-  const container = scene;
-  let front = scene.querySelector("video");
-  if (!front) return;
-  let back = document.createElement("video");
-  back.className = "gg-page-scene-video";
-  back.muted = true;
-  back.defaultMuted = true;
-  back.loop = true;
-  back.playsInline = true;
-  back.preload = "none";
-  back.setAttribute("muted", "");
-  back.setAttribute("playsinline", "");
-  back.setAttribute("aria-hidden", "true");
-  back.disablePictureInPicture = true;
-  container.insertBefore(back, container.querySelector(".gg-page-scene-grain"));
-
-  let selectedKind = container.dataset.sceneKind || kind;
-  let requestNumber = 0;
-  const sceneForLabel = label => {
-    const value = (label || "").toLowerCase();
-    if (/security|moderat|audit|incident/.test(value)) return "security";
-    if (/command|bot|setup|music/.test(value)) return "commands";
-    if (/support|ticket|community|member|social|profile/.test(value)) return "community";
-    if (/notification|announcement|release|activity/.test(value)) return "announcements";
-    if (/verif|lock|appeal|access/.test(value)) return "verification";
-    return "dashboard";
-  };
-
-  function crossFadeTo(nextKind) {
-    if (!nextKind || nextKind === selectedKind) return;
-    const source = videoSource(nextKind);
-    if (front.dataset.sceneSource === source) return;
-    const request = ++requestNumber;
-    back.pause();
-    back.classList.remove("is-visible");
-    back.removeAttribute("src");
-    back.load();
-    back.src = source;
-    back.dataset.sceneSource = source;
-
-    const showNewScene = () => {
-      back.removeEventListener("loadeddata", showNewScene);
-      if (request !== requestNumber) return;
-      back.play().catch(() => {});
-      back.classList.add("is-visible");
-      front.classList.remove("is-visible");
-      const oldFront = front;
-      front = back;
-      oldFront.dataset.sceneSource = oldFront.dataset.sceneSource || "";
-      // Reuse the faded-out layer on the next tab change, after its opacity transition completes.
-      back = oldFront;
-      selectedKind = nextKind;
-      container.dataset.sceneKind = nextKind;
-      window.setTimeout(() => {
-        if (!oldFront.classList.contains("is-visible")) oldFront.pause();
-      }, 1450);
+  const dashboardPath = /^\/(dashboard|servers|admin)(\/|$)/.test(path);
+  if (dashboardPath && controllers.length) {
+    const tabs = Array.from(document.querySelectorAll('#main-content [role="tab"], #main-content [data-tab], #main-content .dashboard-tab, #main-content .tab-button'));
+    const sceneForLabel = label => {
+      const value = (label || "").toLowerCase();
+      if (/security|moderat|audit|incident/.test(value)) return "security";
+      if (/command|bot|setup|music/.test(value)) return "commands";
+      if (/support|ticket|community|member|social|profile/.test(value)) return "community";
+      if (/notification|announcement|release|activity/.test(value)) return "announcements";
+      if (/verif|lock|appeal|access/.test(value)) return "verification";
+      return "dashboard";
     };
-    back.addEventListener("loadeddata", showNewScene);
-    back.addEventListener("error", () => {
-      back.removeEventListener("loadeddata", showNewScene);
-    }, { once: true });
-    back.load();
+    if (tabs.length) {
+      tabs.forEach(button => button.addEventListener("click", () => {
+        const controller = controllers[0];
+        controller.crossFade(sceneForLabel(button.textContent || button.getAttribute("aria-label")));
+      }));
+    }
   }
 
-  document.querySelectorAll('[role="tab"],[data-tab],.dashboard-tab,.tab-button').forEach(button => {
-    button.addEventListener("click", () => crossFadeTo(sceneForLabel(button.textContent || button.getAttribute("aria-label"))));
+  document.addEventListener("visibilitychange", () => {
+    controllers.forEach(controller => {
+      if (document.hidden) controller.stop();
+      else if (controller.target.getBoundingClientRect().bottom > 0 && controller.target.getBoundingClientRect().top < window.innerHeight) controller.start();
+    });
   });
 })();
