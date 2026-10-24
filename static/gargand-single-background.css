@@ -1,0 +1,129 @@
+/* One shared Gargand film background for every route. */
+html,
+body,
+body.gargand-site {
+  min-height: 100%;
+  background: #030201 !important;
+}
+
+body.gargand-site {
+  position: relative;
+  isolation: isolate;
+}
+
+body.gargand-site::before {
+  background: transparent !important;
+}
+
+.gg-site-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  background: #030201;
+  isolation: isolate;
+}
+
+.gg-site-backdrop-video {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover !important;
+  object-position: center 50% !important;
+  opacity: .76;
+  filter: brightness(.66) saturate(.82) contrast(1.07);
+  transform: scale(1.012);
+  background: #030201;
+  transition: opacity .45s ease;
+}
+
+.gg-site-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(3, 2, 1, .60) 0%, rgba(3, 2, 1, .34) 34%, rgba(3, 2, 1, .50) 66%, rgba(3, 2, 1, .78) 100%),
+    linear-gradient(90deg, rgba(3, 2, 1, .30), transparent 48%, rgba(3, 2, 1, .24));
+}
+
+.gargand-ambient {
+  display: none !important;
+}
+
+/* Inner pages use the same backdrop rather than loading route-specific video clips. */
+.gg-page-scene {
+  display: none !important;
+}
+
+/* The homepage showcase is foreground content, not a second video window/background. */
+.gg-film-frame {
+  background: transparent !important;
+}
+
+.gg-film-atmosphere,
+.gg-film-stars,
+.gg-film-light-leak,
+.gg-film-grid {
+  display: none !important;
+}
+
+.gg-film-frame::before {
+  background: linear-gradient(90deg, rgba(3, 2, 1, .34), rgba(3, 2, 1, .08) 60%, rgba(3, 2, 1, .22)) !important;
+}
+
+.gg-film-frame::after {
+  opacity: .035 !important;
+}
+
+.gg-cinematic-intro {
+  background: rgba(5, 4, 2, .48) !important;
+  backdrop-filter: none !important;
+}
+
+.gg-cinematic-intro::before {
+  opacity: .72;
+}
+
+.gg-cinematic-intro::after {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(228, 196, 118, .035) 4px, transparent 5px),
+    radial-gradient(circle at 50% 50%, transparent 30%, rgba(0, 0, 0, .48) 100%) !important;
+}
+
+/* Keep content glassy enough to show the same film beneath it, without sacrificing contrast. */
+.gg-header {
+  background: linear-gradient(115deg, rgba(7, 6, 4, .84), rgba(18, 13, 4, .72)) !important;
+}
+
+.gg-proof-strip,
+.gg-owner-card {
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 760px) {
+  .gg-site-backdrop-video {
+    object-position: 52% center !important;
+    filter: brightness(.61) saturate(.78) contrast(1.04);
+    transform: none;
+  }
+
+  .gg-site-backdrop::after {
+    background:
+      linear-gradient(180deg, rgba(3, 2, 1, .60), rgba(3, 2, 1, .38) 40%, rgba(3, 2, 1, .76)),
+      linear-gradient(90deg, rgba(3, 2, 1, .20), transparent 45%, rgba(3, 2, 1, .20));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-site-backdrop-video {
+    display: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
