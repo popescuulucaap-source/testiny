@@ -15,9 +15,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand.css') }}?v=20261017f">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-gold.css') }}?v=gold1">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-crown.css') }}?v=1">
-  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-lion-polish.css') }}?v=20261024-control-center">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-lion-polish.css') }}?v=20261024-cinematic-music2">
   <link rel="stylesheet" href="{{ url_for('static', filename='gargand-motion.css') }}?v=20261020">
-  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-cinematic-intro.css') }}?v=20261024">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gargand-cinematic-intro.css') }}?v=20261024-cinematic-music2">
 </head>
 <body class="gargand-site">
   <div class="gargand-ambient" aria-hidden="true"><span></span><span></span><span></span><i></i><i></i></div>
@@ -92,9 +92,9 @@
       if(nav)nav.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){document.body.classList.remove('gg-menu-open');var b=document.querySelector('.gg-menu');if(b)b.setAttribute('aria-expanded','false');});});
     });
   </script>
-  <script src="{{ url_for('static', filename='dashboard.js') }}?v=20261024-control-center" defer></script>
+  <script src="{{ url_for('static', filename='dashboard.js') }}?v=20261024-cinematic-music2" defer></script>
   <script src="{{ url_for('static', filename='gargand-motion.js') }}?v=20261020-crown-easteregg" defer></script>
-  <script src="{{ url_for('static', filename='cinematic-intro.js') }}?v=20261024" defer></script>
+  <script src="{{ url_for('static', filename='cinematic-intro.js') }}?v=20261024-cinematic-music2" defer></script>
   <script src="{{ url_for('static', filename='gargand-sound.js') }}?v=20261020-lion-roar" defer></script>
 </body>
 </html>
