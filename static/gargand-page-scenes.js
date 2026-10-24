@@ -29,7 +29,7 @@
     const video=document.createElement("video");
     video.className="gg-page-scene-video";video.muted=true;video.defaultMuted=true;video.autoplay=true;video.loop=true;video.playsInline=true;
     video.preload=slot===0?"metadata":"none";video.setAttribute("muted","");video.setAttribute("playsinline","");video.setAttribute("aria-hidden","true");
-    video.disablePictureInPicture=true;video.src="/static/gargand-scenes/"+kind+".mp4?v=20261024-worldtabs2";
+    video.disablePictureInPicture=true;video.src="/static/gargand-scenes/"+kind+".mp4?v=20261024-worldtabs3";
     const grain=document.createElement("span");grain.className="gg-page-scene-grain";
     wrapper.append(video,grain);target.prepend(wrapper);
     const play=video.play();if(play&&typeof play.catch==="function")play.catch(()=>{wrapper.classList.add("is-static");});
@@ -57,7 +57,7 @@
     document.querySelectorAll('[role="tab"],[data-tab],.dashboard-tab,.tab-button').forEach(button=>{
       button.addEventListener("click",()=>{
         const next=sceneForLabel(button.textContent||button.getAttribute("aria-label"));
-        const source="/static/gargand-scenes/"+next+".mp4?v=20261024-worldtabs2";
+        const source="/static/gargand-scenes/"+next+".mp4?v=20261024-worldtabs3";
         if(video&&video.getAttribute("src")!==source){video.src=source;video.load();video.play().catch(()=>{});}
         dashboardScene.dataset.sceneKind=next;
       });
