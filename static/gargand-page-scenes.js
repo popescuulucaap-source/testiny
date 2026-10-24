@@ -7,11 +7,11 @@
   const scenes={
     "/":"home","/commands":"commands","/security":"security","/verification":"verification",
     "/support":"support","/announcements":"announcements","/servers":"dashboard","/dashboard":"dashboard",
-    "/admin":"dashboard","/admin/audit":"dashboard","/admin/community":"community","/admin/support":"support",
-    "/guild/analytics":"dashboard","/guild/moderation":"security","/socials":"community","/profile":"community",
-    "/passport":"community","/achievements":"community","/leaderboards":"community","/daily":"community",
+    "/admin":"dashboard","/admin/panel":"dashboard","/admin/audit":"dashboard","/admin/community":"community","/admin/support":"support",
+    "/guild/analytics":"dashboard","/guild/moderation":"security","/socials":"community","/community":"community","/profile":"community",
+    "/passport":"community","/nightfall-passport":"community","/achievements":"community","/leaderboards":"community","/daily":"community",
     "/notifications":"announcements","/suggestions":"community","/suggestions/list":"community",
-    "/guidelines":"security","/terms":"verification","/login":"home"
+    "/guidelines":"security","/terms":"verification","/login":"home","/premium":"dashboard","/redeem":"dashboard","/secrets":"security"
   };
   let kind=scenes[path];
   if(!kind&&/^\/dashboard\/\d+(?:\/|$)/.test(path)){
