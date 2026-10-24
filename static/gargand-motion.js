@@ -5,20 +5,35 @@
   const selectors=[
     "#main-content > section",
     "#main-content .page-head",
+    "#main-content .gg-section",
     "#main-content .gg-section-head",
+    "#main-content .gg-proof-strip",
     "#main-content .gg-feature",
-    "#main-content .gg-command-preview",
+    "#main-content .gg-terminal",
+    "#main-content .gg-info-strip",
+    "#main-content .command-tools",
     "#main-content .command-grid",
+    "#main-content .command-card",
+    "#main-content .command-category",
+    "#main-content .legal-grid > *",
     "#main-content .update-center",
+    "#main-content .update",
+    "#main-content .server-grid",
+    "#main-content .server-card",
     "#main-content .support-choice-grid",
+    "#main-content .support-choice",
     "#main-content .support-panel",
     "#main-content .dashboard-metrics",
+    "#main-content .dashboard-metric",
     "#main-content .dashboard-grid",
-    "#main-content .server-grid",
-    "#main-content .gg-info-strip",
+    "#main-content .dashboard-content > section",
+    "#main-content .settings-card",
+    "#main-content .overview-card",
+    "#main-content .setup-step",
+    "#main-content .admin-row",
+    "#main-content .gg-owner-card",
     ".gg-footer-top",
     ".gg-developers",
-    ".gg-owner-card",
     ".gg-footer-bottom"
   ];
   const elements=new Set();
@@ -31,11 +46,11 @@
       entry.target.classList.add("is-visible");
       observer.unobserve(entry.target);
     });
-  },{threshold:.12,rootMargin:"0px 0px -36px 0px"});
+  },{threshold:.09,rootMargin:"0px 0px -24px 0px"});
   let index=0;
   elements.forEach(element=>{
     element.classList.add("gg-reveal");
-    element.style.setProperty("--gg-reveal-delay",Math.min(index++%5,4)*55+"ms");
+    element.style.setProperty("--gg-reveal-delay",Math.min(index++%5,4)*48+"ms");
     observer.observe(element);
   });
 })();
