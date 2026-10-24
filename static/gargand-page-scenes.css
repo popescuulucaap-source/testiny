@@ -52,3 +52,8 @@
  .gg-film-frame.has-video .gg-film-video{transform:none!important;transition:none!important}
  .gg-film-scene,.gg-film-video{transition:none!important}
 }
+
+
+/* Let the homepage's cinematic backdrop run edge-to-edge, while its copy stays in the normal page flow. */
+.gg-film-section{width:100vw!important;max-width:none!important;margin-left:calc(50% - 50vw)!important;margin-right:calc(50% - 50vw)!important}
+.gg-film-frame{width:100%!important}
