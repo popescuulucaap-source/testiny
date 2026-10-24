@@ -9,6 +9,8 @@ import math
 import os
 import subprocess
 import wave
+
+import numpy as np
 from pathlib import Path
 
 import imageio_ffmpeg
@@ -17,10 +19,14 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "static"
 OUT = STATIC / "gargand-trailer.mp4"
+MUSIC_OUT = STATIC / "gargand-ambient.mp3"
+TEMP_MUSIC_WAV = STATIC / ".gargand-ambient.wav"
+MUSIC_SECONDS = 48
+MUSIC_RATE = 44100
 TEMP_VIDEO = STATIC / ".gargand-trailer-video.mp4"
 TEMP_WAV = STATIC / ".gargand-trailer-audio.wav"
 WIDTH, HEIGHT = 1920, 1080
-FPS = 24
+FPS = 20
 SCENE_SECONDS = 6
 SCENES = 6
 DURATION = SCENE_SECONDS * SCENES
@@ -573,6 +579,93 @@ def make_audio(path: Path):
         wav.setframerate(rate)
         wav.writeframes(stereo.tobytes())
 
+
+def make_site_music():
+    """Create a quiet, original 48-second cinematic ambient loop for the whole website."""
+    ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    count = int(MUSIC_RATE * MUSIC_SECONDS)
+    t = np.arange(count, dtype=np.float64) / MUSIC_RATE
+    chord_length = MUSIC_SECONDS / 6
+    crossfade = 1.35
+    chords = [
+        (73.42, 110.00, 146.83, 174.61, 220.00, 293.66),  # D minor
+        (58.27, 116.54, 146.83, 174.61, 233.08, 349.23),  # Bb
+        (87.31, 130.81, 174.61, 220.00, 261.63, 349.23),  # F
+        (65.41, 130.81, 164.81, 196.00, 261.63, 329.63),  # C
+        (55.00, 110.00, 130.81, 164.81, 220.00, 329.63),  # A minor
+        (49.00, 98.00, 116.54, 146.83, 196.00, 293.66),   # G minor
+    ]
+    lead_notes = (293.66, 349.23, 392.00, 440.00, 349.23, 329.63)
+    waves = []
+    for index, frequencies in enumerate(chords):
+        boundary = index * chord_length
+        local = t - boundary
+        if index == 0:
+            # The first chord also supplies the incoming layer at the loop's end.
+            local = np.where(t >= MUSIC_SECONDS - chord_length, t - MUSIC_SECONDS, t)
+        pad = (
+            0.17 * np.sin(2 * np.pi * frequencies[0] * local)
+            + 0.105 * np.sin(2 * np.pi * frequencies[1] * local)
+            + 0.115 * np.sin(2 * np.pi * frequencies[2] * local)
+            + 0.085 * np.sin(2 * np.pi * frequencies[3] * local)
+            + 0.060 * np.sin(2 * np.pi * frequencies[4] * local)
+            + 0.035 * np.sin(2 * np.pi * frequencies[5] * local)
+        )
+        # Gentle, bell-like notes recur inside each phrase; their attacks are soft.
+        melody = np.zeros_like(t)
+        for beat, strength in ((0.75, 0.12), (2.8, 0.075), (4.75, 0.10), (6.45, 0.065)):
+            age = local - beat
+            active = (age >= 0) & (age <= 2.8)
+            envelope = np.exp(-np.maximum(age, 0) / 1.05) * active
+            melody += strength * envelope * np.sin(2 * np.pi * lead_notes[index] * np.maximum(age, 0))
+        waves.append(pad + melody)
+
+    phrase_position = np.mod(t, chord_length)
+    phrase_index = np.minimum(5, np.floor(t / chord_length).astype(np.int8))
+    music = np.empty_like(t)
+    for index in range(6):
+        active = phrase_index == index
+        normal = active & (phrase_position < chord_length - crossfade)
+        transition = active & ~normal
+        music[normal] = waves[index][normal]
+        if np.any(transition):
+            fade = (phrase_position[transition] - (chord_length - crossfade)) / crossfade
+            fade = np.clip(fade, 0, 1)
+            fade = fade * fade * (3 - 2 * fade)
+            next_index = (index + 1) % 6
+            music[transition] = waves[index][transition] * (1 - fade) + waves[next_index][transition] * fade
+
+    # A low warm drone and faint shimmering overtones fill the gaps without loud hits.
+    music += 0.075 * np.sin(2 * np.pi * 55.0 * t)
+    shimmer = 0.022 * np.sin(2 * np.pi * 523.25 * t) + 0.014 * np.sin(2 * np.pi * 659.25 * t)
+    music += shimmer * (0.35 + 0.65 * (0.5 + 0.5 * np.sin(2 * np.pi * t / 16)))
+    peak = float(np.max(np.abs(music))) or 1.0
+    music = music * (0.34 / peak)
+    stereo = np.column_stack((
+        music * (0.985 + 0.015 * np.sin(2 * np.pi * t / 12)),
+        music * (0.985 - 0.015 * np.sin(2 * np.pi * t / 12)),
+    ))
+    pcm = np.clip(stereo * 32767, -32767, 32767).astype("<i2")
+    with wave.open(str(TEMP_MUSIC_WAV), "wb") as wav:
+        wav.setnchannels(2)
+        wav.setsampwidth(2)
+        wav.setframerate(MUSIC_RATE)
+        wav.writeframes(pcm.tobytes())
+    try:
+        subprocess.run(
+            [ffmpeg, "-y", "-i", str(TEMP_MUSIC_WAV),
+             "-c:a", "libmp3lame", "-b:a", "96k", "-ar", str(MUSIC_RATE), "-ac", "2",
+             "-metadata", "title=Gargand Ambient Soundtrack",
+             "-metadata", "artist=Gargand", "-write_xing", "0", str(MUSIC_OUT)],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+    finally:
+        try:
+            TEMP_MUSIC_WAV.unlink()
+        except FileNotFoundError:
+            pass
+    print(f"Created {MUSIC_OUT} ({MUSIC_OUT.stat().st_size:,} bytes, {MUSIC_SECONDS}s)", flush=True)
+
 def build():
     STATIC.mkdir(parents=True, exist_ok=True)
     audio_available = True
@@ -580,7 +673,7 @@ def build():
         str(TEMP_VIDEO), (WIDTH, HEIGHT), fps=FPS, codec="libx264",
         pix_fmt_in="rgb24", pix_fmt_out="yuv420p", quality=None,
         macro_block_size=1, ffmpeg_log_level="error",
-        output_params=["-crf", "23", "-preset", "veryfast", "-movflags", "+faststart"],
+        output_params=["-crf", "26", "-preset", "veryfast", "-movflags", "+faststart", "-vf", "scale=1280:720"],
     )
     writer.send(None)
     frame_count = int(DURATION * FPS)
@@ -627,6 +720,7 @@ def build():
                 pass
     print(f"Created {OUT} ({OUT.stat().st_size:,} bytes, {WIDTH}x{HEIGHT}, {DURATION}s, audio={audio_available})")
     build_tab_scenes()
+    make_site_music()
 
 if __name__ == "__main__":
     build()
