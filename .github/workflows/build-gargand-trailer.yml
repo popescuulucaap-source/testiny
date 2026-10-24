@@ -1,0 +1,41 @@
+name: Build Gargand cinematic trailer
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_gargand_trailer.py"
+      - ".github/workflows/build-gargand-trailer.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gargand-cinematic-trailer
+  cancel-in-progress: false
+jobs:
+  build-trailer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out website
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install video renderer
+        run: python -m pip install --upgrade Pillow imageio-ffmpeg
+      - name: Render the 1080p trailer
+        run: python scripts/build_gargand_trailer.py
+      - name: Commit the generated MP4
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add static/gargand-trailer.mp4
+          if git diff --cached --quiet; then
+            echo "Trailer has not changed."
+          else
+            git commit -m "Add generated Gargand cinematic trailer"
+            git push
+          fi
