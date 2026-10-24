@@ -1,0 +1,59 @@
+name: Validate Gargand Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "templates/base.html"
+      - "templates/dashboard.html"
+      - "templates/commands.html"
+      - "static/dashboard.js"
+      - "static/commands.js"
+      - "static/gargand-lion-polish.css"
+      - ".github/workflows/validate-gargand-website.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "templates/base.html"
+      - "templates/dashboard.html"
+      - "templates/commands.html"
+      - "static/dashboard.js"
+      - "static/commands.js"
+      - "static/gargand-lion-polish.css"
+      - ".github/workflows/validate-gargand-website.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install website dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Compile Python
+        run: python -m py_compile app.py
+      - name: Check JavaScript syntax
+        run: |
+          node --check static/dashboard.js
+          node --check static/commands.js
+      - name: Compile dashboard and command templates
+        run: |
+          python - <<'PY'
+          from jinja2 import Environment, FileSystemLoader
+
+          env = Environment(loader=FileSystemLoader("templates"))
+          for name in ("base.html", "dashboard.html", "commands.html"):
+              env.get_template(name)
+              print(f"Template parsed: {name}")
+          PY
